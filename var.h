@@ -17,12 +17,13 @@
 #define SCY r_mem(0xFF42)
 #define SCX r_mem(0xFF43)
 #define LY r_mem(0xFF44)
+#define BGP r_mem(0xFF47)
 
 typedef unsigned char byte;
 typedef unsigned short dbyte;
 
 byte mem[0x10000];
-byte dsp[0xA0][0x90];
+byte dsp[0x90][0xA0];
 dbyte PC;
 dbyte SP;
 byte A, B, C, D, E, F, H, L;
