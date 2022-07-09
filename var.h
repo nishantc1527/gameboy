@@ -3,21 +3,22 @@
 
 #include <string.h>
 
-#define FLG_Z 7
-#define FLG_N 6
-#define FLG_H 5
-#define FLG_C 4
+#define FLG_Z     7
+#define FLG_N     6
+#define FLG_H     5
+#define FLG_C     4
 
-#define CLR_WHT 0
+#define ABS_WHT   -1
+#define CLR_WHT   0
 #define CLR_L_GRY 1
 #define CLR_D_GRY 2
-#define CLR_BLK 3
+#define CLR_BLK   3
 
 #define LCDC_CTRL r_mem(0xFF40)
-#define SCY r_mem(0xFF42)
-#define SCX r_mem(0xFF43)
-#define LY r_mem(0xFF44)
-#define BGP r_mem(0xFF47)
+#define SCY       r_mem(0xFF42)
+#define SCX       r_mem(0xFF43)
+#define LY        r_mem(0xFF44)
+#define BGP       r_mem(0xFF47)
 
 typedef unsigned char byte;
 typedef unsigned short dbyte;

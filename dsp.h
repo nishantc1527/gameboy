@@ -12,13 +12,14 @@ void init_dsp() {
 void scnln() {
   // TODO Do OAM Search
   if(gt_bt(LCDC_CTRL, 7)) {
-    if(LY < 144) {
+    int ly = LY;
+    if(ly < 144) {
       if(gt_bt(LCDC_CTRL, 0)) {
         int dat_area = gt_bt(LCDC_CTRL, 4);
         int mp_area = gt_bt(LCDC_CTRL, 3);
         byte scy = SCY;
         byte scx = SCX;
-        byte ly = (LY + scy) % 256;
+        ly = (ly + scy) % 256;
         int tiley = ly / 8;
         int offy = ly % 8;
         int bytey = offy / 2;
@@ -45,12 +46,13 @@ void scnln() {
         // TODO Draw OBJ
       }
     }
-    LY ++;
-    if(LY == 154) LY = 0;
+    ly ++;
+    if(ly == 154) ly = 0;
+    w_mem(0xFF44, ly);
   } else {
-    for(int i = 0; i < 0xA0; i ++) {
-      for(int j = 0; j < 0x90; j ++) {
-        dsp[i][j] = CLR_WHT;
+    for(int i = 0; i < 0x90; i ++) {
+      for(int j = 0; j < 0xA0; j ++) {
+        dsp[i][j] = ABS_WHT;
       }
     }
   }
@@ -62,7 +64,8 @@ void rndr() {
     for(int j = 0; j < 0xA0; j ++) {
       int clr = dsp[i][j] * 2;
       clr = (pal >> clr) & 0b11;
-      if(clr == CLR_WHT);
+      if(clr == ABS_WHT);
+      else if(clr == CLR_WHT);
       else if(clr == CLR_L_GRY);
       else if(clr == CLR_D_GRY);
       else if(clr == CLR_BLK);
