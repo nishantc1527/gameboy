@@ -12,14 +12,14 @@ void init_dsp() {
 void scnln() {
   // TODO Do OAM Search
   if(gt_bt(LCDC_CTRL, 7)) {
-    int ly = LY;
-    if(ly < 144) {
+    int line = LY;
+    if(line < 144) {
       if(gt_bt(LCDC_CTRL, 0)) {
         int dat_area = gt_bt(LCDC_CTRL, 4);
         int mp_area = gt_bt(LCDC_CTRL, 3);
         byte scy = SCY;
         byte scx = SCX;
-        ly = (ly + scy) % 256;
+        byte ly = (line + scy) % 256;
         int tiley = ly / 8;
         int offy = ly % 8;
         int bytey = offy / 2;
@@ -46,9 +46,9 @@ void scnln() {
         // TODO Draw OBJ
       }
     }
-    ly ++;
-    if(ly == 154) ly = 0;
-    w_mem(0xFF44, ly);
+    line ++;
+    if(line >= 154) line = 0;
+    w_mem(0xFF44, line);
   } else {
     for(int i = 0; i < 0x90; i ++) {
       for(int j = 0; j < 0xA0; j ++) {

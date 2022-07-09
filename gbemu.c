@@ -13,9 +13,11 @@ int main(int argc, char* argv[]) {
   fread(mem, 0x8000, 1, tetr);
   fread(mem, 0x8000, 1, rom);
   int lines = 0;
-  while(1) {
+  while(PC < 0x100) {
     int cyc = 456;
-    while(cyc) cyc -= exec(mem[PC ++]);
+    while(cyc > 0) {
+      cyc -= exec(mem[PC ++]);
+    }
     lines ++;
     scnln();
     if(lines == 154) {
@@ -23,6 +25,5 @@ int main(int argc, char* argv[]) {
       lines = 0;
     }
   }
-  printf("DONE\n");
   return 0;
 }
