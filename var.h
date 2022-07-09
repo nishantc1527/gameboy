@@ -13,6 +13,11 @@
 #define CLR_D_GRY 2
 #define CLR_BLK 3
 
+#define LCDC_CTRL r_mem(0xFF40)
+#define SCY r_mem(0xFF42)
+#define SCX r_mem(0xFF43)
+#define LY r_mem(0xFF44)
+
 typedef unsigned char byte;
 typedef unsigned short dbyte;
 
