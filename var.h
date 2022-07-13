@@ -10,7 +10,6 @@
 #define FLG_H     5
 #define FLG_C     4
 
-#define ABS_WHT   -1
 #define CLR_WHT   0
 #define CLR_L_GRY 1
 #define CLR_D_GRY 2
@@ -35,11 +34,12 @@ SDL_Window* win;
 SDL_Renderer* rnd;
 SDL_Event evt;
 
+int FCT = 5;
+
 void init_reg() {
   PC = 0;
   memset(mem, 0, sizeof(mem));
   memset(dsp, 0, sizeof(dsp));
-  // mem[0xFF44] = 0x90;
 }
 
 #endif
