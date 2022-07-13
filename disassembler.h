@@ -1,11 +1,14 @@
 #ifndef DISASSEMBLY
 #define DISASSEMBLY
 
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "var.h"
 #include "func.h"
 
 int p_instr(byte instr) {
-  // return 0;
+  return 0;
   printf("$%04X %02X ", PC - 1, instr);
   if(instr == 0xCB) {
     byte prfx = mem[PC];

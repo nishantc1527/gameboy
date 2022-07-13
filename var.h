@@ -3,6 +3,8 @@
 
 #include <string.h>
 
+#include <SDL2/SDL.h>
+
 #define FLG_Z     7
 #define FLG_N     6
 #define FLG_H     5
@@ -28,6 +30,10 @@ byte dsp[0x90][0xA0];
 dbyte PC;
 dbyte SP;
 byte A, B, C, D, E, F, H, L;
+
+SDL_Window* win;
+SDL_Renderer* rnd;
+SDL_Event evt;
 
 void init_reg() {
   PC = 0;

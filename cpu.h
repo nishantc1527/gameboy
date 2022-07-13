@@ -38,6 +38,7 @@ int exec(byte instr) {
   } else {
     switch(instr) {
       case 0x00:
+        return -1;
         return 4;
       case 0x04:
         B ++;
