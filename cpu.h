@@ -6,6 +6,9 @@
 #include "func.h"
 #include "disassembler.h"
 
+byte nxt() {
+}
+
 int exec(byte instr) {
   p_instr(instr);
   if(instr == 0xCB) {
@@ -155,6 +158,9 @@ int exec(byte instr) {
           }
           return 8;
         }
+      case 0x2E:
+        L = rd8();
+        break;
       case 0x31:
         SP = rd16();
         return 12;
@@ -165,6 +171,7 @@ int exec(byte instr) {
       case 0x3D:
         A --;
         if(A == 0) st_flg(FLG_Z);
+        else cl_flg(FLG_Z);
         st_flg(FLG_N);
         cl_flg(FLG_H);
         return 4;

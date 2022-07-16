@@ -156,7 +156,7 @@ int p_instr(byte instr) {
         printf("CP (HL)\n");
         break;
       case 0xC1:
-        printf("BOB BC\n");
+        printf("POP BC\n");
         break;
       case 0xC5:
         printf("PUSH BC\n");

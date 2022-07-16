@@ -35,6 +35,7 @@ int main(int argc, char* argv[]) {
   fread(mem, 0x8000, 1, rom);
   while(1) {
     if(update()) break;
+    // w_mem(0xFF47, 0x4);
     if(rndr()) break;
   }
   printf("DONE %d\n", cnt);

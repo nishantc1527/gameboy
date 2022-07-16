@@ -20,7 +20,6 @@ void init_dsp() {
 
 void scnln() {
   if(gt_bt(LCDC_CTRL, 7)) {
-    // TODO Do OAM Search
     if(LY < 0x90) {
       if(gt_bt(LCDC_CTRL, 0)) {
         int dat_area = gt_bt(LCDC_CTRL, 4);
@@ -50,20 +49,11 @@ void scnln() {
           dsp[LY][x] = clr;
         }
       }
-      if(gt_bt(LCDC_CTRL, 2)) {
-        // TODO Draw OBJ
-      }
     }
     int ly = LY;
     ly ++;
     if(ly >= 154) ly = 0;
     w_mem(0xFF44, ly);
-  } else {
-    for(int i = 0; i < 0x90; i ++) {
-      for(int j = 0; j < 0xA0; j ++) {
-        dsp[i][j] = CLR_WHT;
-      }
-    }
   }
 }
 
@@ -74,13 +64,12 @@ int rndr() {
   byte pal = BGP;
   for(int i = 0; i < 0x90; i ++) {
     for(int j = 0; j < 0xA0; j ++) {
-      int clr = dsp[i][j] * 2;
-      clr = (pal >> clr) & 0b11;
+      int clr = (pal >> (dsp[i][j] << 1)) & 0b11;
       if(clr == CLR_WHT) SDL_SetRenderDrawColor(rnd, 0xFF, 0xFF, 0xFF, 0xFF);
       else if(clr == CLR_L_GRY) SDL_SetRenderDrawColor(rnd, 0x7F, 0x7F, 0x7F, 0xFF);
       else if(clr == CLR_D_GRY) SDL_SetRenderDrawColor(rnd, 0x54, 0x54, 0x54, 0xFF);
       else if(clr == CLR_BLK) SDL_SetRenderDrawColor(rnd, 0x00, 0x00, 0x00, 0xFF);
-      else printf("clr\n");
+      else printf("INVALID COLOR %d\n", clr);
       SDL_Rect rct;
       rct.x = j * FCT;
       rct.y = i * FCT;
