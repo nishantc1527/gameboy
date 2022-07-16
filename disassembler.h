@@ -8,14 +8,18 @@
 #include "func.h"
 
 int p_instr(byte instr) {
-  return 0;
+  if(PC < 0x100) return 0;
   printf("$%04X %02X ", PC - 1, instr);
   if(instr == 0xCB) {
-    byte prfx = mem[PC];
+    byte prfx = rd8();
+    PC --;
     printf("%02X ", prfx);
     switch(prfx) {
       case 0x11:
         printf("RL C\n");
+        break;
+      case 0x37:
+        printf("SWAP A\n");
         break;
       case 0x7C:
         printf("BIT 7, H\n");
@@ -29,6 +33,10 @@ int p_instr(byte instr) {
       case 0x00:
         printf("NOP\n");
         break;
+      case 0x01:
+        printf("LD BC, $%04X\n", rd16());
+        PC -= 2;
+        break;
       case 0x04:
         printf("INC B\n");
         break;
@@ -38,6 +46,9 @@ int p_instr(byte instr) {
       case 0x06:
         printf("LD B, $%02X\n", rd8());
         PC --;
+        break;
+      case 0x0B:
+        printf("DEC BC\n");
         break;
       case 0x0C:
         printf("INC C\n");
@@ -101,9 +112,15 @@ int p_instr(byte instr) {
         printf("JR Z, %d\n", (signed char) rd8());
         PC --;
         break;
+      case 0x2A:
+        printf("LD A, (HL+)\n");
+        break;
       case 0x2E:
         printf("LD L, $%02X\n", rd8());
         PC --;
+        break;
+      case 0x2F:
+        printf("CPL\n");
         break;
       case 0x31:
         printf("LD SP $%04X\n", rd16());
@@ -112,12 +129,19 @@ int p_instr(byte instr) {
       case 0x32:
         printf("LD (HL-), A\n");
         break;
+      case 0x36:
+        printf("LD (HL), $%02X\n", rd8());
+        PC --;
+        break;
       case 0x3D:
         printf("DEC A\n");
         break;
       case 0x3E:
         printf("LD A, $%02X\n", rd8());
         PC --;
+        break;
+      case 0x47:
+        printf("LD B, A\n");
         break;
       case 0x4F:
         printf("LD C, A\n");
@@ -134,6 +158,9 @@ int p_instr(byte instr) {
       case 0x78:
         printf("LD A, B\n");
         break;
+      case 0x79:
+        printf("LD A, C\n");
+        break;
       case 0x7B:
         printf("LD A, E\n");
         break;
@@ -149,14 +176,30 @@ int p_instr(byte instr) {
       case 0x90:
         printf("SUB B\n");
         break;
+      case 0xA1:
+        printf("AND C\n");
+        break;
+      case 0xA9:
+        printf("XOR C\n");
+        break;
       case 0xAF:
         printf("XOR A\n");
+        break;
+      case 0xB0:
+        printf("OR B\n");
+        break;
+      case 0xB1:
+        printf("OR C\n");
         break;
       case 0xBE:
         printf("CP (HL)\n");
         break;
       case 0xC1:
         printf("POP BC\n");
+        break;
+      case 0xC3:
+        printf("JP $%04X\n", rd16());
+        PC -= 2;
         break;
       case 0xC5:
         printf("PUSH BC\n");
@@ -175,6 +218,10 @@ int p_instr(byte instr) {
       case 0xE2:
         printf("LD ($FF00+C), A\n");
         break;
+      case 0xE6:
+        printf("AND $%02X\n", rd8());
+        PC --;
+        break;
       case 0xEA:
         printf("LD ($%04X), A\n", rd16());
         PC -= 2;
@@ -182,6 +229,12 @@ int p_instr(byte instr) {
       case 0xF0:
         printf("LD A, ($FF00+$%02X)\n", rd8());
         PC --;
+        break;
+      case 0xF3:
+        printf("DI\n");
+        break;
+      case 0xFB:
+        printf("EI\n");
         break;
       case 0xFE:
         printf("CP $%02X\n", rd8());

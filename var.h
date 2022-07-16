@@ -25,10 +25,13 @@ typedef unsigned char byte;
 typedef unsigned short dbyte;
 
 byte mem[0x10000];
+byte brom[0x100];
 byte dsp[0x90][0xA0];
 dbyte PC;
 dbyte SP;
 byte A, B, C, D, E, F, H, L;
+
+byte IME;
 
 SDL_Window* win;
 SDL_Renderer* rnd;

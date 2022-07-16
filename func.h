@@ -4,6 +4,10 @@
 #include <stdio.h>
 #include "var.h"
 
+int gt_clr(byte pal, int val) {
+  return (pal >> (val << 1)) & 0b11;
+}
+
 byte gt_bt(byte var, byte bt) {
   return (var >> bt) & 1;
 }
@@ -28,22 +32,25 @@ void cl_flg(byte flg) {
   cl_bt(&F, flg);
 }
 
+byte r_mem(dbyte loc) {
+  if(mem[0xFF50] || loc >= 0x100) return mem[loc];
+  else return brom[loc];
+}
+
+void w_mem(dbyte loc, byte val) {
+  mem[loc] = val;
+}
+
 byte rd8() {
-  return mem[PC ++];
+  if(r_mem(0xFF50)) return mem[PC ++];
+  else return brom[PC ++];
 }
 
 dbyte rd16() {
   dbyte addr1 = PC ++;
   dbyte addr2 = PC ++;
-  return ((dbyte) mem[addr2] << 8) | (dbyte) mem[addr1];
-}
-
-byte r_mem(dbyte loc) {
-  return mem[loc];
-}
-
-void w_mem(dbyte loc, byte val) {
-  mem[loc] = val;
+  if(r_mem(0xFF50)) return ((dbyte) mem[addr2] << 8) | (dbyte) mem[addr1];
+  else return ((dbyte) brom[addr2] << 8) | (dbyte) brom[addr1];
 }
 
 void psh16(dbyte val) {

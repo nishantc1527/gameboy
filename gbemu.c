@@ -12,7 +12,7 @@ int update() {
   int scn = 456;
 
   while(cyc > 0) {
-    int curr = exec(r_mem(PC ++)); 
+    int curr = exec(rd8()); 
     cnt ++;
     if(curr == -1) return 1;
     scn -= curr;
@@ -29,13 +29,12 @@ int update() {
 int main(int argc, char* argv[]) {
   init_reg();
   init_dsp();
-  FILE* rom = fopen("bootrom.rom", "rb");
-  FILE* tetr = fopen("tetris.gb", "rb");
-  fread(mem, 0x8000, 1, tetr);
+  FILE* b_rom = fopen("bootrom.rom", "rb");
+  FILE* rom = fopen("tetris.gb", "rb");
   fread(mem, 0x8000, 1, rom);
+  fread(brom, 0x100, 1, b_rom);
   while(1) {
     if(update()) break;
-    // w_mem(0xFF47, 0x4);
     if(rndr()) break;
   }
   printf("DONE %d\n", cnt);

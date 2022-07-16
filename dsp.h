@@ -30,6 +30,7 @@ void scnln() {
         int tiley = ly / 8;
         int offy = ly % 8;
         int bytey = offy * 2;
+        byte pal = BGP;
         for(int x = 0; x < 0xA0; x ++) {
           int lx = (x + scx) % 256;
           int tilex = lx / 8;
@@ -46,7 +47,7 @@ void scnln() {
           byte ms = r_mem(idx + bytey + 1);
           offx = 7 - offx;
           int clr = (gt_bt(ms, offx) << 1) | gt_bt(ls, offx);
-          dsp[LY][x] = clr;
+          dsp[LY][x] = gt_clr(pal, clr);
         }
       }
     }
@@ -61,10 +62,9 @@ int rndr() {
   while(SDL_PollEvent(&evt)) {
     if(evt.type == SDL_QUIT) return 1;
   }
-  byte pal = BGP;
   for(int i = 0; i < 0x90; i ++) {
     for(int j = 0; j < 0xA0; j ++) {
-      int clr = (pal >> (dsp[i][j] << 1)) & 0b11;
+      int clr = dsp[i][j];
       if(clr == CLR_WHT) SDL_SetRenderDrawColor(rnd, 0xFF, 0xFF, 0xFF, 0xFF);
       else if(clr == CLR_L_GRY) SDL_SetRenderDrawColor(rnd, 0x7F, 0x7F, 0x7F, 0xFF);
       else if(clr == CLR_D_GRY) SDL_SetRenderDrawColor(rnd, 0x54, 0x54, 0x54, 0xFF);
