@@ -226,6 +226,9 @@ int p_instr(byte instr) {
         printf("LD ($%04X), A\n", rd16());
         PC -= 2;
         break;
+      case 0xEF:
+        printf("RST 5\n");
+        break;
       case 0xF0:
         printf("LD A, ($FF00+$%02X)\n", rd8());
         PC --;

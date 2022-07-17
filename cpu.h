@@ -25,14 +25,6 @@ int exec(byte instr) {
           else cl_flg(FLG_C);
           return 8;
         }
-      case 0x37:
-        A = (A >> 4) | ((A & 0xF) << 4);
-        if(A == 0) st_flg(FLG_Z);
-        else cl_flg(FLG_Z);
-        cl_flg(FLG_N);
-        cl_flg(FLG_H);
-        cl_flg(FLG_C);
-        return 8;
       case 0x7C:
         if(!gt_bt(H, 7)) st_flg(FLG_Z);
         else cl_flg(FLG_Z);
@@ -47,9 +39,6 @@ int exec(byte instr) {
     switch(instr) {
       case 0x00:
         return 4;
-      case 0x01:
-        st_BC(rd16());
-        return 12;
       case 0x04:
         B ++;
         cl_flg(FLG_Z);
@@ -66,9 +55,6 @@ int exec(byte instr) {
         return 4;
       case 0x06:
         B = rd8();
-        return 8;
-      case 0x0B:
-        st_BC(gt_BC() - 1);
         return 8;
       case 0x0C:
         C ++;
@@ -168,18 +154,9 @@ int exec(byte instr) {
           }
           return 8;
         }
-      case 0x2A:
-        A = r_mem(gt_HL());
-        st_HL(gt_HL() + 1);
-        return 8;
       case 0x2E:
         L = rd8();
         return 8;
-      case 0x2F:
-        A = ~A;
-        st_flg(FLG_N);
-        st_flg(FLG_H);
-        return 4;
       case 0x31:
         SP = rd16();
         return 12;
@@ -187,9 +164,6 @@ int exec(byte instr) {
         w_mem(gt_HL(), A);
         st_HL(gt_HL() - 1);
         return 8;
-      case 0x36:
-        w_mem(gt_HL(), rd8());
-        return 12;
       case 0x3D:
         A --;
         if(A == 0) st_flg(FLG_Z);
@@ -200,9 +174,6 @@ int exec(byte instr) {
       case 0x3E:
         A = rd8();
         return 8;
-      case 0x47:
-        B = A;
-        return 4;
       case 0x4F:
         C = A;
         return 4;
@@ -217,9 +188,6 @@ int exec(byte instr) {
         return 8;
       case 0x78:
         A = B;
-        return 4;
-      case 0x79:
-        A = C;
         return 4;
       case 0x7B:
         A = E;
@@ -249,41 +217,9 @@ int exec(byte instr) {
         st_flg(FLG_N);
         cl_flg(FLG_H);
         return 4;
-      case 0xA1:
-        A &= C;
-        if(A == 0) st_flg(FLG_Z);
-        else cl_flg(FLG_Z);
-        cl_flg(FLG_N);
-        st_flg(FLG_H);
-        cl_flg(FLG_C);
-        return 4;
-      case 0xA9:
-        A ^= C;
-        if(A == 0) st_flg(FLG_Z);
-        else cl_flg(FLG_Z);
-        cl_flg(FLG_N);
-        cl_flg(FLG_H);
-        cl_flg(FLG_C);
-        return 4;
       case 0xAF:
         A = 0;
         st_flg(FLG_Z);
-        cl_flg(FLG_N);
-        cl_flg(FLG_H);
-        cl_flg(FLG_C);
-        return 4;
-      case 0xB0:
-        A |= B;
-        if(A == 0) st_flg(FLG_Z);
-        else cl_flg(FLG_Z);
-        cl_flg(FLG_N);
-        cl_flg(FLG_H);
-        cl_flg(FLG_C);
-        return 4;
-      case 0xB1:
-        A |= C;
-        if(A == 0) st_flg(FLG_Z);
-        else cl_flg(FLG_Z);
         cl_flg(FLG_N);
         cl_flg(FLG_H);
         cl_flg(FLG_C);
@@ -318,23 +254,16 @@ int exec(byte instr) {
       case 0xE2:
         w_mem(0xFF00 + C, A);
         return 8;
-      case 0xE6:
-        A &= rd8();
-        if(A == 0) st_flg(FLG_Z);
-        else cl_flg(FLG_Z);
-        cl_flg(FLG_N);
-        st_flg(FLG_H);
-        cl_flg(FLG_C);
-        return 8;
       case 0xEA:
         w_mem(rd16(), A);
+        return 16;
+      case 0xEF:
+        psh16(PC + 1);
+        // PC = 0x0028;
         return 16;
       case 0xF0:
         A = r_mem(0xFF00 + rd8());
         return 12;
-      case 0xF3:
-        IME = 0;
-        return 4;
       case 0xFB:
         IME = 1;
         return 4;

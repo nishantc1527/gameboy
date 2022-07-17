@@ -61,6 +61,13 @@ void scnln() {
 int rndr() {
   while(SDL_PollEvent(&evt)) {
     if(evt.type == SDL_QUIT) return 1;
+    else if(evt.type == SDL_KEYDOWN) {
+      switch(evt.key.keysym.sym) {
+        case SDLK_d:
+          printf("{\n\tAF: $%04X\n\tBC: $%04X\n\tDE: $%04X\n\tHL: $%04X\n}\n", gt_AF(), gt_BC(), gt_DE(), gt_HL());
+          break;
+      }
+    }
   }
   for(int i = 0; i < 0x90; i ++) {
     for(int j = 0; j < 0xA0; j ++) {
