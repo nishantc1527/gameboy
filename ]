@@ -33,11 +33,6 @@ int exec(byte instr) {
     }
   } else {
     switch(instr) {
-      case 0x04:
-        st_h_add(B, 1);
-        B ++;
-        st_z(B);
-        cl_flg(FLG_N);
       case 0x05:
         st_h_sub(B, 1);
         B --;
@@ -53,12 +48,6 @@ int exec(byte instr) {
         st_z(C);
         cl_flg(FLG_N);
         return 4;
-      case 0x0D:
-        st_h_sub(C, 1);
-        C --;
-        st_z(C);
-        st_flg(FLG_N);
-        return 4;
       case 0x0E:
         C = rd8();
         return 8;
@@ -68,12 +57,6 @@ int exec(byte instr) {
       case 0x13:
         st_DE(gt_DE() + 1);
         return 8;
-      case 0x15:
-        st_h_sub(D, 1);
-        D --;
-        st_z(D);
-        st_flg(FLG_N);
-        return 4;
       case 0x17:
         {
           int carry = gt_flg(FLG_C);
@@ -84,20 +67,8 @@ int exec(byte instr) {
           cl_flg(FLG_H);
           return 8;
         }
-      case 0x18:
-        PC += (signed char) rd8();
-        return 12;
       case 0x1A:
         A = r_mem(gt_DE());
-        return 8;
-      case 0x1D:
-        st_h_sub(E, 1);
-        E --;
-        st_z(E);
-        st_flg(FLG_N);
-        return 4;
-      case 0x1E:
-        E = rd8();
         return 8;
       case 0x20:
         if(!gt_flg(FLG_Z)) {
@@ -111,18 +82,12 @@ int exec(byte instr) {
         st_HL(rd16());
         return 12;
       case 0x22:
-        w_mem(gt_HL(), A);
+        w_mem(gt_HL(),  A);
         st_HL(gt_HL() + 1);
         return 8;
       case 0x23:
         st_HL(gt_HL() + 1);
         return 8;
-      case 0x24:
-        st_h_add(H, 1);
-        H ++;
-        st_z(H);
-        cl_flg(FLG_N);
-        return 4;
       case 0x28:
         if(gt_flg(FLG_Z)) {
           PC += (signed char) rd8();
@@ -131,9 +96,6 @@ int exec(byte instr) {
           rd8();
           return 8;
         }
-      case 0x2E:
-        L = rd8();
-        return 8;
       case 0x31:
         SP = rd16();
         return 12;
@@ -145,6 +107,7 @@ int exec(byte instr) {
         st_h_sub(A, 1);
         A --;
         st_z(A);
+        printf("ZERO FLAG: %d\n", gt_flg(FLG_Z));
         st_flg(FLG_N);
         return 4;
       case 0x3E:
@@ -153,43 +116,11 @@ int exec(byte instr) {
       case 0x4F:
         C = A;
         return 4;
-      case 0x57:
-        D = A;
-        return 4;
-      case 0x67:
-        H = A;
-        return 4;
       case 0x77:
         w_mem(gt_HL(), A);
         return 8;
-      case 0x78:
-        A = B;
-        return 4;
       case 0x7B:
         A = E;
-        return 4;
-      case 0x7C:
-        A = H;
-        return 4;
-      case 0x7D:
-        A = L;
-        return 4;
-      case 0x86:
-        {
-          byte var = r_mem(gt_HL());
-          st_h_add(A, var);
-          st_c_add(A, var);
-          A += var;
-          st_z(A);
-          cl_flg(FLG_N);
-          return 8;
-        }
-      case 0x90:
-        st_h_sub(A, B);
-        st_c_sub(A, B);
-        A -= B;
-        st_z(A);
-        st_flg(FLG_N);
         return 4;
       case 0xAF:
         A = 0;
@@ -198,15 +129,6 @@ int exec(byte instr) {
         cl_flg(FLG_H);
         cl_flg(FLG_C);
         return 4;
-      case 0xBE:
-        {
-          byte var = r_mem(gt_HL());
-          st_z(A - var);
-          st_flg(FLG_N);
-          st_h_sub(A, var);
-          st_c_sub(A, var);
-          return 8;
-        }
       case 0xC1:
         st_BC(pop16());
         return 12;
@@ -230,9 +152,6 @@ int exec(byte instr) {
       case 0xEA:
         w_mem(rd16(), A);
         return 16;
-      case 0xF0:
-        A = r_mem(0xFF00 + rd8());
-        return 12;
       case 0xFE:
         {
           byte var = rd8();

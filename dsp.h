@@ -64,7 +64,7 @@ int rndr() {
     else if(evt.type == SDL_KEYDOWN) {
       switch(evt.key.keysym.sym) {
         case SDLK_d:
-          printf("{\n\tAF: $%04X\n\tBC: $%04X\n\tDE: $%04X\n\tHL: $%04X\n}\n", gt_AF(), gt_BC(), gt_DE(), gt_HL());
+          dbg();
           break;
       }
     }

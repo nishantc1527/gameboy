@@ -8,8 +8,9 @@
 #include "func.h"
 
 int p_instr(byte instr) {
-  if(PC < 0x100) return 0;
-  printf("$%04X %02X ", PC - 1, instr);
+  // return 0;
+  // if(!LOG) return 0;
+  printf("$%04X %02X ", PC, instr);
   if(instr == 0xCB) {
     byte prfx = rd8();
     PC --;
@@ -81,6 +82,9 @@ int p_instr(byte instr) {
         printf("JR %d\n", (signed char) rd8());
         PC --;
         break;
+      case 0x19:
+        printf("ADD HL, DE\n");
+        break;
       case 0x1A:
         printf("LD A, (DE)\n");
         break;
@@ -149,6 +153,9 @@ int p_instr(byte instr) {
       case 0x57:
         printf("LD D, A\n");
         break;
+      case 0x5F:
+        printf("LD E, A\n");
+        break;
       case 0x67:
         printf("LD H, A\n");
         break;
@@ -172,6 +179,9 @@ int p_instr(byte instr) {
         break;
       case 0x86:
         printf("ADD A, (HL)\n");
+        break;
+      case 0x87:
+        printf("ADD A, A\n");
         break;
       case 0x90:
         printf("SUB B\n");
@@ -214,6 +224,9 @@ int p_instr(byte instr) {
       case 0xE0:
         printf("LD ($FF00+%02X), A\n", rd8());
         PC --;
+        break;
+      case 0xE1:
+        printf("POP HL\n");
         break;
       case 0xE2:
         printf("LD ($FF00+C), A\n");

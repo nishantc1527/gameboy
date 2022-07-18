@@ -11,8 +11,9 @@ int update() {
   int cyc = 70224;
   int scn = 456;
 
-  while(cyc > 0) {
-    int curr = exec(rd8()); 
+  while(cyc > 0 && PC != STP) {
+    int curr = exec(r_mem(PC)); 
+    PC ++;
     cnt ++;
     if(curr == -1) return 1;
     scn -= curr;
@@ -37,6 +38,7 @@ int main(int argc, char* argv[]) {
     if(update()) break;
     if(rndr()) break;
   }
+  dbg();
   printf("DONE %d\n", cnt);
   return 0;
 }

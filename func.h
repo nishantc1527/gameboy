@@ -32,6 +32,37 @@ void cl_flg(byte flg) {
   cl_bt(&F, flg);
 }
 
+void st_z(byte var) {
+  if(var == 0) st_flg(FLG_Z);
+  else cl_flg(FLG_Z);
+}
+
+void st_h_add(byte var1, byte var2) {
+  if(((var1 & 0x0F) + (var2 & 0x0F)) & 0x10) st_flg(FLG_H);
+  else cl_flg(FLG_H);
+}
+
+void st_h_sub(byte var1, byte var2) {
+  if(((var1 & 0x0F) - (var2 & 0x0F)) & 0x10) st_flg(FLG_H);
+  else cl_flg(FLG_H);
+}
+
+void st_c_rl(byte var) {
+  if(var >> 7) st_flg(FLG_C);
+  else cl_flg(FLG_C);
+}
+
+void st_c_add(byte var1, byte var2) {
+  dbyte res = (dbyte) var1 + (dbyte) var2;
+  if(res > 0xFF) st_flg(FLG_C);
+  else cl_flg(FLG_C);
+}
+
+void st_c_sub(byte var1, byte var2) {
+  if(var1 < var2) st_flg(FLG_C);
+  else cl_flg(FLG_C);
+}
+
 byte r_mem(dbyte loc) {
   if(mem[0xFF50] || loc >= 0x100) return mem[loc];
   else return brom[loc];
@@ -42,13 +73,13 @@ void w_mem(dbyte loc, byte val) {
 }
 
 byte rd8() {
-  if(r_mem(0xFF50)) return mem[PC ++];
-  else return brom[PC ++];
+  if(r_mem(0xFF50)) return mem[++ PC];
+  else return brom[++ PC];
 }
 
 dbyte rd16() {
-  dbyte addr1 = PC ++;
-  dbyte addr2 = PC ++;
+  dbyte addr1 = ++ PC;
+  dbyte addr2 = ++ PC;
   if(r_mem(0xFF50)) return ((dbyte) mem[addr2] << 8) | (dbyte) mem[addr1];
   else return ((dbyte) brom[addr2] << 8) | (dbyte) brom[addr1];
 }
@@ -102,6 +133,14 @@ dbyte gt_HL() {
 void st_HL(dbyte HL) {
   H = (byte) (HL >> 8);
   L = (byte) HL;
+}
+
+void kp() {
+  PC --;
+}
+
+void dbg() {
+  printf("{\n\tAF: $%04X\n\tBC: $%04X\n\tDE: $%04X\n\tHL: $%04X\n\tSP: $%04X\n\tPC: $%04X\n\tZERO FLAG: %d\n\tSUBTRACTION FLAG: %d\n\tHALF CARRY FLAG: %d\n\tCARRY FLAG: %d\n}\n", gt_AF(), gt_BC(), gt_DE(), gt_HL(), SP, PC, gt_flg(FLG_Z), gt_flg(FLG_N), gt_flg(FLG_H), gt_flg(FLG_C));
 }
 
 #endif

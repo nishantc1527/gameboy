@@ -30,7 +30,6 @@ byte dsp[0x90][0xA0];
 dbyte PC;
 dbyte SP;
 byte A, B, C, D, E, F, H, L;
-
 byte IME;
 
 SDL_Window* win;
@@ -38,6 +37,7 @@ SDL_Renderer* rnd;
 SDL_Event evt;
 
 int FCT = 5;
+dbyte STP = 0x0051;
 
 void init_reg() {
   PC = 0;
