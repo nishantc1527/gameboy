@@ -8,7 +8,7 @@
 #include "func.h"
 
 int p_instr(byte instr) {
-  // return 0;
+  return 0;
   // if(!LOG) return 0;
   printf("$%04X %02X ", PC, instr);
   if(instr == 0xCB) {

@@ -37,7 +37,7 @@ SDL_Renderer* rnd;
 SDL_Event evt;
 
 int FCT = 5;
-dbyte STP = 0x0051;
+dbyte STP = 0x0100;
 
 void init_reg() {
   PC = 0;

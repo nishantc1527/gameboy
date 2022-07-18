@@ -38,6 +38,7 @@ int exec(byte instr) {
         B ++;
         st_z(B);
         cl_flg(FLG_N);
+        return 4;
       case 0x05:
         st_h_sub(B, 1);
         B --;
@@ -218,8 +219,7 @@ int exec(byte instr) {
         return 16;
       case 0xCD:
         psh16(PC);
-        PC = rd16();
-        kp();
+        PC = rd16() - 1;
         return 24;
       case 0xE0:
         w_mem(0xFF00 + rd8(), A);
