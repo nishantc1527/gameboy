@@ -16,6 +16,7 @@ void init_dsp() {
 
   win = SDL_CreateWindow("GAMEBOY", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 160 * FCT, 144 * FCT, 0);
   rnd = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
+
   tile_dat = SDL_CreateWindow("TILE DATA", 150, 200, 128 * FCT_DAT, 192 * FCT_DAT, 0);
   rnd_dat = SDL_CreateRenderer(tile_dat, -1, SDL_RENDERER_ACCELERATED);
 }
@@ -41,7 +42,7 @@ void scnln() {
           if(mp_area == 0) idx += 0x9800;
           else idx += 0x9C00;
           idx = r_mem(idx);
-          if(dat_area == 0) idx = 255 - idx;
+          if(dat_area == 0) idx = (signed char) idx + 128;
           idx *= 16;
           if(dat_area == 0) idx += 0x8800;
           else idx += 0x8000;
@@ -64,10 +65,10 @@ void drw_screen() {
   for(int i = 0; i < 0x90; i ++) {
     for(int j = 0; j < 0xA0; j ++) {
       int clr = dsp[i][j];
-      if(clr == CLR_WHT) SDL_SetRenderDrawColor(rnd, 0xFF, 0xFF, 0xFF, 0xFF);
-      else if(clr == CLR_L_GRY) SDL_SetRenderDrawColor(rnd, 0x7F, 0x7F, 0x7F, 0xFF);
-      else if(clr == CLR_D_GRY) SDL_SetRenderDrawColor(rnd, 0x54, 0x54, 0x54, 0xFF);
-      else if(clr == CLR_BLK) SDL_SetRenderDrawColor(rnd, 0x00, 0x00, 0x00, 0xFF);
+      if(clr == CLR_WHT) SDL_SetRenderDrawColor(rnd, HEX_WHT, HEX_WHT, HEX_WHT, 0xFF);
+      else if(clr == CLR_L_GRY) SDL_SetRenderDrawColor(rnd, HEX_L_GREY, HEX_L_GREY, HEX_L_GREY, 0xFF);
+      else if(clr == CLR_D_GRY) SDL_SetRenderDrawColor(rnd, HEX_R_GREY, HEX_R_GREY, HEX_R_GREY, 0xFF);
+      else if(clr == CLR_BLK) SDL_SetRenderDrawColor(rnd, HEX_BLK, HEX_BLK, HEX_BLK, 0xFF);
       else printf("INVALID COLOR %d\n", clr);
       SDL_Rect rct;
       rct.x = j * FCT;
@@ -99,10 +100,10 @@ void drw_tile_dat() {
     for(int y = 0; y < 8; y ++) {
       for(int x = 0; x < 8; x ++) {
         int clr = tile[y][x];
-        if(clr == CLR_WHT) SDL_SetRenderDrawColor(rnd_dat, 0xFF, 0xFF, 0xFF, 0xFF);
-        else if(clr == CLR_L_GRY) SDL_SetRenderDrawColor(rnd_dat, 0x7F, 0x7F, 0x7F, 0xFF);
-        else if(clr == CLR_D_GRY) SDL_SetRenderDrawColor(rnd_dat, 0x54, 0x54, 0x54, 0xFF);
-        else if(clr == CLR_BLK) SDL_SetRenderDrawColor(rnd_dat, 0x00, 0x00, 0x00, 0xFF);
+        if(clr == CLR_WHT) SDL_SetRenderDrawColor(rnd_dat, HEX_WHT, HEX_WHT, HEX_WHT, 0xFF);
+        else if(clr == CLR_L_GRY) SDL_SetRenderDrawColor(rnd_dat, HEX_L_GREY, HEX_L_GREY, HEX_L_GREY, 0xFF);
+        else if(clr == CLR_D_GRY) SDL_SetRenderDrawColor(rnd_dat, HEX_R_GREY, HEX_R_GREY, HEX_R_GREY, 0xFF);
+        else if(clr == CLR_BLK) SDL_SetRenderDrawColor(rnd_dat, HEX_BLK, HEX_BLK, HEX_BLK, 0xFF);
 
         SDL_Rect rct;
         rct.x = (x + addx) * FCT_DAT;

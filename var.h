@@ -5,21 +5,26 @@
 
 #include <SDL2/SDL.h>
 
-#define FLG_Z     7
-#define FLG_N     6
-#define FLG_H     5
-#define FLG_C     4
+#define FLG_Z      7
+#define FLG_N      6
+#define FLG_H      5
+#define FLG_C      4
 
-#define CLR_WHT   0
-#define CLR_L_GRY 1
-#define CLR_D_GRY 2
-#define CLR_BLK   3
+#define CLR_WHT    0
+#define CLR_L_GRY  1
+#define CLR_D_GRY  2
+#define CLR_BLK    3
 
-#define LCDC      r_mem(0xFF40)
-#define SCY       r_mem(0xFF42)
-#define SCX       r_mem(0xFF43)
-#define LY        r_mem(0xFF44)
-#define BGP       r_mem(0xFF47)
+#define HEX_WHT    0xFF
+#define HEX_L_GREY 0xD3
+#define HEX_R_GREY 0x69
+#define HEX_BLK    0x00
+
+#define LCDC       r_mem(0xFF40)
+#define SCY        r_mem(0xFF42)
+#define SCX        r_mem(0xFF43)
+#define LY         r_mem(0xFF44)
+#define BGP        r_mem(0xFF47)
 
 typedef unsigned char byte;
 typedef unsigned short dbyte;
@@ -34,8 +39,10 @@ byte IME;
 
 SDL_Window* win;
 SDL_Window* tile_dat;
+
 SDL_Renderer* rnd;
 SDL_Renderer* rnd_dat;
+
 SDL_Event evt;
 
 int FCT = 5;
