@@ -42,6 +42,11 @@ void st_h_add(byte var1, byte var2) {
   else cl_flg(FLG_H);
 }
 
+void st_h_add16(dbyte var1, dbyte var2) {
+  if(((var1 & 0xFF) + (var2 & 0xFF)) & 0x100) st_flg(FLG_H);
+  else cl_flg(FLG_H);
+}
+
 void st_h_sub(byte var1, byte var2) {
   if(((var1 & 0x0F) - (var2 & 0x0F)) & 0x10) st_flg(FLG_H);
   else cl_flg(FLG_H);
@@ -55,6 +60,11 @@ void st_c_rl(byte var) {
 void st_c_add(byte var1, byte var2) {
   dbyte res = (dbyte) var1 + (dbyte) var2;
   if(res > 0xFF) st_flg(FLG_C);
+  else cl_flg(FLG_C);
+}
+
+void st_c_add16(dbyte var1, dbyte var2) {
+  if((int) var1 + (int) var2 > 0xFFFF) st_flg(FLG_C);
   else cl_flg(FLG_C);
 }
 
@@ -137,6 +147,126 @@ void st_HL(dbyte HL) {
 
 void kp() {
   PC --;
+}
+
+int c_add(byte reg) {
+  st_h_add(A, reg);
+  st_c_add(A, reg);
+  A += reg;
+  st_z(A);
+  cl_flg(FLG_N);
+  return 4;
+}
+
+int c_and(byte reg) {
+  A &= reg;
+  st_z(A);
+  cl_flg(FLG_N);
+  st_flg(FLG_H);
+  cl_flg(FLG_C);
+  return 8;
+}
+
+int c_bit(byte* reg, int bit) {
+  if(gt_bt(*reg, bit)) cl_flg(FLG_Z);
+  else st_flg(FLG_Z);
+  cl_flg(FLG_N);
+  st_flg(FLG_H);
+  return 8;
+}
+
+int c_cpl(byte* reg) {
+  *reg = ~*reg;
+  st_flg(FLG_N);
+  st_flg(FLG_H);
+  return 4;
+}
+
+int c_dec(byte* reg) {
+  st_h_sub(*reg, 1);
+  *reg = *reg - 1;
+  st_z(*reg);
+  st_flg(FLG_N);
+  return 4;
+}
+
+int c_inc(byte* reg) {
+  st_h_add(*reg, 1);
+  *reg = *reg + 1;
+  st_z(*reg);
+  cl_flg(FLG_N);
+  return 4;
+}
+
+int c_or(byte reg) {
+  A |= reg;
+  st_z(A);
+  cl_flg(FLG_N);
+  cl_flg(FLG_H);
+  cl_flg(FLG_C);
+  return 4;
+}
+
+int c_res(byte* reg, int bit) {
+  *reg = *reg & ~(1 << bit);
+  return 8;
+}
+
+int c_rr(byte* reg) {
+  byte carry = gt_flg(FLG_C);
+  if(*reg & 1) st_flg(FLG_C);
+  else cl_flg(FLG_C);
+  *reg = *reg >> 1;
+  st_z(*reg);
+  cl_flg(FLG_N);
+  cl_flg(FLG_H);
+  *reg = *reg | (carry << 7);
+  return 8;
+}
+
+int c_rl(byte* reg) {
+  int carry = gt_flg(FLG_C);
+  st_c_rl(C);
+  *reg = (*reg << 1) | carry;
+  st_z(*reg);
+  cl_flg(FLG_N);
+  cl_flg(FLG_H);
+  return 8;
+}
+
+int c_rst(byte loc) {
+  psh16(PC + 1);
+  PC = loc;
+  kp();
+  return 16;
+}
+
+int c_srl(byte* reg) {
+  if(*reg & 1) st_flg(FLG_C);
+  else cl_flg(FLG_C);
+  *reg = *reg >> 1;
+  st_z(*reg);
+  cl_flg(FLG_N);
+  cl_flg(FLG_H);
+  return 8;
+}
+
+int c_swp(byte* reg) {
+  *reg = (*reg >> 4) | (*reg << 4);
+  st_z(*reg);
+  cl_flg(FLG_N);
+  cl_flg(FLG_H);
+  cl_flg(FLG_C);
+  return 8;
+}
+
+int c_xor(int reg) {
+  A ^= reg;
+  st_z(A);
+  cl_flg(FLG_N);
+  cl_flg(FLG_H);
+  cl_flg(FLG_C);
+  return 4;
 }
 
 void dbg() {

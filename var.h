@@ -15,7 +15,7 @@
 #define CLR_D_GRY 2
 #define CLR_BLK   3
 
-#define LCDC_CTRL r_mem(0xFF40)
+#define LCDC      r_mem(0xFF40)
 #define SCY       r_mem(0xFF42)
 #define SCX       r_mem(0xFF43)
 #define LY        r_mem(0xFF44)
@@ -33,11 +33,15 @@ byte A, B, C, D, E, F, H, L;
 byte IME;
 
 SDL_Window* win;
+SDL_Window* tile_dat;
 SDL_Renderer* rnd;
+SDL_Renderer* rnd_dat;
 SDL_Event evt;
 
 int FCT = 5;
-dbyte STP = 0x0100;
+int FCT_DAT = 3;
+dbyte STP = 0xFFFF;
+int cnt = 0;
 
 void init_reg() {
   PC = 0;

@@ -5,13 +5,11 @@
 #include "cpu.h"
 #include "dsp.h"
 
-int cnt = 0;
-
 int update() {
   int cyc = 70224;
   int scn = 456;
 
-  while(cyc > 0 && PC != STP) {
+  while(cyc > 0 && PC < STP) {
     int curr = exec(r_mem(PC)); 
     PC ++;
     cnt ++;
@@ -22,6 +20,7 @@ int update() {
       scnln();
       scn = 456;
     }
+    while(SDL_PollEvent(&evt)) if(evt.type == SDL_QUIT) return 1;
   }
 
   return 0;
@@ -31,7 +30,7 @@ int main(int argc, char* argv[]) {
   init_reg();
   init_dsp();
   FILE* b_rom = fopen("bootrom.rom", "rb");
-  FILE* rom = fopen("tetris.gb", "rb");
+  FILE* rom = fopen("drmario.gb", "rb");
   fread(mem, 0x8000, 1, rom);
   fread(brom, 0x100, 1, b_rom);
   while(1) {
