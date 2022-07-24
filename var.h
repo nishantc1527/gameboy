@@ -20,11 +20,28 @@
 #define HEX_R_GREY 0x69
 #define HEX_BLK    0x00
 
+#define JOYP       r_mem(0xFF00)
+#define IF         r_mem(0xFF0F)
 #define LCDC       r_mem(0xFF40)
+#define LCD_STAT   r_mem(0xFF41)
 #define SCY        r_mem(0xFF42)
 #define SCX        r_mem(0xFF43)
 #define LY         r_mem(0xFF44)
+#define LYC        r_mem(0xFF45)
+#define DMA        r_mem(0xFF46)
 #define BGP        r_mem(0xFF47)
+#define OBP0       r_mem(0xFF48)
+#define OBP1       r_mem(0xFF49)
+#define IE         r_mem(0xFFFF)
+
+#define BTN_A      0
+#define BTN_B      1
+#define BTN_STRT   2
+#define BTN_SLCT   3
+#define BTN_UP     4
+#define BTN_DOWN   5
+#define BTN_LEFT   6
+#define BTN_RIGHT  7
 
 typedef unsigned char byte;
 typedef unsigned short dbyte;
@@ -36,6 +53,9 @@ dbyte PC;
 dbyte SP;
 byte A, B, C, D, E, F, H, L;
 byte IME;
+int scn, frame;
+int in[8];
+int dma;
 
 SDL_Window* win;
 SDL_Window* tile_dat;

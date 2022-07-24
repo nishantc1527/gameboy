@@ -79,6 +79,7 @@ byte r_mem(dbyte loc) {
 }
 
 void w_mem(dbyte loc, byte val) {
+  if(loc == 0xFF46) dma = 1;
   mem[loc] = val;
 }
 
@@ -167,8 +168,8 @@ int c_and(byte reg) {
   return 8;
 }
 
-int c_bit(byte* reg, int bit) {
-  if(gt_bt(*reg, bit)) cl_flg(FLG_Z);
+int c_bit(byte reg, int bit) {
+  if(gt_bt(reg, bit)) cl_flg(FLG_Z);
   else st_flg(FLG_Z);
   cl_flg(FLG_N);
   st_flg(FLG_H);
@@ -251,6 +252,11 @@ int c_srl(byte* reg) {
   return 8;
 }
 
+int c_set(byte* reg, int bit) {
+  st_bt(reg, bit);
+  return 16;
+}
+
 int c_swp(byte* reg) {
   *reg = (*reg >> 4) | (*reg << 4);
   st_z(*reg);
@@ -267,6 +273,75 @@ int c_xor(int reg) {
   cl_flg(FLG_H);
   cl_flg(FLG_C);
   return 4;
+}
+
+void req_intr(int intr) {
+  st_bt(&mem[0xFF0F], intr);
+}
+
+void do_intr(int intr) {
+  IME = 0;
+  cl_bt(&mem[0xFF0F], intr);
+  dbyte loc;
+  switch(intr) {
+    case 0:
+      loc = 0x0040;
+      break;
+    case 1:
+      loc = 0x0048;
+      break;
+    case 2:
+      loc = 0x0050;
+      break;
+    case 3:
+      loc = 0x0058;
+      break;
+    case 4:
+      loc = 0x0060;
+      break;
+  }
+  psh16(PC + 1);
+  PC = loc;
+  kp();
+}
+
+void chck_intr() {
+  if(!IME) return;
+  for(int i = 0; i < 5; i ++) {
+    if(gt_bt(IF, i) && gt_bt(IE, i)) {
+      do_intr(i);
+      break;
+    }
+  }
+}
+
+void chck_in() {
+  byte in_reg = JOYP;
+  in_reg |= 0xF;
+  if(!gt_bt(in_reg, 4)) {
+    if(in[BTN_RIGHT]) cl_bt(&in_reg, 0);
+    if(in[BTN_LEFT]) cl_bt(&in_reg, 1);
+    if(in[BTN_UP]) cl_bt(&in_reg, 2);
+    if(in[BTN_DOWN]) cl_bt(&in_reg, 3);
+  }
+  if(!gt_bt(in_reg, 5)) {
+    if(in[BTN_A]) cl_bt(&in_reg, 0);
+    if(in[BTN_B]) cl_bt(&in_reg, 1);
+    if(in[BTN_SLCT]) cl_bt(&in_reg, 2);
+    if(in[BTN_STRT]) cl_bt(&in_reg, 3);
+  }
+  if(in_reg != JOYP) req_intr(4);
+  w_mem(0xFF00, in_reg);
+}
+
+void chck_dma() {
+  if(dma) {
+    dma = 0;
+    byte src = DMA * 0x100;
+    for(int t = 0; t < 0xA0; t ++) {
+      w_mem(0xFE00 + t, r_mem(src + t));
+    }
+  }
 }
 
 void dbg() {

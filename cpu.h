@@ -22,9 +22,41 @@ int exec(byte instr) {
       case 0x38:
         return c_srl(&B);
       case 0x7C:
-        return c_bit(&H, 7);
+        return c_bit(H, 7);
+      case 0x7E:
+        return c_bit(gt_HL(), 7);
+      case 0x86:
+        return c_res(&mem[gt_HL()], 0);
       case 0x87:
         return c_res(&A, 0);
+      case 0x8E:
+        return c_res(&mem[gt_HL()], 1);
+      case 0x96:
+        return c_res(&mem[gt_HL()], 2);
+      case 0x9E:
+        return c_res(&mem[gt_HL()], 3);
+      case 0xA6:
+        return c_res(&mem[gt_HL()], 4);
+      case 0xAE:
+        return c_res(&mem[gt_HL()], 5);
+      case 0xB6:
+        return c_res(&mem[gt_HL()], 6);
+      case 0xC6:
+        return c_set(&mem[gt_HL()], 0);
+      case 0xCE:
+        return c_set(&mem[gt_HL()], 1);
+      case 0xD6:
+        return c_set(&mem[gt_HL()], 2);
+      case 0xDE:
+        return c_set(&mem[gt_HL()], 3);
+      case 0xE6:
+        return c_set(&mem[gt_HL()], 4);
+      case 0xEE:
+        return c_set(&mem[gt_HL()], 5);
+      case 0xF6:
+        return c_set(&mem[gt_HL()], 6);
+      case 0xFE:
+        return c_set(&mem[gt_HL()], 7);
       default:
         printf("UNIMPLEMENTED PREFIX INSTRUCTION\n");
         return -1;
@@ -46,6 +78,9 @@ int exec(byte instr) {
       case 0x06:
         B = rd8();
         return 8;
+      case 0x0A:
+        A = r_mem(gt_BC());
+        return 8;
       case 0x0B:
         st_BC(gt_BC() - 1);
         return 8;
@@ -65,6 +100,8 @@ int exec(byte instr) {
       case 0x13:
         st_DE(gt_DE() + 1);
         return 8;
+      case 0x14:
+        return c_inc(&D);
       case 0x15:
         return c_dec(&D);
       case 0x16:
@@ -167,6 +204,9 @@ int exec(byte instr) {
       case 0x3E:
         A = rd8();
         return 8;
+      case 0x40:
+        B = B;
+        return 4;
       case 0x46:
         B = r_mem(gt_HL());
         return 8;
@@ -193,6 +233,9 @@ int exec(byte instr) {
         return 4;
       case 0x67:
         H = A;
+        return 4;
+      case 0x6F:
+        L = A;
         return 4;
       case 0x70:
         w_mem(gt_HL(), B);
@@ -305,6 +348,12 @@ int exec(byte instr) {
         return 16;
       case 0xC6:
         return c_add(rd8());
+      case 0xC8:
+        if(gt_flg(FLG_Z)) {
+          PC = pop16();
+          kp();
+          return 20;
+        } else return 8;
       case 0xC9:
         PC = pop16();
         kp();
@@ -329,6 +378,11 @@ int exec(byte instr) {
         return 16;
       case 0xD6:
         return c_and(rd8());
+      case 0xD9:
+        PC = pop16();
+        kp();
+        IME = 1;
+        return 16;
       case 0xE0:
         w_mem(0xFF00 + rd8(), A);
         return 12;

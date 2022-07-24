@@ -8,6 +8,7 @@
 #include "func.h"
 
 int p_instr(byte instr) {
+  return 0;
   if(!r_mem(0xFF50)) return 0;
   printf("$%04X %02X ", PC, instr);
   if(instr == 0xCB) {
@@ -32,6 +33,57 @@ int p_instr(byte instr) {
         break;
       case 0x7C:
         printf("BIT 7, H\n");
+        break;
+      case 0x7E:
+        printf("BIT 7, (HL)\n");
+        break;
+      case 0x86:
+        printf("RES 0, (HL)\n");
+        break;
+      case 0x87:
+        printf("RES 0, A\n");
+        break;
+      case 0x8E:
+        printf("RES 1, (HL)\n");
+        break;
+      case 0x96:
+        printf("RES 2, (HL)\n");
+        break;
+      case 0x9E:
+        printf("RES 3, (HL)\n");
+        break;
+      case 0xA6:
+        printf("RES 4, (HL)\n");
+        break;
+      case 0xAE:
+        printf("RES 5, (HL)\n");
+        break;
+      case 0xB6:
+        printf("RES 6, (HL)\n");
+        break;
+      case 0xC6:
+        printf("SET 0, (HL)\n");
+        break;
+      case 0xCE:
+        printf("SET 1, (HL)\n");
+        break;
+      case 0xD6:
+        printf("SET 2, (HL)\n");
+        break;
+      case 0xDE:
+        printf("SET 3, (HL)\n");
+        break;
+      case 0xE6:
+        printf("SET 4, (HL)\n");
+        break;
+      case 0xEE:
+        printf("SET 5, (HL)\n");
+        break;
+      case 0xF6:
+        printf("SET 6, (HL)\n");
+        break;
+      case 0xFE:
+        printf("SET 7, (HL)\n");
         break;
       default:
         printf("UNKONWN PREFIX INSTRUCTION %02X\n", prfx);
@@ -321,6 +373,9 @@ int p_instr(byte instr) {
       case 0x67:
         printf("LD H, A\n");
         break;
+      case 0x6F:
+        printf("LD L, A\n");
+        break;
       case 0x70:
         printf("LD (HL), B\n");
         break;
@@ -413,6 +468,9 @@ int p_instr(byte instr) {
       case 0xC6:
         printf("ADD A, $%02X\n", rd8());
         PC --;
+        break;
+      case 0xC8:
+        printf("RET Z\n");
         break;
       case 0xC9:
         printf("RET\n");
