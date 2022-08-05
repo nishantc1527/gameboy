@@ -79,48 +79,42 @@ void scnln() {
       }
       if(gt_bt(LCDC, 1)) {
         int cnt = 0;
-        int sz;
-        if(gt_bt(LCDC, 2)) sz = 16;
-        else sz = 8;
         for(int t = 0xFE00; t < 0xFFA0 && cnt < 10; t += 4) {
-          // if(t != 0xFE20) continue;
-          byte y = r_mem(t + 0) - 16;
-          byte x = r_mem(t + 1) - 8;
-          dbyte idx = r_mem(t + 2);
+          if(t != 0xFE20) continue;
+          byte y = r_mem(t + 0);
+          byte x = r_mem(t + 1);
+          byte idx = r_mem(t + 2);
           byte flg = r_mem(t + 3);
 
+          y -= 16;
+          x -= 8;
+
           idx *= 16;
-          idx += 0x8000;
-          
-          if(y <= LY && LY <= y + sz) cnt ++;
-          else continue;
+          idx *= 0x8000;
 
-          if(gt_bt(flg, 7)) continue;
+          int ly = LY;
+          if(y < ly || y > ly + 8) continue;
 
-          byte ly = LY;
-          int line = ly % sz;
-          if(gt_bt(flg, 6)) line = (sz - 1) - line;
-          if(line >= 8) {
-            idx += 16;
-            line = 15 - line;
-          }
-          line = line * 2;
+          int line = ly % 8;
+
+          byte ls = r_mem(idx + line);
+          byte ms = r_mem(idx + line + 1);
+
+          if(ls != 0 || ms != 0) printf("LS: %d, MS: %d\n", ls, ms);
 
           byte pal;
           if(gt_bt(flg, 4)) pal = OBP1;
           else pal = OBP0;
 
-          byte ls = r_mem(idx + line);
-          byte ms = r_mem(idx + line + 1);
-
-          for(byte pos = x; pos < x + 8 && pos < 0xA0; pos ++) {
-            int offx = 7 - (pos - x);
-            if(gt_bt(flg, 5)) offx = 7 - offx;
-            int clr = (gt_bt(ms, offx) << 1) | gt_bt(ls, offx);
-            if(clr == 0) continue;
-            dsp[LY][pos] = gt_clr(pal, clr);
+          for(int pos = x; pos < x + 8; pos ++) {
+            int posx = 7 - (pos - x);
+            // printf("POS: %d\n", posx);
+            int clr = (gt_bt(ms, posx) << 1) | gt_bt(ms, posx);
+            // printf("COLOR: %d\n", clr);
+            dsp[ly][pos] = gt_clr(pal, clr);
           }
-          
+
+          cnt ++;
         }
       }
     }
@@ -138,11 +132,13 @@ void drw_screen() {
   for(int i = 0; i < 0x90; i ++) {
     for(int j = 0; j < 0xA0; j ++) {
       int clr = dsp[i][j];
-      if(clr == CLR_WHT) SDL_SetRenderDrawColor(rnd, HEX_WHT, HEX_WHT, HEX_WHT, 0xFF);
-      else if(clr == CLR_L_GRY) SDL_SetRenderDrawColor(rnd, HEX_L_GREY, HEX_L_GREY, HEX_L_GREY, 0xFF);
-      else if(clr == CLR_D_GRY) SDL_SetRenderDrawColor(rnd, HEX_R_GREY, HEX_R_GREY, HEX_R_GREY, 0xFF);
-      else if(clr == CLR_BLK) SDL_SetRenderDrawColor(rnd, HEX_BLK, HEX_BLK, HEX_BLK, 0xFF);
-      else printf("INVALID COLOR %d\n", clr);
+      if(clr == CLR_WHT) clr = HEX_WHT;
+      else if(clr == CLR_L_GRY) clr = HEX_L_GREY;
+      else if(clr == CLR_D_GRY) clr = HEX_R_GREY;
+      else if(clr == CLR_BLK) clr = HEX_BLK;
+      // if(i == 85) SDL_SetRenderDrawColor(rnd, 0xFF, 0x00, 0x00, 0xFF);
+      // else SDL_SetRenderDrawColor(rnd, clr, clr, clr, 0xFF);
+      SDL_SetRenderDrawColor(rnd, clr, clr, clr, 0xFF);
       SDL_Rect rct;
       rct.x = j * FCT;
       rct.y = i * FCT;

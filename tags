@@ -1,0 +1,140 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_OUTPUT_EXCMD	mixed	/number, pattern, mixed, or combineV2/
+!_TAG_OUTPUT_FILESEP	slash	/slash or backslash/
+!_TAG_OUTPUT_MODE	u-ctags	/u-ctags or e-ctags/
+!_TAG_PATTERN_LENGTH_LIMIT	96	/0 for no limit/
+!_TAG_PROC_CWD	/home/nishantc/projects/c/gameboy/	//
+!_TAG_PROGRAM_AUTHOR	Universal Ctags Team	//
+!_TAG_PROGRAM_NAME	Universal Ctags	/Derived from Exuberant Ctags/
+!_TAG_PROGRAM_URL	https://ctags.io/	/official site/
+!_TAG_PROGRAM_VERSION	5.9.0	/p5.9.20210905.0/
+A	var.h	/^byte A, B, C, D, E, F, H, L;$/;"	v	typeref:typename:byte
+B	var.h	/^byte A, B, C, D, E, F, H, L;$/;"	v	typeref:typename:byte
+BGP	var.h	/^#define BGP /;"	d
+BTN_A	var.h	/^#define BTN_A /;"	d
+BTN_B	var.h	/^#define BTN_B /;"	d
+BTN_DOWN	var.h	/^#define BTN_DOWN /;"	d
+BTN_LEFT	var.h	/^#define BTN_LEFT /;"	d
+BTN_RIGHT	var.h	/^#define BTN_RIGHT /;"	d
+BTN_SLCT	var.h	/^#define BTN_SLCT /;"	d
+BTN_STRT	var.h	/^#define BTN_STRT /;"	d
+BTN_UP	var.h	/^#define BTN_UP /;"	d
+C	var.h	/^byte A, B, C, D, E, F, H, L;$/;"	v	typeref:typename:byte
+CLR_BLK	var.h	/^#define CLR_BLK /;"	d
+CLR_D_GRY	var.h	/^#define CLR_D_GRY /;"	d
+CLR_L_GRY	var.h	/^#define CLR_L_GRY /;"	d
+CLR_WHT	var.h	/^#define CLR_WHT /;"	d
+CPU	cpu.h	/^#define CPU$/;"	d
+D	var.h	/^byte A, B, C, D, E, F, H, L;$/;"	v	typeref:typename:byte
+DEF	dsp.h	/^#define DEF$/;"	d
+DISASSEMBLY	disassembler.h	/^#define DISASSEMBLY$/;"	d
+DMA	var.h	/^#define DMA /;"	d
+E	var.h	/^byte A, B, C, D, E, F, H, L;$/;"	v	typeref:typename:byte
+F	var.h	/^byte A, B, C, D, E, F, H, L;$/;"	v	typeref:typename:byte
+FCT	var.h	/^int FCT = 5;$/;"	v	typeref:typename:int
+FCT_DAT	var.h	/^int FCT_DAT = 3;$/;"	v	typeref:typename:int
+FLG_C	var.h	/^#define FLG_C /;"	d
+FLG_H	var.h	/^#define FLG_H /;"	d
+FLG_N	var.h	/^#define FLG_N /;"	d
+FLG_Z	var.h	/^#define FLG_Z /;"	d
+FUNC	func.h	/^#define FUNC$/;"	d
+H	var.h	/^byte A, B, C, D, E, F, H, L;$/;"	v	typeref:typename:byte
+HEX_BLK	var.h	/^#define HEX_BLK /;"	d
+HEX_L_GREY	var.h	/^#define HEX_L_GREY /;"	d
+HEX_R_GREY	var.h	/^#define HEX_R_GREY /;"	d
+HEX_WHT	var.h	/^#define HEX_WHT /;"	d
+IE	var.h	/^#define IE /;"	d
+IF	var.h	/^#define IF /;"	d
+IME	var.h	/^byte IME;$/;"	v	typeref:typename:byte
+JOYP	var.h	/^#define JOYP /;"	d
+L	var.h	/^byte A, B, C, D, E, F, H, L;$/;"	v	typeref:typename:byte
+LCDC	var.h	/^#define LCDC /;"	d
+LCD_STAT	var.h	/^#define LCD_STAT /;"	d
+LY	var.h	/^#define LY /;"	d
+LYC	var.h	/^#define LYC /;"	d
+OBP0	var.h	/^#define OBP0 /;"	d
+OBP1	var.h	/^#define OBP1 /;"	d
+PC	var.h	/^dbyte PC;$/;"	v	typeref:typename:dbyte
+SCX	var.h	/^#define SCX /;"	d
+SCY	var.h	/^#define SCY /;"	d
+SP	var.h	/^dbyte SP;$/;"	v	typeref:typename:dbyte
+STP	var.h	/^dbyte STP = 0xFFFF;$/;"	v	typeref:typename:dbyte
+VAR	var.h	/^#define VAR$/;"	d
+brom	var.h	/^byte brom[0x100];$/;"	v	typeref:typename:byte[0x100]
+byte	var.h	/^typedef unsigned char byte;$/;"	t	typeref:typename:unsigned char
+c_add	func.h	/^int c_add(byte reg) {$/;"	f	typeref:typename:int
+c_and	func.h	/^int c_and(byte reg) {$/;"	f	typeref:typename:int
+c_bit	func.h	/^int c_bit(byte reg, int bit) {$/;"	f	typeref:typename:int
+c_cpl	func.h	/^int c_cpl(byte* reg) {$/;"	f	typeref:typename:int
+c_dec	func.h	/^int c_dec(byte* reg) {$/;"	f	typeref:typename:int
+c_inc	func.h	/^int c_inc(byte* reg) {$/;"	f	typeref:typename:int
+c_or	func.h	/^int c_or(byte reg) {$/;"	f	typeref:typename:int
+c_res	func.h	/^int c_res(byte* reg, int bit) {$/;"	f	typeref:typename:int
+c_rl	func.h	/^int c_rl(byte* reg) {$/;"	f	typeref:typename:int
+c_rr	func.h	/^int c_rr(byte* reg) {$/;"	f	typeref:typename:int
+c_rst	func.h	/^int c_rst(byte loc) {$/;"	f	typeref:typename:int
+c_set	func.h	/^int c_set(byte* reg, int bit) {$/;"	f	typeref:typename:int
+c_srl	func.h	/^int c_srl(byte* reg) {$/;"	f	typeref:typename:int
+c_swp	func.h	/^int c_swp(byte* reg) {$/;"	f	typeref:typename:int
+c_xor	func.h	/^int c_xor(int reg) {$/;"	f	typeref:typename:int
+chck_dma	func.h	/^void chck_dma() {$/;"	f	typeref:typename:void
+chck_in	func.h	/^void chck_in() {$/;"	f	typeref:typename:void
+chck_intr	func.h	/^void chck_intr() {$/;"	f	typeref:typename:void
+cl_bt	func.h	/^void cl_bt(byte* var, byte bt) {$/;"	f	typeref:typename:void
+cl_flg	func.h	/^void cl_flg(byte flg) {$/;"	f	typeref:typename:void
+cnt	var.h	/^int cnt = 0;$/;"	v	typeref:typename:int
+dbg	func.h	/^void dbg() {$/;"	f	typeref:typename:void
+dbyte	var.h	/^typedef unsigned short dbyte;$/;"	t	typeref:typename:unsigned short
+dma	var.h	/^int dma;$/;"	v	typeref:typename:int
+do_intr	func.h	/^void do_intr(int intr) {$/;"	f	typeref:typename:void
+drw_screen	dsp.h	/^void drw_screen() {$/;"	f	typeref:typename:void
+drw_tile_dat	dsp.h	/^void drw_tile_dat() {$/;"	f	typeref:typename:void
+dsp	var.h	/^byte dsp[0x90][0xA0];$/;"	v	typeref:typename:byte[0x90][0xA0]
+evt	var.h	/^SDL_Event evt;$/;"	v	typeref:typename:SDL_Event
+exec	cpu.h	/^int exec(byte instr) {$/;"	f	typeref:typename:int
+frame	var.h	/^int scn, frame;$/;"	v	typeref:typename:int
+gt_AF	func.h	/^dbyte gt_AF() {$/;"	f	typeref:typename:dbyte
+gt_BC	func.h	/^dbyte gt_BC() {$/;"	f	typeref:typename:dbyte
+gt_DE	func.h	/^dbyte gt_DE() {$/;"	f	typeref:typename:dbyte
+gt_HL	func.h	/^dbyte gt_HL() {$/;"	f	typeref:typename:dbyte
+gt_bt	func.h	/^byte gt_bt(byte var, byte bt) {$/;"	f	typeref:typename:byte
+gt_clr	func.h	/^int gt_clr(byte pal, int val) {$/;"	f	typeref:typename:int
+gt_flg	func.h	/^byte gt_flg(byte flg) {$/;"	f	typeref:typename:byte
+in	var.h	/^int in[8];$/;"	v	typeref:typename:int[8]
+init_dsp	dsp.h	/^void init_dsp() {$/;"	f	typeref:typename:void
+init_reg	var.h	/^void init_reg() {$/;"	f	typeref:typename:void
+kp	func.h	/^void kp() {$/;"	f	typeref:typename:void
+main	gbemu.c	/^int main(int argc, char* argv[]) {$/;"	f	typeref:typename:int
+mem	var.h	/^byte mem[0x10000];$/;"	v	typeref:typename:byte[0x10000]
+p_instr	disassembler.h	/^int p_instr(byte instr) {$/;"	f	typeref:typename:int
+pop16	func.h	/^dbyte pop16() {$/;"	f	typeref:typename:dbyte
+psh16	func.h	/^void psh16(dbyte val) {$/;"	f	typeref:typename:void
+r_mem	func.h	/^byte r_mem(dbyte loc) {$/;"	f	typeref:typename:byte
+rd16	func.h	/^dbyte rd16() {$/;"	f	typeref:typename:dbyte
+rd8	func.h	/^byte rd8() {$/;"	f	typeref:typename:byte
+req_intr	func.h	/^void req_intr(int intr) {$/;"	f	typeref:typename:void
+rnd	var.h	/^SDL_Renderer* rnd;$/;"	v	typeref:typename:SDL_Renderer *
+rnd_dat	var.h	/^SDL_Renderer* rnd_dat;$/;"	v	typeref:typename:SDL_Renderer *
+rndr	dsp.h	/^int rndr() {$/;"	f	typeref:typename:int
+scn	var.h	/^int scn, frame;$/;"	v	typeref:typename:int
+scnln	dsp.h	/^void scnln() {$/;"	f	typeref:typename:void
+st_AF	func.h	/^void st_AF(dbyte AF) {$/;"	f	typeref:typename:void
+st_BC	func.h	/^void st_BC(dbyte BC) {$/;"	f	typeref:typename:void
+st_DE	func.h	/^void st_DE(dbyte DE) {$/;"	f	typeref:typename:void
+st_HL	func.h	/^void st_HL(dbyte HL) {$/;"	f	typeref:typename:void
+st_bt	func.h	/^void st_bt(byte* var, byte bt) {$/;"	f	typeref:typename:void
+st_c_add	func.h	/^void st_c_add(byte var1, byte var2) {$/;"	f	typeref:typename:void
+st_c_add16	func.h	/^void st_c_add16(dbyte var1, dbyte var2) {$/;"	f	typeref:typename:void
+st_c_rl	func.h	/^void st_c_rl(byte var) {$/;"	f	typeref:typename:void
+st_c_sub	func.h	/^void st_c_sub(byte var1, byte var2) {$/;"	f	typeref:typename:void
+st_flg	func.h	/^void st_flg(byte flg) {$/;"	f	typeref:typename:void
+st_h_add	func.h	/^void st_h_add(byte var1, byte var2) {$/;"	f	typeref:typename:void
+st_h_add16	func.h	/^void st_h_add16(dbyte var1, dbyte var2) {$/;"	f	typeref:typename:void
+st_h_sub	func.h	/^void st_h_sub(byte var1, byte var2) {$/;"	f	typeref:typename:void
+st_z	func.h	/^void st_z(byte var) {$/;"	f	typeref:typename:void
+tile_dat	var.h	/^SDL_Window* tile_dat;$/;"	v	typeref:typename:SDL_Window *
+upd_stat	dsp.h	/^void upd_stat() {$/;"	f	typeref:typename:void
+update	gbemu.c	/^int update() {$/;"	f	typeref:typename:int
+w_mem	func.h	/^void w_mem(dbyte loc, byte val) {$/;"	f	typeref:typename:void
+win	var.h	/^SDL_Window* win;$/;"	v	typeref:typename:SDL_Window *
