@@ -1,5 +1,0 @@
-https://gbdev.io/pandocs/CPU_Registers_and_Flags.html
-https://gbdev.gg8.se/wiki/articles/Gameboy_Bootstrap_ROM
-https://meganesulli.com/generate-gb-opcodes/
-https://robdor.com/2016/08/10/gameboy-emulator-half-carry-flag/
-http://www.devrs.com/gb/files/GBCPU_Instr.html

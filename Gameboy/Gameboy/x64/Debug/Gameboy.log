@@ -1,0 +1,5 @@
+﻿  gbemu.c
+C:\Users\nisha\Downloads\gameboy-master\gameboy-master\func.h(324,43): warning C4098: 'chck_in': 'void' function returning a value
+C:\Users\nisha\Downloads\gameboy-master\gameboy-master\cpu.h(37,26): warning C4244: 'function': conversion from 'dbyte' to 'byte', possible loss of data
+C:\Users\nisha\Downloads\gameboy-master\gameboy-master\cpu.h(496,17): warning C4244: '=': conversion from 'dbyte' to 'byte', possible loss of data
+  Gameboy.vcxproj -> C:\Users\nisha\source\repos\Gameboy\x64\Debug\Gameboy.exe
