@@ -7,12 +7,10 @@
 #include "var.h"
 #include "func.h"
 
-int p_instr(byte instr) {
+int p_instr(byte instr, byte prfx) {
     if (!r_mem(0xFF50)) return 0;
     printf("$%04X %02X ", PC, instr);
     if (instr == 0xCB) {
-        byte prfx = rd8();
-        PC--;
         printf("%02X ", prfx);
         switch (prfx) {
         case 0x11:
@@ -23,6 +21,9 @@ int p_instr(byte instr) {
             break;
         case 0x1A:
             printf("RR D\n");
+            break;
+        case 0x20:
+            printf("SLA B\n");
             break;
         case 0x37:
             printf("SWAP A\n");
@@ -36,6 +37,8 @@ int p_instr(byte instr) {
         case 0x58:
             printf("BIT 3, B\n");
             break;
+        case 0x6C:
+            printf("BIT 5, H\n");
         case 0x70:
             printf("BIT 6, B\n");
             break;
@@ -568,6 +571,9 @@ int p_instr(byte instr) {
         case 0xB1:
             printf("OR C\n");
             break;
+        case 0xB6:
+            printf("OR (HL)\n");
+            break;
         case 0xB7:
             printf("OR A\n");
             break;
@@ -626,6 +632,13 @@ int p_instr(byte instr) {
             printf("SUB $%02X\n", rd8());
             PC--;
             break;
+        case 0xD9:
+            printf("RETI\n");
+            break;
+        case 0xDA:
+            printf("JP C $%04X\n", rd16());
+            PC -= 2;
+            break;
         case 0xE0:
             printf("LD ($FF00+%02X), A\n", rd8());
             PC--;
@@ -642,6 +655,9 @@ int p_instr(byte instr) {
         case 0xE6:
             printf("AND $%02X\n", rd8());
             PC--;
+            break;
+        case 0xE7:
+            printf("RST 4\n");
             break;
         case 0xE9:
             printf("JP HL\n");
