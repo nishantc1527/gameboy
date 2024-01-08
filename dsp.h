@@ -13,7 +13,6 @@ void init_dsp() {
         printf("ERROR CREATING WINDOW: %s\n", SDL_GetError());
         exit(1);
     }
-
     win = SDL_CreateWindow("GAMEBOY", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 160 * FCT, 144 * FCT, 0);
     rnd = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
 }
@@ -26,7 +25,6 @@ void upd_stat() {
     else if (scn >= 456 - 80 - 168) mode = 3;
     else mode = 0;
     if (LY >= 144) mode = 1;
-
     if (mode != curr && mode == 1) {
         req_intr(0);
         if (gt_bt(stat, 4)) req_intr(1);
@@ -34,7 +32,6 @@ void upd_stat() {
     if ((mode == 0 && curr != 0 && gt_bt(stat, 3)) || (mode == 2 && curr != 2 && gt_bt(stat, 5))) {
         req_intr(0);
     }
-
     stat &= ~(0b11);
     stat |= mode;
 
@@ -48,13 +45,13 @@ void upd_stat() {
 
 void scnln() {
     if (gt_bt(LCDC, 7)) {
-        if (LY < 0x90) {
+        if (LY < SCRN_HEIGHT) {
             if (gt_bt(LCDC, 0)) {
                 byte ly = LY;
                 int dat_area = gt_bt(LCDC, 4);
                 int mp_area = gt_bt(LCDC, 3);
                 byte pal = BGP;
-                for (int x = 0; x < 0xA0; x++) {
+                for (int x = 0; x < SCRN_WIDTH; x++) {
                     byte by = (ly + SCY) % 256;
                     int tiley = by / 8;
                     int offy = by % 8;
@@ -86,7 +83,7 @@ void scnln() {
                         int tiley = wy / 8;
                         int offy = wy % 8;
                         int bytey = offy << 1;
-                        for (byte x = wx; x < 0xA0; x++) {
+                        for (byte x = wx; x < SCRN_WIDTH; x++) {
                             byte _wx = x - wx;
                             int tilex = _wx / 8;
                             int offx = _wx % 8;
@@ -109,7 +106,7 @@ void scnln() {
                 }
             }
             else {
-                for (int x = 0; x < 0xA0; x++) {
+                for (int x = 0; x < SCRN_WIDTH; x++) {
                     dsp[LY][x] = gt_clr(BGP, 0);
                 }
             }
@@ -119,36 +116,26 @@ void scnln() {
                 int cnt = 0;
                 int vis[1000];
                 memset(vis, 0, sizeof(vis));
-
                 for (dbyte mem = 0xFE00; mem <= 0xFE9F && cnt < 10; mem += 4) {
                     signed char y   = r_mem(mem + 0);
                     signed char x   = r_mem(mem + 1);
                     dbyte idx = r_mem(mem + 2);
                     byte flg = r_mem(mem + 3);
-
                     y -= 16;
                     x -= 8;
-
                     if (ly < y) continue;
                     if (sz) {
                         if (ly >= y + 16) continue;
                         else idx &= 0xFE;
                     }
                     else if (ly >= y + 8) continue;
-                    
                     if (vis[x]) continue;
                     vis[x] = 1;
-
-                    printf("%04X\n", mem);
-
                     cnt++;
-
                     idx *= 16;
                     idx += 0x8000;
-
                     byte flipx = gt_bt(flg, 5);
                     byte flipy = gt_bt(flg, 6);
-
                     byte line = ly - y;
                     if (sz) {
                         if (flipy) line = 15 - line;
@@ -159,11 +146,9 @@ void scnln() {
                     line <<= 1;
                     byte ls = r_mem(idx + line + 0);
                     byte ms = r_mem(idx + line + 1);
-
                     byte pal;
                     if (gt_bt(flg, 4)) pal = OBP1;
                     else pal = OBP0;
-
                     for (signed char x0 = x; x0 < x + 8; x0++) {
                         if (x0 < 0) continue;
                         byte posx = 7 - (x0 - x);
@@ -189,15 +174,13 @@ void scnln() {
 }
 
 void drw_screen() {
-    for (int i = 0; i < 0x90; i++) {
-        for (int j = 0; j < 0xA0; j++) {
+    for (int i = 0; i < SCRN_HEIGHT; i++) {
+        for (int j = 0; j < SCRN_WIDTH; j++) {
             int clr = dsp[i][j];
             if (clr == CLR_WHT) clr = HEX_WHT;
             else if (clr == CLR_L_GRY) clr = HEX_L_GREY;
             else if (clr == CLR_D_GRY) clr = HEX_R_GREY;
             else if (clr == CLR_BLK) clr = HEX_BLK;
-            // if(i == 130) SDL_SetRenderDrawColor(rnd, 0xFF, 0x00, 0x00, 0xFF);
-            // else SDL_SetRenderDrawColor(rnd, clr, clr, clr, 0xFF);
             SDL_SetRenderDrawColor(rnd, clr, clr, clr, 0xFF);
             SDL_Rect rct;
             rct.x = j * FCT;
