@@ -11,13 +11,13 @@ int update() {
     scn = 456;
     frame = 0;
     dma = 0;
-    int d = 0;
+    int debug = 0;
 
     while (!frame) {
-        d = 0;
-        switch (PC) { // PC
-        case 0xB702:
-            d = 1;
+        debug = 0;
+        switch (-1) { // PC
+        case 0xC31E:
+            debug = 1;
         }
         if (HALT) {
             if (chck_intr()) HALT = 0;
@@ -25,7 +25,7 @@ int update() {
         }
         else {
             int curr = exec();
-            if (d) {
+            if (debug) {
                 dbg();
                 SDL_Delay(5000);
             }
@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
     FILE* boot_rom;
     FILE* rom;
     fopen_s(&boot_rom, "bootrom.rom", "rb");
-    fopen_s(&rom, "space.gb", "rb");
+    fopen_s(&rom, "02.gb", "rb");
     fread(mem, 0x8000, 1, rom);
     fread(brom, 0x100, 1, boot_rom);
     while (1) {
