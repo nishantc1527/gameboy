@@ -38,23 +38,28 @@ void st_z(byte var) {
 }
 
 void st_h_add(byte var1, byte var2) {
-  if(((var1 & 0x0F) + (var2 & 0x0F)) & 0x10) st_flg(FLG_H);
-  else cl_flg(FLG_H);
+    if (((var1 & 0xF) + (var2 & 0xF)) & 0x10) st_flg(FLG_H);
+    else cl_flg(FLG_H);
 }
 
 void st_h_add16(dbyte var1, dbyte var2) {
-  if(((var1 & 0xFF) + (var2 & 0xFF)) & 0x100) st_flg(FLG_H);
-  else cl_flg(FLG_H);
+    if (((var1 & 0xFFF) + (var2 & 0xFFF)) & 0x1000) st_flg(FLG_H);
+    else cl_flg(FLG_H);
 }
 
 void st_h_sub(byte var1, byte var2) {
-  if(((var1 & 0x0F) - (var2 & 0x0F)) & 0x10) st_flg(FLG_H);
-  else cl_flg(FLG_H);
+    if (((var1 & 0x0F) - (var2 & 0x0F)) & 0x10) st_flg(FLG_H);
+    else cl_flg(FLG_H);
 }
 
 void st_c_rl(byte var) {
-  if(var >> 7) st_flg(FLG_C);
-  else cl_flg(FLG_C);
+    if (var >> 7) st_flg(FLG_C);
+    else cl_flg(FLG_C);
+}
+
+void st_c_rr(byte var) {
+    if (var & 1) st_flg(FLG_C);
+    else cl_flg(FLG_C);
 }
 
 void st_c_add(byte var1, byte var2) {
@@ -64,18 +69,19 @@ void st_c_add(byte var1, byte var2) {
 }
 
 void st_c_add16(dbyte var1, dbyte var2) {
-  if((int) var1 + (int) var2 > 0xFFFF) st_flg(FLG_C);
-  else cl_flg(FLG_C);
+    int res = (int)var1 + (int)var2;
+    if (res > 0xFFFF) st_flg(FLG_C);
+    else cl_flg(FLG_C);
 }
 
 void st_c_sub(byte var1, byte var2) {
-  if(var1 < var2) st_flg(FLG_C);
-  else cl_flg(FLG_C);
+    if (var1 < var2) st_flg(FLG_C);
+    else cl_flg(FLG_C);
 }
 
 byte r_mem(dbyte loc) {
-  if (mem[0xFF50] || loc >= 0x100) return mem[loc];
-  else return brom[loc];
+    if (mem[0xFF50] || loc >= 0x100) return mem[loc];
+    else return brom[loc];
 }
 
 void w_mem(dbyte loc, byte val) {
@@ -85,8 +91,7 @@ void w_mem(dbyte loc, byte val) {
 }
 
 byte rd8() {
-    if (r_mem(0xFF50)) return mem[++PC];
-    else return brom[++PC];
+    return r_mem(++PC);
 }
 
 dbyte rd16() {
@@ -156,7 +161,19 @@ void kp() {
 }
 
 int c_adc(byte reg) {
-    return c_add(reg + gt_flg(FLG_C));
+    int cy = 0;
+    int hy = 0;
+    if (gt_flg(FLG_C)) {
+        st_h_add(A, 1);
+        st_c_add(A, 1);
+        cy = gt_flg(FLG_C);
+        hy = gt_flg(FLG_H);
+        A++;
+    }
+    c_add(reg);
+    if (cy) st_flg(FLG_C);
+    if (hy) st_flg(FLG_H);
+    return 4;
 }
 
 int c_add(byte reg) {
@@ -276,23 +293,20 @@ int c_ret(int flg) {
 }
 
 int c_rr(byte* reg) {
-  byte carry = gt_flg(FLG_C);
-  if(*reg & 1) st_flg(FLG_C);
-  else cl_flg(FLG_C);
-  *reg = *reg >> 1;
+  int carry = gt_flg(FLG_C);
+  st_c_rr(*reg);
+  *reg = (*reg >> 1) | (carry << 7);
   st_z(*reg);
   cl_flg(FLG_N);
   cl_flg(FLG_H);
-  *reg = *reg | (carry << 7);
   return 8;
 }
 
 int c_rrc(byte* reg) {
     int carry = *reg & 1;
-    if (carry) st_flg(FLG_C);
-    else cl_flg(FLG_C);
+    st_c_rr(*reg);
     *reg = (*reg >> 1) | (carry << 7);
-    cl_flg(FLG_Z);
+    st_z(*reg);
     cl_flg(FLG_N);
     cl_flg(FLG_H);
     return 4;
@@ -309,7 +323,7 @@ int c_rl(byte* reg) {
 }
 
 int c_rlc(byte* reg) {
-    int carry = gt_bt(*reg, 7);
+    int carry = (*reg >> 7) & 1;
     st_c_rl(*reg);
     *reg = (*reg << 1) | carry;
     st_z(*reg);
@@ -326,12 +340,18 @@ int c_rst(byte loc) {
 }
 
 int c_sbc(byte reg) {
-    byte sub = reg + gt_flg(FLG_C);
-    st_h_sub(A, sub);
-    st_c_sub(A, sub);
-    A -= sub;
-    st_z(A);
-    st_flg(FLG_N);
+    int cy = 0;
+    int hy = 0;
+    if (gt_flg(FLG_C)) {
+        st_h_sub(A, 1);
+        st_c_sub(A, 1);
+        cy = gt_flg(FLG_C);
+        hy = gt_flg(FLG_H);
+        A--;
+    }
+    c_sub(reg);
+    if (cy) st_flg(FLG_C);
+    if (hy) st_flg(FLG_H);
     return 4;
 }
 
@@ -353,6 +373,16 @@ int c_set(byte* reg, int bit) {
 int c_sla(byte* reg) {
     st_c_rl(*reg);
     *reg = *reg << 1;
+    st_z(*reg);
+    cl_flg(FLG_N);
+    cl_flg(FLG_H);
+    return 8;
+}
+
+int c_sra(byte* reg) {
+    st_c_rr(*reg);
+    int bt = (*reg >> 7) & 1;
+    *reg = (*reg >> 1) | (bt << 7);
     st_z(*reg);
     cl_flg(FLG_N);
     cl_flg(FLG_H);
@@ -392,7 +422,7 @@ void req_intr(int intr) {
 
 void do_intr(int intr) {
     if (!HALT || IME) {
-        switch (intr) {
+        switch (-1) { // intr
         case 0:
             printf("VBLANK INTERRUPT\n");
             break;
