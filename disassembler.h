@@ -577,6 +577,9 @@ int p_instr(byte instr, byte prfx) {
         case 0xB7:
             printf("OR A\n");
             break;
+        case 0xBB:
+            printf("CP E\n");
+            break;
         case 0xBE:
             printf("CP (HL)\n");
             break;
@@ -588,6 +591,10 @@ int p_instr(byte instr, byte prfx) {
             break;
         case 0xC1:
             printf("POP BC\n");
+            break;
+        case 0xC2:
+            printf("JP NZ $%04X\n", rd16());
+            PC -= 2;
             break;
         case 0xC3:
             printf("JP $%04X\n", rd16());
@@ -699,9 +706,6 @@ int p_instr(byte instr, byte prfx) {
             break;
         case 0xFB:
             printf("EI\n");
-            break;
-        case 0xFC:
-        case 0xFD:
             break;
         case 0xFE:
             printf("CP $%02X\n", rd8());
