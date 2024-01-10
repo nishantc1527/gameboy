@@ -7,6 +7,7 @@
 #include "disassembler.h"
 
 int exec() {
+    int dis = 1;
     byte instr = r_mem(PC);
     if (PC >= 0x8000 && 0) { // Unset for debugging
         printf("PROGRAM COUNTER PAST CARTRIDGE SPACE\n");
@@ -14,34 +15,134 @@ int exec() {
     }
     if (instr == 0xCB) {
         byte prfx = rd8();
-        p_instr(instr, prfx);
+        if (dis) p_instr(instr, prfx);
         switch (prfx) {
+        case 0x00:
+            return c_rlc(&B);
+        case 0x01:
+            return c_rlc(&C);
+        case 0x02:
+            return c_rlc(&D);
         case 0x03:
             return c_rlc(&E);
+        case 0x04:
+            return c_rlc(&H);
+        case 0x05:
+            return c_rlc(&L);
+        case 0x06:
+            return c_rlc(&mem[gt_HL()]);
+        case 0x07:
+            return c_rlc(&A);
+        case 0x08:
+            return c_rrc(&B);
+        case 0x09:
+            return c_rrc(&C);
+        case 0x0A:
+            return c_rrc(&D);
+        case 0x0B:
+            return c_rrc(&E);
+        case 0x0C:
+            return c_rrc(&H);
+        case 0x0D:
+            return c_rrc(&L);
+        case 0x0E:
+            return c_rrc(&mem[gt_HL()]);
+        case 0x0F:
+            return c_rrc(&A);
         case 0x10:
             return c_rl(&B);
         case 0x11:
             return c_rl(&C);
+        case 0x12:
+            return c_rl(&D);
+        case 0x13:
+            return c_rl(&E);
+        case 0x14:
+            return c_rl(&H);
+        case 0x15:
+            return c_rl(&L);
+        case 0x16:
+            return c_rl(&mem[gt_HL()]);
+        case 0x17:
+            return c_rl(&A);
+        case 0x18:
+            return c_rr(&B);
         case 0x19:
             return c_rr(&C);
         case 0x1A:
             return c_rr(&D);
         case 0x1B:
             return c_rr(&E);
+        case 0x1C:
+            return c_rr(&H);
+        case 0x1D:
+            return c_rr(&L);
+        case 0x1E:
+            return c_rr(&mem[gt_HL()]);
+        case 0x1F:
+            return c_rr(&A);
         case 0x20:
             return c_sla(&B);
         case 0x21:
             return c_sla(&C);
+        case 0x22:
+            return c_sla(&D);
+        case 0x23:
+            return c_sla(&E);
+        case 0x24:
+            return c_sla(&H);
+        case 0x25:
+            return c_sla(&L);
+        case 0x26:
+            return c_sla(&mem[gt_HL()]);
         case 0x27:
             return c_sla(&A);
+        case 0x28:
+            return c_sra(&B);
+        case 0x29:
+            return c_sra(&C);
+        case 0x2A:
+            return c_sra(&D);
+        case 0x2B:
+            return c_sra(&E);
+        case 0x2C:
+            return c_sra(&H);
+        case 0x2D:
+            return c_sra(&L);
+        case 0x2E:
+            return c_sra(&mem[gt_HL()]);
+        case 0x2F:
+            return c_sra(&A);
+        case 0x30:
+            return c_swp(&B);
+        case 0x31:
+            return c_swp(&C);
+        case 0x32:
+            return c_swp(&D);
         case 0x33:
             return c_swp(&E);
+        case 0x34:
+            return c_swp(&H);
+        case 0x35:
+            return c_swp(&L);
+        case 0x36:
+            return c_swp(&mem[gt_HL()]);
         case 0x37:
             return c_swp(&A);
         case 0x38:
             return c_srl(&B);
+        case 0x39:
+            return c_srl(&C);
         case 0x3A:
             return c_srl(&D);
+        case 0x3B:
+            return c_srl(&E);
+        case 0x3C:
+            return c_srl(&H);
+        case 0x3D:
+            return c_srl(&L);
+        case 0x3E:
+            return c_srl(&mem[gt_HL()]);
         case 0x3F:
             return c_srl(&A);
         case 0x40:
@@ -62,20 +163,30 @@ int exec() {
             return c_bit(A, 1);
         case 0x50:
             return c_bit(B, 2);
+        case 0x56:
+            return c_bit(r_mem(gt_HL()), 2);
         case 0x58:
             return c_bit(B, 3);
+        case 0x5E:
+            return c_bit(r_mem(gt_HL()), 3);
         case 0x5F:
             return c_bit(A, 3);
         case 0x60:
             return c_bit(B, 4);
+        case 0x66:
+            return c_bit(r_mem(gt_HL()), 4);
         case 0x68:
             return c_bit(B, 5);
+        case 0x6E:
+            return c_bit(r_mem(gt_HL()), 5);
         case 0x6C:
             return c_bit(H, 5);
         case 0x6F:
             return c_bit(A, 5);
         case 0x70:
             return c_bit(B, 6);
+        case 0x76:
+            return c_bit(r_mem(gt_HL()), 6);
         case 0x77:
             return c_bit(A, 6);
         case 0x78:
@@ -135,7 +246,7 @@ int exec() {
         }
     }
     else {
-        p_instr(instr, 0);
+        if (dis) p_instr(instr, 0);
         switch (instr) {
         case 0x00:
             return 4;
@@ -156,7 +267,9 @@ int exec() {
             B = rd8();
             return 8;
         case 0x07:
-            return c_rlc(&A);
+            c_rlc(&A);
+            cl_flg(FLG_Z);
+            return 4;
         case 0x08:
         {
             dbyte addr = rd16();
@@ -183,7 +296,9 @@ int exec() {
             C = rd8();
             return 8;
         case 0x0F:
-            return c_rrc(&A);
+            c_rrc(&A);
+            cl_flg(FLG_Z);
+            return 4;
         case 0x11:
             st_DE(rd16());
             return 12;
@@ -201,7 +316,9 @@ int exec() {
             D = rd8();
             return 8;
         case 0x17:
-            return c_rl(&A);
+            c_rl(&A);
+            cl_flg(FLG_Z);
+            return 4;
         case 0x18:
             PC += (signed char)rd8();
             return 12;
@@ -225,7 +342,9 @@ int exec() {
             E = rd8();
             return 8;
         case 0x1F:
-            return c_rr(&A);
+            c_rr(&A);
+            cl_flg(FLG_Z);
+            return 4;
         case 0x20:
             return c_jp8(1 - gt_flg(FLG_Z));
         case 0x21:
@@ -245,6 +364,27 @@ int exec() {
         case 0x26:
             H = rd8();
             return 8;
+        case 0x27: // No clue how this works I just copied it
+            if (!gt_flg(FLG_N)) {
+                if (gt_flg(FLG_C) || A > 0x99) {
+                    A += 0x60;
+                    st_flg(FLG_C);
+                }
+                if (gt_flg(FLG_H) || (A & 0x0f) > 0x09) {
+                    A += 0x06;
+                }
+            }
+            else {
+                if (gt_flg(FLG_C)) {
+                    A -= 0x60;
+                }
+                if (gt_flg(FLG_H)) {
+                    A -= 0x06;
+                }
+            }
+            st_z(A);
+            cl_flg(FLG_H);
+            return 4;
         case 0x28:
             return c_jp8(gt_flg(FLG_Z));
         case 0x29:
@@ -289,6 +429,8 @@ int exec() {
             w_mem(gt_HL(), rd8());
             return 12;
         case 0x37:
+            cl_flg(FLG_N);
+            cl_flg(FLG_H);
             st_flg(FLG_C);
             return 4;
         case 0x38:
@@ -313,17 +455,29 @@ int exec() {
         case 0x3E:
             A = rd8();
             return 8;
+        case 0x3F:
+            cl_flg(FLG_N);
+            cl_flg(FLG_H);
+            if (gt_flg(FLG_C)) cl_flg(FLG_C);
+            else st_flg(FLG_C);
+            return 4;
         case 0x40:
             B = B;
             return 4;
         case 0x41:
             B = C;
             return 4;
+        case 0x42:
+            B = D;
+            return 4;
         case 0x43:
             B = E;
             return 4;
         case 0x44:
             B = H;
+            return 4;
+        case 0x45:
+            B = L;
             return 4;
         case 0x46:
             B = r_mem(gt_HL());
@@ -334,11 +488,20 @@ int exec() {
         case 0x48:
             C = B;
             return 4;
+        case 0x49:
+            C = C;
+            return 4;
         case 0x4A:
             C = D;
             return 4;
         case 0x4B:
             C = E;
+            return 4;
+        case 0x4C:
+            C = H;
+            return 4;
+        case 0x4D:
+            C = L;
             return 4;
         case 0x4E:
             C = r_mem(gt_HL());
@@ -349,10 +512,20 @@ int exec() {
         case 0x50:
             D = B;
             return 4;
+        case 0x51:
+            D = C;
+            return 4;
+        case 0x52:
+            D = D;
+            return 4;
         case 0x53:
             D = E;
+            return 4;
         case 0x54:
             D = H;
+            return 4;
+        case 0x55:
+            D = L;
             return 4;
         case 0x56:
             D = r_mem(gt_HL());
@@ -362,6 +535,18 @@ int exec() {
             return 4;
         case 0x58:
             E = B;
+            return 4;
+        case 0x59:
+            E = C;
+            return 4;
+        case 0x5A:
+            E = D;
+            return 4;
+        case 0x5B:
+            E = E;
+            return 4;
+        case 0x5C:
+            E = H;
             return 4;
         case 0x5D:
             E = L;
@@ -375,8 +560,20 @@ int exec() {
         case 0x60:
             H = B;
             return 4;
+        case 0x61:
+            H = C;
+            return 4;
         case 0x62:
             H = D;
+            return 4;
+        case 0x63:
+            H = E;
+            return 4;
+        case 0x64:
+            H = H;
+            return 4;
+        case 0x65:
+            H = L;
             return 4;
         case 0x66:
             H = r_mem(gt_HL());
@@ -389,6 +586,9 @@ int exec() {
             return 4;
         case 0x69:
             L = C;
+            return 4;
+        case 0x6A:
+            L = D;
             return 4;
         case 0x6B:
             L = E;
@@ -417,6 +617,12 @@ int exec() {
         case 0x73:
             w_mem(gt_HL(), E);
             return 8;
+        case 0x74:
+            w_mem(gt_HL(), H);
+            return 8;
+        case 0x75:
+            w_mem(gt_HL(), L);
+            return 8;
         case 0x76:
             HALT = 1;
             return 4;
@@ -444,6 +650,9 @@ int exec() {
         case 0x7E:
             A = r_mem(gt_HL());
             return 8;
+        case 0x7F:
+            A = A;
+            return 4;
         case 0x80:
             return c_add(B);
         case 0x81:
@@ -466,8 +675,14 @@ int exec() {
             return c_adc(C);
         case 0x8A:
             return c_adc(D);
+        case 0x8B:
+            return c_adc(E);
         case 0x8C:
             return c_adc(H);
+        case 0x8D:
+            return c_adc(L);
+        case 0x8E:
+            return c_adc(r_mem(gt_HL()));
         case 0x8F:
             return c_adc(A);
         case 0x90:
@@ -478,6 +693,8 @@ int exec() {
             return c_sub(D);
         case 0x93:
             return c_sub(E);
+        case 0x94:
+            return c_sub(H);
         case 0x95:
             return c_sub(L);
         case 0x96:
@@ -488,6 +705,16 @@ int exec() {
             return c_sbc(B);
         case 0x99:
             return c_sbc(C);
+        case 0x9A:
+            return c_sbc(D);
+        case 0x9B:
+            return c_sbc(E);
+        case 0x9C:
+            return c_sbc(H);
+        case 0x9D:
+            return c_sbc(L);
+        case 0x9E:
+            return c_sbc(r_mem(gt_HL()));
         case 0x9F:
             return c_sbc(A);
         case 0xA0:
@@ -500,6 +727,8 @@ int exec() {
             return c_and(E);
         case 0xA4:
             return c_and(H);
+        case 0xA5:
+            return c_and(L);
         case 0xA6:
             return c_and(r_mem(gt_HL()));
         case 0xA7:
@@ -508,8 +737,14 @@ int exec() {
             return c_xor(B);
         case 0xA9:
             return c_xor(C);
+        case 0xAA:
+            return c_xor(D);
+        case 0xAB:
+            return c_xor(E);
         case 0xAC:
             return c_xor(H);
+        case 0xAD:
+            return c_xor(L);
         case 0xAE:
             return c_xor(r_mem(gt_HL()));
         case 0xAF:
@@ -522,6 +757,10 @@ int exec() {
             return c_or(D);
         case 0xB3:
             return c_or(E);
+        case 0xB4:
+            return c_or(H);
+        case 0xB5:
+            return c_or(L);
         case 0xB6:
             return c_or(r_mem(gt_HL()));
         case 0xB7:
@@ -534,6 +773,10 @@ int exec() {
             return c_cp(D);
         case 0xBB:
             return c_cp(E);
+        case 0xBC:
+            return c_cp(H);
+        case 0xBD:
+            return c_cp(L);
         case 0xBE:
             return c_cp(r_mem(gt_HL()));
         case 0xBF:
@@ -556,6 +799,8 @@ int exec() {
             return 16;
         case 0xC6:
             return c_add(rd8());
+        case 0xC7:
+            return c_rst(0x0000);
         case 0xC8:
             return c_ret(gt_flg(FLG_Z));
         case 0xC9:
@@ -577,6 +822,8 @@ int exec() {
             return 12;
         case 0xD2:
             return c_jp16(1 - gt_flg(FLG_C));
+        case 0xD4:
+            return c_call(1 - gt_flg(FLG_C));
         case 0xD5:
             psh16(gt_DE());
             return 16;
@@ -591,6 +838,8 @@ int exec() {
             return c_ret(1);
         case 0xDA:
             return c_jp16(gt_flg(FLG_C));
+        case 0xDC:
+            return c_call(gt_flg(FLG_C));
         case 0xDE:
             return c_sbc(rd8());
         case 0xDF:
@@ -611,6 +860,8 @@ int exec() {
             return c_and(rd8());
         case 0xE7:
             return c_rst(0x0020);
+        case 0xE8:
+            return c_add(rd8());
         case 0xE9:
             PC = gt_HL();
             kp();
@@ -626,7 +877,7 @@ int exec() {
             A = r_mem(0xFF00 + rd8());
             return 12;
         case 0xF1:
-            st_AF(pop16());
+            st_AF(pop16() & 0xFFF0);
             return 12;
         case 0xF2:
             A = r_mem(0xFF00 + C);
@@ -662,8 +913,8 @@ int exec() {
             return 4;
         case 0xFE:
             return c_cp(rd8());
-        // case 0xFF:
-        //     return c_rst(0x0038);
+        case 0xFF:
+            return c_rst(0x0038);
         default:
             printf("UNIMPLEMENTED INSTRUCTION\n");
             p_instr(instr, 0);
