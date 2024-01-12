@@ -30,7 +30,6 @@ int update() {
                 SDL_Delay(5000);
             }
             if (curr == -1) return 1;
-            OP_CNT++;
             PC++;
             scn -= curr;
         }
@@ -53,7 +52,7 @@ int main(int argc, char* argv[]) {
     FILE* boot_rom;
     FILE* rom;
     fopen_s(&boot_rom, "bootrom.rom", "rb");
-    fopen_s(&rom, "02.gb", "rb");
+    fopen_s(&rom, "drmario.gb", "rb");
     fread(mem, 0x8000, 1, rom);
     fread(brom, 0x100, 1, boot_rom);
     while (1) {
@@ -61,6 +60,6 @@ int main(int argc, char* argv[]) {
         if (rndr()) break;
     }
     dbg();
-    printf("DONE %d\n", OP_CNT);
+    printf("DONE\n");
     return 0;
 }
