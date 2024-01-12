@@ -160,6 +160,8 @@ void kp() {
   PC --;
 }
 
+int c_add(byte reg);
+
 int c_adc(byte reg) {
     int cy = 0;
     int hy = 0;
@@ -339,6 +341,8 @@ int c_rst(byte loc) {
   return 16;
 }
 
+int c_sub(byte reg);
+
 int c_sbc(byte reg) {
     int cy = 0;
     int hy = 0;
@@ -421,7 +425,7 @@ void req_intr(int intr) {
 }
 
 void do_intr(int intr) {
-    if (!HALT || IME) {
+    if (IME) {
         switch (-1) { // intr
         case 0:
             printf("VBLANK INTERRUPT\n");
@@ -448,7 +452,6 @@ void do_intr(int intr) {
 }
 
 int chck_intr() {
-    if (!IME) return 0;
     for (int i = 0; i <= 4; i++) {
         if (gt_bt(IF, i) && gt_bt(IE, i)) {
             do_intr(i);
@@ -533,7 +536,7 @@ int chck_in() {
         if (in[BTN_START]) cl_bt(&in_reg, 3);
     }
     int intr = 0;
-    for (int i = 0; i < 8; i++) if ((JOYP >> i) & 1 && !((in_reg >> i) & 1)) intr = 1;
+    for (int i = 0; i < 4; i++) if ((JOYP >> i) & 1 && !((in_reg >> i) & 1)) intr = 1;
     if (intr) req_intr(4);
     w_mem(0xFF00, in_reg);
     return 0;
