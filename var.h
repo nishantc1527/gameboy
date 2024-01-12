@@ -71,13 +71,9 @@ int dma;
 
 SDL_Window* win;
 SDL_Renderer* rnd;
-
 SDL_Event evt;
 
-int FCT = 5;
-int FCT_DAT = 3;
-dbyte STP = 0xFFFF;
-int OP_CNT = 0;
+int FCT = 2;
 
 void init_reg() {
 	PC = 0;
