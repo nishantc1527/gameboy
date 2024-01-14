@@ -30,7 +30,7 @@ int exec() {
         case 0x05:
             return c_rlc(&L);
         case 0x06:
-            return c_rlc(&mem[gt_HL()]);
+            return c_rlc_mem(gt_HL());
         case 0x07:
             return c_rlc(&A);
         case 0x08:
@@ -46,7 +46,7 @@ int exec() {
         case 0x0D:
             return c_rrc(&L);
         case 0x0E:
-            return c_rrc(&mem[gt_HL()]);
+            return c_rrc_mem(gt_HL());
         case 0x0F:
             return c_rrc(&A);
         case 0x10:
@@ -62,7 +62,7 @@ int exec() {
         case 0x15:
             return c_rl(&L);
         case 0x16:
-            return c_rl(&mem[gt_HL()]);
+            return c_rl_mem(gt_HL());
         case 0x17:
             return c_rl(&A);
         case 0x18:
@@ -78,7 +78,7 @@ int exec() {
         case 0x1D:
             return c_rr(&L);
         case 0x1E:
-            return c_rr(&mem[gt_HL()]);
+            return c_rr_mem(gt_HL());
         case 0x1F:
             return c_rr(&A);
         case 0x20:
@@ -94,7 +94,7 @@ int exec() {
         case 0x25:
             return c_sla(&L);
         case 0x26:
-            return c_sla(&mem[gt_HL()]);
+            return c_sla_mem(gt_HL());
         case 0x27:
             return c_sla(&A);
         case 0x28:
@@ -110,7 +110,7 @@ int exec() {
         case 0x2D:
             return c_sra(&L);
         case 0x2E:
-            return c_sra(&mem[gt_HL()]);
+            return c_sra_mem(gt_HL());
         case 0x2F:
             return c_sra(&A);
         case 0x30:
@@ -126,7 +126,7 @@ int exec() {
         case 0x35:
             return c_swp(&L);
         case 0x36:
-            return c_swp(&mem[gt_HL()]);
+            return c_swp_mem(gt_HL());
         case 0x37:
             return c_swp(&A);
         case 0x38:
@@ -142,7 +142,7 @@ int exec() {
         case 0x3D:
             return c_srl(&L);
         case 0x3E:
-            return c_srl(&mem[gt_HL()]);
+            return c_srl_mem(gt_HL());
         case 0x3F:
             return c_srl(&A);
         case 0x40:
@@ -286,7 +286,7 @@ int exec() {
         case 0x85:
             return c_res(&L, 0);
         case 0x86:
-            return c_res(&mem[gt_HL()], 0);
+            return c_res_mem(gt_HL(), 0);
         case 0x87:
             return c_res(&A, 0);
         case 0x88:
@@ -302,7 +302,7 @@ int exec() {
         case 0x8D:
             return c_res(&L, 1);
         case 0x8E:
-            return c_res(&mem[gt_HL()], 1);
+            return c_res_mem(gt_HL(), 1);
         case 0x8F:
             return c_res(&A, 1);
         case 0x90:
@@ -318,7 +318,7 @@ int exec() {
         case 0x95:
             return c_res(&L, 2);
         case 0x96:
-            return c_res(&mem[gt_HL()], 2);
+            return c_res_mem(gt_HL(), 2);
         case 0x97:
             return c_res(&A, 2);
         case 0x98:
@@ -334,7 +334,7 @@ int exec() {
         case 0x9D:
             return c_res(&L, 3);
         case 0x9E:
-            return c_res(&mem[gt_HL()], 3);
+            return c_res_mem(gt_HL(), 3);
         case 0x9F:
             return c_res(&A, 3);
         case 0xA0:
@@ -350,7 +350,7 @@ int exec() {
         case 0xA5:
             return c_res(&L, 4);
         case 0xA6:
-            return c_res(&mem[gt_HL()], 4);
+            return c_res_mem(gt_HL(), 4);
         case 0xA7:
             return c_res(&A, 4);
         case 0xA8:
@@ -366,7 +366,7 @@ int exec() {
         case 0xAD:
             return c_res(&L, 5);
         case 0xAE:
-            return c_res(&mem[gt_HL()], 5);
+            return c_res_mem(gt_HL(), 5);
         case 0xAF:
             return c_res(&A, 5);
         case 0xB0:
@@ -382,7 +382,7 @@ int exec() {
         case 0xB5:
             return c_res(&L, 6);
         case 0xB6:
-            return c_res(&mem[gt_HL()], 6);
+            return c_res_mem(gt_HL(), 6);
         case 0xB7:
             return c_res(&A, 6);
         case 0xB8:
@@ -398,7 +398,7 @@ int exec() {
         case 0xBD:
             return c_res(&L, 7);
         case 0xBE:
-            return c_res(&mem[gt_HL()], 7);
+            return c_res_mem(gt_HL(), 7);
         case 0xBF:
             return c_res(&A, 7);
         case 0xC0:
@@ -414,7 +414,7 @@ int exec() {
         case 0xC5:
             return c_set(&L, 0);
         case 0xC6:
-            return c_set(&mem[gt_HL()], 0);
+            return c_set_mem(gt_HL(), 0);
         case 0xC7:
             return c_set(&A, 0);
         case 0xC8:
@@ -430,7 +430,7 @@ int exec() {
         case 0xCD:
             return c_set(&L, 1);
         case 0xCE:
-            return c_set(&mem[gt_HL()], 1);
+            return c_set_mem(gt_HL(), 1);
         case 0xCF:
             return c_set(&A, 1);
         case 0xD0:
@@ -446,7 +446,7 @@ int exec() {
         case 0xD5:
             return c_set(&L, 2);
         case 0xD6:
-            return c_set(&mem[gt_HL()], 2);
+            return c_set_mem(gt_HL(), 2);
         case 0xD7:
             return c_set(&A, 2);
         case 0xD8:
@@ -462,7 +462,7 @@ int exec() {
         case 0xDD:
             return c_set(&L, 3);
         case 0xDE:
-            return c_set(&mem[gt_HL()], 3);
+            return c_set_mem(gt_HL(), 3);
         case 0xDF:
             return c_set(&A, 3);
         case 0xE0:
@@ -478,7 +478,7 @@ int exec() {
         case 0xE5:
             return c_set(&L, 4);
         case 0xE6:
-            return c_set(&mem[gt_HL()], 4);
+            return c_set_mem(gt_HL(), 4);
         case 0xE7:
             return c_set(&A, 4);
         case 0xE8:
@@ -494,7 +494,7 @@ int exec() {
         case 0xED:
             return c_set(&L, 5);
         case 0xEE:
-            return c_set(&mem[gt_HL()], 5);
+            return c_set_mem(gt_HL(), 5);
         case 0xEF:
             return c_set(&A, 5);
         case 0xF0:
@@ -510,7 +510,7 @@ int exec() {
         case 0xF5:
             return c_set(&L, 6);
         case 0xF6:
-            return c_set(&mem[gt_HL()], 6);
+            return c_set_mem(gt_HL(), 6);
         case 0xF7:
             return c_set(&A, 6);
         case 0xF8:
@@ -526,7 +526,7 @@ int exec() {
         case 0xFD:
             return c_set(&L, 7);
         case 0xFE:
-            return c_set(&mem[gt_HL()], 7);
+            return c_set_mem(gt_HL(), 7);
         case 0xFF:
             return c_set(&A, 7);
         default:
@@ -715,9 +715,9 @@ int exec() {
             ++SP;
             return 8;
         case 0x34:
-            return c_inc(&mem[gt_HL()]);
+            return c_inc_mem(gt_HL());
         case 0x35:
-            return c_dec(&mem[gt_HL()]);
+            return c_dec_mem(gt_HL());
         case 0x36:
             w_mem(gt_HL(), rd8());
             return 12;
@@ -1153,7 +1153,7 @@ int exec() {
             return c_and(rd8());
         case 0xE7:
             return c_rst(0x0020);
-        case 0xE8: // TODO half carry + carry flag
+        case 0xE8:
         {
             byte add = rd8();
             st_h_add((byte)SP, add);
