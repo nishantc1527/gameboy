@@ -26,27 +26,23 @@ void upd_stat() {
     else mode = 0;
     if (LY >= 144) mode = 1;
     if (mode != curr && mode == 1) {
-        req_intr(0);
-        if (gt_bt(stat, 4)) req_intr(1);
+        req_intr(INTR_VBLANK);
+        if (gt_bt(stat, 4)) req_intr(INTR_LCD);
     }
-    if ((mode == 0 && curr != 0 && gt_bt(stat, 3)) || (mode == 2 && curr != 2 && gt_bt(stat, 5))) {
-        req_intr(0);
-    }
+    if ((mode == 0 && curr != 0 && gt_bt(stat, 3)) || (mode == 2 && curr != 2 && gt_bt(stat, 5))) req_intr(INTR_LCD);
     stat &= ~(0b11);
     stat |= mode;
-
     curr = gt_bt(stat, 2);
-
     if (LY == LYC) st_bt(&stat, 2);
     else cl_bt(&stat, 2);
-    if (gt_bt(stat, 2) != curr && gt_bt(stat, 2) && gt_bt(stat, 6)) req_intr(1);
+    if (gt_bt(stat, 2) != curr && gt_bt(stat, 2) && gt_bt(stat, 6)) req_intr(INTR_LCD);
     w_mem(0xFF41, stat);
 }
 
 void scnln() {
-    if (gt_bt(LCDC, 7)) {
+    if (gt_bt(LCDC, 7)) { // PPU Enable
         if (LY < SCRN_HEIGHT) {
-            if (gt_bt(LCDC, 0)) {
+            if (gt_bt(LCDC, 0)) { // Background & Window Enable
                 byte ly = LY;
                 int dat_area = gt_bt(LCDC, 4);
                 int mp_area = gt_bt(LCDC, 3);
@@ -63,7 +59,7 @@ void scnln() {
                     if (mp_area == 0) idx += 0x9800;
                     else idx += 0x9C00;
                     idx = r_mem(idx);
-                    if (dat_area == 0) idx = (signed char) idx + 128;
+                    if (dat_area == 0) idx = (signed char)idx + 128;
                     idx *= 16;
                     if (dat_area == 0) idx += 0x8800;
                     else idx += 0x8000;
@@ -107,31 +103,52 @@ void scnln() {
             }
             else {
                 for (int x = 0; x < SCRN_WIDTH; x++) {
-                    dsp[LY][x] = gt_clr(BGP, 0);
+                    dsp[LY][x] = CLR_WHT;
                 }
             }
-            if (gt_bt(LCDC, 1)) {
+            if (gt_bt(LCDC, 1)) { // Object Enable
                 byte ly = LY;
                 byte sz = gt_bt(LCDC, 2);
                 int cnt = 0;
-                int vis[1000];
-                memset(vis, 0, sizeof(vis));
+                dbyte obj[10];
+                memset(obj, 0, sizeof(obj));
                 for (dbyte mem = 0xFE00; mem <= 0xFE9F && cnt < 10; mem += 4) {
-                    signed char y   = r_mem(mem + 0);
-                    signed char x   = r_mem(mem + 1);
-                    dbyte idx = r_mem(mem + 2);
-                    byte flg = r_mem(mem + 3);
+                    signed char y = r_mem(mem + 0);
                     y -= 16;
-                    x -= 8;
                     if (ly < y) continue;
                     if (sz) {
-                        if (ly >= y + 16) continue;
-                        else idx &= 0xFE;
+                        if (ly >= y + 16) {
+                            continue;
+                        }
                     }
                     else if (ly >= y + 8) continue;
-                    if (vis[x]) continue;
-                    vis[x] = 1;
-                    cnt++;
+                    obj[cnt++] = mem;
+                }
+                dbyte max = 0x100;
+                while(1) {
+                    int midx = -1;
+                    for (int i = 0; i < 10; i++) {
+                        byte x = r_mem(obj[i] + 1);
+                        if (obj[i] && x < max) {
+                            if (midx == -1) midx = i;
+                            else {
+                                byte prev = r_mem(obj[midx] + 1);
+                                if (x > prev) midx = i;
+                                if (x == prev && obj[i] < obj[midx]) midx = i;
+                            }
+                        }
+                    }
+                    if (midx == -1) break;
+                    dbyte mem = obj[midx];
+                    obj[midx] = 0;
+                    signed char y = r_mem(mem + 0);
+                    signed char x = r_mem(mem + 1);
+                    dbyte idx = r_mem(mem + 2);
+                    byte  flg = r_mem(mem + 3);
+                    max = x;
+                    y -= 16;
+                    x -= 8;
+                    if (sz) idx &= 0xFE;
                     idx *= 16;
                     idx += 0x8000;
                     byte flipx = gt_bt(flg, 5);
