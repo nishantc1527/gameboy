@@ -10,7 +10,6 @@
 int update() {
     scn = 456;
     frame = 0;
-    dma = 0;
     int debug = 0;
 
     while (!frame) {
