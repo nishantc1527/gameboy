@@ -80,12 +80,13 @@ void st_c_sub(byte var1, byte var2) {
 }
 
 byte r_mem(dbyte loc) {
+    if (loc >= 0xE000 && loc <= 0xFDFF) loc -= 0x200;
     if (mem[0xFF50] || loc >= 0x100) return mem[loc];
     else return brom[loc];
 }
 
 void w_mem(dbyte loc, byte val) {
-    if (loc == 0xFF46) dma = 1;
+    if (loc >= 0xE000 && loc <= 0xFDFF) loc -= 0x200;
     if (loc == 0xFF04) val = 0;
     mem[loc] = val;
 }
@@ -240,12 +241,32 @@ int c_dec(byte* reg) {
   return 4;
 }
 
+int c_dec_mem(dbyte loc) {
+    byte reg = r_mem(loc);
+    st_h_sub(reg, 1);
+    reg = reg - 1;
+    w_mem(loc, reg);
+    st_z(reg);
+    st_flg(FLG_N);
+    return 4;
+}
+
 int c_inc(byte* reg) {
   st_h_add(*reg, 1);
   *reg = *reg + 1;
   st_z(*reg);
   cl_flg(FLG_N);
   return 4;
+}
+
+int c_inc_mem(dbyte loc) {
+    byte reg = r_mem(loc);
+    st_h_add(reg, 1);
+    reg = reg + 1;
+    w_mem(loc, reg);
+    st_z(reg);
+    cl_flg(FLG_N);
+    return 4;
 }
 
 int c_jp8(int flg) {
@@ -283,6 +304,13 @@ int c_res(byte* reg, int bit) {
   return 8;
 }
 
+int c_res_mem(dbyte loc, int bit) {
+    byte reg = r_mem(loc);
+    reg = reg & ~(1 << bit);
+    w_mem(loc, reg);
+    return 8;
+}
+
 int c_ret(int flg) {
     if (flg) {
         PC = pop16();
@@ -304,11 +332,35 @@ int c_rr(byte* reg) {
   return 8;
 }
 
+int c_rr_mem(dbyte loc) {
+    byte reg = r_mem(loc);
+    int carry = gt_flg(FLG_C);
+    st_c_rr(reg);
+    reg = (reg >> 1) | (carry << 7);
+    w_mem(loc, reg);
+    st_z(reg);
+    cl_flg(FLG_N);
+    cl_flg(FLG_H);
+    return 8;
+}
+
 int c_rrc(byte* reg) {
     int carry = *reg & 1;
     st_c_rr(*reg);
     *reg = (*reg >> 1) | (carry << 7);
     st_z(*reg);
+    cl_flg(FLG_N);
+    cl_flg(FLG_H);
+    return 4;
+}
+
+int c_rrc_mem(dbyte loc) {
+    byte reg = r_mem(loc);
+    int carry = reg & 1;
+    st_c_rr(reg);
+    reg = (reg >> 1) | (carry << 7);
+    w_mem(loc, reg);
+    st_z(reg);
     cl_flg(FLG_N);
     cl_flg(FLG_H);
     return 4;
@@ -324,11 +376,35 @@ int c_rl(byte* reg) {
   return 8;
 }
 
+int c_rl_mem(dbyte loc) {
+    byte reg = r_mem(loc);
+    int carry = gt_flg(FLG_C);
+    st_c_rl(reg);
+    reg = (reg << 1) | carry;
+    w_mem(loc, reg);
+    st_z(reg);
+    cl_flg(FLG_N);
+    cl_flg(FLG_H);
+    return 8;
+}
+
 int c_rlc(byte* reg) {
     int carry = (*reg >> 7) & 1;
     st_c_rl(*reg);
     *reg = (*reg << 1) | carry;
     st_z(*reg);
+    cl_flg(FLG_N);
+    cl_flg(FLG_H);
+    return 8;
+}
+
+int c_rlc_mem(dbyte loc) {
+    byte reg = r_mem(loc);
+    int carry = (reg >> 7) & 1;
+    st_c_rl(reg);
+    reg = (reg << 1) | carry;
+    w_mem(loc, reg);
+    st_z(reg);
     cl_flg(FLG_N);
     cl_flg(FLG_H);
     return 8;
@@ -369,9 +445,28 @@ int c_srl(byte* reg) {
   return 8;
 }
 
+int c_srl_mem(dbyte loc) {
+    byte reg = r_mem(loc);
+    if (reg & 1) st_flg(FLG_C);
+    else cl_flg(FLG_C);
+    reg = reg >> 1;
+    w_mem(loc, reg);
+    st_z(reg);
+    cl_flg(FLG_N);
+    cl_flg(FLG_H);
+    return 8;
+}
+
 int c_set(byte* reg, int bit) {
   st_bt(reg, bit);
   return 16;
+}
+
+int c_set_mem(dbyte loc, int bit) {
+    byte reg = r_mem(loc);
+    st_bt(&reg, bit);
+    w_mem(loc, reg);
+    return 16;
 }
 
 int c_sla(byte* reg) {
@@ -383,11 +478,34 @@ int c_sla(byte* reg) {
     return 8;
 }
 
+int c_sla_mem(dbyte loc) {
+    byte reg = r_mem(loc);
+    st_c_rl(reg);
+    reg = reg << 1;
+    w_mem(loc, reg);
+    st_z(reg);
+    cl_flg(FLG_N);
+    cl_flg(FLG_H);
+    return 8;
+}
+
 int c_sra(byte* reg) {
     st_c_rr(*reg);
     int bt = (*reg >> 7) & 1;
     *reg = (*reg >> 1) | (bt << 7);
     st_z(*reg);
+    cl_flg(FLG_N);
+    cl_flg(FLG_H);
+    return 8;
+}
+
+int c_sra_mem(dbyte loc) {
+    byte reg = r_mem(loc);
+    st_c_rr(reg);
+    int bt = (reg >> 7) & 1;
+    reg = (reg >> 1) | (bt << 7);
+    w_mem(loc, reg);
+    st_z(reg);
     cl_flg(FLG_N);
     cl_flg(FLG_H);
     return 8;
@@ -409,6 +527,17 @@ int c_swp(byte* reg) {
   cl_flg(FLG_H);
   cl_flg(FLG_C);
   return 8;
+}
+
+int c_swp_mem(dbyte loc) {
+    byte reg = r_mem(loc);
+    reg = (reg >> 4) | (reg << 4);
+    w_mem(loc, reg);
+    st_z(reg);
+    cl_flg(FLG_N);
+    cl_flg(FLG_H);
+    cl_flg(FLG_C);
+    return 8;
 }
 
 int c_xor(int reg) {
@@ -543,12 +672,12 @@ int chck_in() {
 }
 
 void chck_dma() {
-    if (dma) {
-        dma = 0;
+    if (DMA >= 0x00 && DMA <= 0xDF) {
         byte src = DMA * 0x100;
-        for (int t = 0; t < 0xA0; t++) {
+        for (dbyte t = 0; t < 0xA0; t++) {
             w_mem(0xFE00 + t, r_mem(src + t));
         }
+        w_mem(0xFF46, 0xFF);
     }
 }
 
