@@ -54,6 +54,12 @@
 #define BTN_LEFT    6
 #define BTN_RIGHT   7
 
+#define INTR_VBLANK 0
+#define INTR_LCD    1
+#define INTR_TIMER  2
+#define INTR_SERIAL 3
+#define INTR_JOYPAD 4
+
 typedef unsigned char byte;
 typedef unsigned short dbyte;
 
@@ -67,7 +73,6 @@ byte IME, WIN_CNT, HALT, STOP;
 int scn, frame;
 int in[8];
 dbyte intr_loc[] = { 0x0040, 0x0048, 0x0050, 0x0058, 0x0060 };
-int dma;
 
 SDL_Window* win;
 SDL_Renderer* rnd;
