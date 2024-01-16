@@ -7,7 +7,7 @@
 #include "disassembler.h"
 
 int exec() {
-    int dis = 0;
+    int dis = 1;
     byte instr = r_mem(PC);
     if (PC >= 0x8000 && 0) { // Unset for debugging
         printf("PROGRAM COUNTER PAST CARTRIDGE SPACE\n");
@@ -918,6 +918,7 @@ int exec() {
             return 8;
         case 0x76:
             HALT = 1;
+            // printf("IE: $%02X\nLCD Stat: $%02X\nLCDC: $%02X\n", IE, LCD_STAT, LCDC);
             return 4;
         case 0x77:
             w_mem(gt_HL(), A);
