@@ -13,7 +13,7 @@ void init_dsp() {
         printf("ERROR CREATING WINDOW: %s\n", SDL_GetError());
         exit(1);
     }
-    win = SDL_CreateWindow("GAMEBOY", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 160 * FCT, 144 * FCT, 0);
+    win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 160 * FCT, 144 * FCT, 0);
     rnd = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
 }
 
@@ -25,11 +25,14 @@ void upd_stat() {
     else if (scn >= 456 - 80 - 168) mode = 3;
     else mode = 0;
     if (LY >= 144) mode = 1;
-    if (mode != curr && mode == 1) {
-        req_intr(INTR_VBLANK);
-        if (gt_bt(stat, 4)) req_intr(INTR_LCD);
+    if (mode != curr) {
+        if(mode == 1) req_intr(INTR_VBLANK);
+        int req = 0;
+        if (mode == 0 && gt_bt(stat, 3)) req = 1;
+        if (mode == 1 && gt_bt(stat, 4)) req = 1;
+        if (mode == 2 && gt_bt(stat, 5)) req = 1;
+        if (req) req_intr(INTR_LCD);
     }
-    if ((mode == 0 && curr != 0 && gt_bt(stat, 3)) || (mode == 2 && curr != 2 && gt_bt(stat, 5))) req_intr(INTR_LCD);
     stat &= ~(0b11);
     stat |= mode;
     curr = gt_bt(stat, 2);
@@ -113,7 +116,7 @@ void scnln() {
                 dbyte obj[10];
                 memset(obj, 0, sizeof(obj));
                 for (dbyte mem = 0xFE00; mem <= 0xFE9F && cnt < 10; mem += 4) {
-                    signed char y = r_mem(mem + 0);
+                    int y = r_mem(mem + 0);
                     y -= 16;
                     if (ly < y) continue;
                     if (sz) {
@@ -124,28 +127,30 @@ void scnln() {
                     else if (ly >= y + 8) continue;
                     obj[cnt++] = mem;
                 }
-                dbyte max = 0x100;
-                while(1) {
+                dbyte maxx = 0x0100;
+                dbyte maxm = 0xFFFF;
+                while (cnt --) {
                     int midx = -1;
-                    for (int i = 0; i < 10; i++) {
+                    for (int i = 0; i < 10; i++) if(obj[i]) {
                         byte x = r_mem(obj[i] + 1);
-                        if (obj[i] && x < max) {
+                        if (x < maxx || (x == maxx && obj[i] < maxm)) {
                             if (midx == -1) midx = i;
                             else {
                                 byte prev = r_mem(obj[midx] + 1);
                                 if (x > prev) midx = i;
-                                if (x == prev && obj[i] < obj[midx]) midx = i;
+                                if (x == prev && obj[i] > obj[midx]) midx = i;
                             }
                         }
                     }
                     if (midx == -1) break;
                     dbyte mem = obj[midx];
                     obj[midx] = 0;
-                    signed char y = r_mem(mem + 0);
-                    signed char x = r_mem(mem + 1);
+                    maxx = r_mem(mem + 1);
+                    maxm = mem;
+                    int y = r_mem(mem + 0);
+                    int x = r_mem(mem + 1);
                     dbyte idx = r_mem(mem + 2);
                     byte  flg = r_mem(mem + 3);
-                    max = x;
                     y -= 16;
                     x -= 8;
                     if (sz) idx &= 0xFE;
@@ -166,7 +171,7 @@ void scnln() {
                     byte pal;
                     if (gt_bt(flg, 4)) pal = OBP1;
                     else pal = OBP0;
-                    for (signed char x0 = x; x0 < x + 8; x0++) {
+                    for (int x0 = x; x0 < x + 8; x0++) {
                         if (x0 < 0) continue;
                         byte posx = 7 - (x0 - x);
                         if (flipx) posx = 7 - posx;
