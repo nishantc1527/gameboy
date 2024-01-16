@@ -5,36 +5,36 @@
 #include "var.h"
 
 int gt_clr(byte pal, int val) {
-  return (pal >> (val << 1)) & 0b11;
+    return (pal >> (val << 1)) & 0b11;
 }
 
 byte gt_bt(byte var, byte bt) {
-  return (var >> bt) & 1;
+    return (var >> bt) & 1;
 }
 
 void st_bt(byte* var, byte bt) {
-  *var |= (1 << bt);
+    *var |= (1 << bt);
 }
 
 void cl_bt(byte* var, byte bt) {
-  *var &= ~(1 << bt);
+    *var &= ~(1 << bt);
 }
 
 byte gt_flg(byte flg) {
-  return gt_bt(F, flg);
+    return gt_bt(F, flg);
 }
 
 void st_flg(byte flg) {
-  st_bt(&F, flg);
+    st_bt(&F, flg);
 }
 
 void cl_flg(byte flg) {
-  cl_bt(&F, flg);
+    cl_bt(&F, flg);
 }
 
 void st_z(byte var) {
-  if(var == 0) st_flg(FLG_Z);
-  else cl_flg(FLG_Z);
+    if (var == 0) st_flg(FLG_Z);
+    else cl_flg(FLG_Z);
 }
 
 void st_h_add(byte var1, byte var2) {
@@ -63,9 +63,9 @@ void st_c_rr(byte var) {
 }
 
 void st_c_add(byte var1, byte var2) {
-  dbyte res = (dbyte) var1 + (dbyte) var2;
-  if(res > 0xFF) st_flg(FLG_C);
-  else cl_flg(FLG_C);
+    dbyte res = (dbyte)var1 + (dbyte)var2;
+    if (res > 0xFF) st_flg(FLG_C);
+    else cl_flg(FLG_C);
 }
 
 void st_c_add16(dbyte var1, dbyte var2) {
@@ -86,6 +86,11 @@ byte r_mem(dbyte loc) {
 }
 
 void w_mem(dbyte loc, byte val) {
+    switch (cart_type) {
+    case 0x01:
+        if (loc < 0x4000) return;
+        break;
+    }
     if (loc >= 0xE000 && loc <= 0xFDFF) loc -= 0x200;
     if (loc == 0xFF04) val = 0;
     mem[loc] = val;
@@ -115,50 +120,50 @@ void psh16(dbyte val) {
 }
 
 dbyte pop16() {
-  dbyte val1 = r_mem(SP);
-  dbyte val2 = r_mem(SP + 1);
-  SP += 2;
-  return val1 | (val2 << 8);
+    dbyte val1 = r_mem(SP);
+    dbyte val2 = r_mem(SP + 1);
+    SP += 2;
+    return val1 | (val2 << 8);
 }
 
 dbyte gt_AF() {
-  return (((dbyte) A) << 8) | (dbyte) F;
+    return (((dbyte)A) << 8) | (dbyte)F;
 }
 
 void st_AF(dbyte AF) {
-  A = (byte) (AF >> 8);
-  F = (byte) AF;
+    A = (byte)(AF >> 8);
+    F = (byte)AF;
 }
 
 dbyte gt_BC() {
-  return (((dbyte) B) << 8) | (dbyte) C;
+    return (((dbyte)B) << 8) | (dbyte)C;
 }
 
 void st_BC(dbyte BC) {
-  B = (byte) (BC >> 8);
-  C = (byte) BC;
+    B = (byte)(BC >> 8);
+    C = (byte)BC;
 }
 
 dbyte gt_DE() {
-  return (((dbyte) D) << 8) | (dbyte) E;
+    return (((dbyte)D) << 8) | (dbyte)E;
 }
 
 void st_DE(dbyte DE) {
-  D = (byte) (DE >> 8);
-  E = (byte) DE;
+    D = (byte)(DE >> 8);
+    E = (byte)DE;
 }
 
 dbyte gt_HL() {
-  return (((dbyte) H) << 8) | (dbyte) L;
+    return (((dbyte)H) << 8) | (dbyte)L;
 }
 
 void st_HL(dbyte HL) {
-  H = (byte) (HL >> 8);
-  L = (byte) HL;
+    H = (byte)(HL >> 8);
+    L = (byte)HL;
 }
 
 void kp() {
-  PC --;
+    PC--;
 }
 
 int c_add(byte reg);
@@ -180,29 +185,29 @@ int c_adc(byte reg) {
 }
 
 int c_add(byte reg) {
-  st_h_add(A, reg);
-  st_c_add(A, reg);
-  A += reg;
-  st_z(A);
-  cl_flg(FLG_N);
-  return 4;
+    st_h_add(A, reg);
+    st_c_add(A, reg);
+    A += reg;
+    st_z(A);
+    cl_flg(FLG_N);
+    return 4;
 }
 
 int c_and(byte reg) {
-  A &= reg;
-  st_z(A);
-  cl_flg(FLG_N);
-  st_flg(FLG_H);
-  cl_flg(FLG_C);
-  return 8;
+    A &= reg;
+    st_z(A);
+    cl_flg(FLG_N);
+    st_flg(FLG_H);
+    cl_flg(FLG_C);
+    return 8;
 }
 
 int c_bit(byte reg, int bit) {
-  if(gt_bt(reg, bit)) cl_flg(FLG_Z);
-  else st_flg(FLG_Z);
-  cl_flg(FLG_N);
-  st_flg(FLG_H);
-  return 8;
+    if (gt_bt(reg, bit)) cl_flg(FLG_Z);
+    else st_flg(FLG_Z);
+    cl_flg(FLG_N);
+    st_flg(FLG_H);
+    return 8;
 }
 
 int c_call(int flg) {
@@ -227,18 +232,18 @@ int c_cp(byte reg) {
 }
 
 int c_cpl(byte* reg) {
-  *reg = ~*reg;
-  st_flg(FLG_N);
-  st_flg(FLG_H);
-  return 4;
+    *reg = ~*reg;
+    st_flg(FLG_N);
+    st_flg(FLG_H);
+    return 4;
 }
 
 int c_dec(byte* reg) {
-  st_h_sub(*reg, 1);
-  *reg = *reg - 1;
-  st_z(*reg);
-  st_flg(FLG_N);
-  return 4;
+    st_h_sub(*reg, 1);
+    *reg = *reg - 1;
+    st_z(*reg);
+    st_flg(FLG_N);
+    return 4;
 }
 
 int c_dec_mem(dbyte loc) {
@@ -252,11 +257,11 @@ int c_dec_mem(dbyte loc) {
 }
 
 int c_inc(byte* reg) {
-  st_h_add(*reg, 1);
-  *reg = *reg + 1;
-  st_z(*reg);
-  cl_flg(FLG_N);
-  return 4;
+    st_h_add(*reg, 1);
+    *reg = *reg + 1;
+    st_z(*reg);
+    cl_flg(FLG_N);
+    return 4;
 }
 
 int c_inc_mem(dbyte loc) {
@@ -291,17 +296,17 @@ int c_jp16(int flg) {
 }
 
 int c_or(byte reg) {
-  A |= reg;
-  st_z(A);
-  cl_flg(FLG_N);
-  cl_flg(FLG_H);
-  cl_flg(FLG_C);
-  return 4;
+    A |= reg;
+    st_z(A);
+    cl_flg(FLG_N);
+    cl_flg(FLG_H);
+    cl_flg(FLG_C);
+    return 4;
 }
 
 int c_res(byte* reg, int bit) {
-  *reg = *reg & ~(1 << bit);
-  return 8;
+    *reg = *reg & ~(1 << bit);
+    return 8;
 }
 
 int c_res_mem(dbyte loc, int bit) {
@@ -323,13 +328,13 @@ int c_ret(int flg) {
 }
 
 int c_rr(byte* reg) {
-  int carry = gt_flg(FLG_C);
-  st_c_rr(*reg);
-  *reg = (*reg >> 1) | (carry << 7);
-  st_z(*reg);
-  cl_flg(FLG_N);
-  cl_flg(FLG_H);
-  return 8;
+    int carry = gt_flg(FLG_C);
+    st_c_rr(*reg);
+    *reg = (*reg >> 1) | (carry << 7);
+    st_z(*reg);
+    cl_flg(FLG_N);
+    cl_flg(FLG_H);
+    return 8;
 }
 
 int c_rr_mem(dbyte loc) {
@@ -367,13 +372,13 @@ int c_rrc_mem(dbyte loc) {
 }
 
 int c_rl(byte* reg) {
-  int carry = gt_flg(FLG_C);
-  st_c_rl(*reg);
-  *reg = (*reg << 1) | carry;
-  st_z(*reg);
-  cl_flg(FLG_N);
-  cl_flg(FLG_H);
-  return 8;
+    int carry = gt_flg(FLG_C);
+    st_c_rl(*reg);
+    *reg = (*reg << 1) | carry;
+    st_z(*reg);
+    cl_flg(FLG_N);
+    cl_flg(FLG_H);
+    return 8;
 }
 
 int c_rl_mem(dbyte loc) {
@@ -411,10 +416,10 @@ int c_rlc_mem(dbyte loc) {
 }
 
 int c_rst(byte loc) {
-  psh16(PC + 1);
-  PC = loc;
-  kp();
-  return 16;
+    psh16(PC + 1);
+    PC = loc;
+    kp();
+    return 16;
 }
 
 int c_sub(byte reg);
@@ -436,13 +441,13 @@ int c_sbc(byte reg) {
 }
 
 int c_srl(byte* reg) {
-  if(*reg & 1) st_flg(FLG_C);
-  else cl_flg(FLG_C);
-  *reg = *reg >> 1;
-  st_z(*reg);
-  cl_flg(FLG_N);
-  cl_flg(FLG_H);
-  return 8;
+    if (*reg & 1) st_flg(FLG_C);
+    else cl_flg(FLG_C);
+    *reg = *reg >> 1;
+    st_z(*reg);
+    cl_flg(FLG_N);
+    cl_flg(FLG_H);
+    return 8;
 }
 
 int c_srl_mem(dbyte loc) {
@@ -458,8 +463,8 @@ int c_srl_mem(dbyte loc) {
 }
 
 int c_set(byte* reg, int bit) {
-  st_bt(reg, bit);
-  return 16;
+    st_bt(reg, bit);
+    return 16;
 }
 
 int c_set_mem(dbyte loc, int bit) {
@@ -521,12 +526,12 @@ int c_sub(byte reg) {
 }
 
 int c_swp(byte* reg) {
-  *reg = (*reg >> 4) | (*reg << 4);
-  st_z(*reg);
-  cl_flg(FLG_N);
-  cl_flg(FLG_H);
-  cl_flg(FLG_C);
-  return 8;
+    *reg = (*reg >> 4) | (*reg << 4);
+    st_z(*reg);
+    cl_flg(FLG_N);
+    cl_flg(FLG_H);
+    cl_flg(FLG_C);
+    return 8;
 }
 
 int c_swp_mem(dbyte loc) {
@@ -541,16 +546,16 @@ int c_swp_mem(dbyte loc) {
 }
 
 int c_xor(int reg) {
-  A ^= reg;
-  st_z(A);
-  cl_flg(FLG_N);
-  cl_flg(FLG_H);
-  cl_flg(FLG_C);
-  return 4;
+    A ^= reg;
+    st_z(A);
+    cl_flg(FLG_N);
+    cl_flg(FLG_H);
+    cl_flg(FLG_C);
+    return 4;
 }
 
 void req_intr(int intr) {
-  st_bt(&mem[0xFF0F], intr);
+    st_bt(&mem[0xFF0F], intr);
 }
 
 void do_intr(int intr) {
