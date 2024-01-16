@@ -1,3 +1,5 @@
+#define _CRT_SECURE_NO_WARNINGS
+
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
@@ -15,7 +17,8 @@ int update() {
     while (!frame) {
         debug = 0;
         switch (-1) { // PC
-        case 0xC31E:
+        case 0x206E:
+        case 0x2078:
             debug = 1;
         }
         if (HALT) {
@@ -39,21 +42,24 @@ int update() {
         upd_stat();
         chck_in();
         chck_dma();
-        upd_tim();
+        // upd_tim();
         chck_intr();
+        // dbg();
     }
     return 0;
 }
 
 int main(int argc, char* argv[]) {
+    // freopen("logfile.txt", "w", stdout);
     init_reg();
-    init_dsp();
     FILE* boot_rom;
     FILE* rom;
     fopen_s(&boot_rom, "bootrom.rom", "rb");
-    fopen_s(&rom, "drmario.gb", "rb");
+    fopen_s(&rom, "kirby.gb", "rb");
     fread(mem, 0x8000, 1, rom);
     fread(brom, 0x100, 1, boot_rom);
+    cart_info();
+    init_dsp();
     while (1) {
         if (update()) break;
         if (rndr()) break;
