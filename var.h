@@ -12,17 +12,17 @@
 #define FLG_N       6
 #define FLG_H       5
 #define FLG_C       4
-				    
+
 #define CLR_WHT     0
 #define CLR_L_GRY   1
 #define CLR_D_GRY   2
 #define CLR_BLK     3
-				    
+
 #define HEX_WHT     0xFF
 #define HEX_L_GREY  0xD3
 #define HEX_R_GREY  0x69
 #define HEX_BLK     0x00
-				    
+
 #define JOYP        r_mem(0xFF00)
 #define SB	        r_mem(0xFF01)
 #define SC          r_mem(0xFF02)
@@ -44,7 +44,7 @@
 #define WY          r_mem(0xFF4A)
 #define WX          r_mem(0xFF4B)
 #define IE          r_mem(0xFFFF)
-				    
+
 #define BTN_A       0
 #define BTN_B       1
 #define BTN_START   2
@@ -74,6 +74,11 @@ int scn, frame;
 int in[8];
 dbyte intr_loc[] = { 0x0040, 0x0048, 0x0050, 0x0058, 0x0060 };
 
+char title[20];
+byte cart_type;
+byte rom_size;
+byte ram_size;
+
 SDL_Window* win;
 SDL_Renderer* rnd;
 SDL_Event evt;
@@ -87,6 +92,24 @@ void init_reg() {
 	STOP = 0;
 	memset(mem, 0, sizeof(mem));
 	memset(dsp, 0, sizeof(dsp));
+}
+
+void cart_info() {
+	memset(title, 0, sizeof(title));
+	dbyte i = 0x0134;
+	for (; i <= 0x0142; i++) {
+		if (!mem[i]) break;
+		title[i - 0x0134] = mem[i];
+	}
+	cart_type = mem[0x0147];
+	rom_size = mem[0x0148];
+	ram_size = mem[0x0149];
+	switch (cart_type) {
+	case 0x01:
+		break;
+	default:
+		printf("UNIMPLEMENTED MAPPER $%02X\n", cart_type);
+	}
 }
 
 #endif
