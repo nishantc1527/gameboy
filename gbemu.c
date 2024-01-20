@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h> // So that memset doesn't give a warning
 #include <SDL.h>
 
 #define SCRN_WIDTH  0xA0
@@ -83,8 +84,8 @@ SDL_Renderer* rnd;
 SDL_Event evt;
 
 int FCT = 4;
-char* rom_name = "drmario.gb";
-int dis = 1;
+char* rom_name = "space.gb";
+int dis = 0;
 
 void init_reg() {
     PC = 0;
@@ -96,13 +97,14 @@ void init_reg() {
     memset(rom, 0, sizeof(rom));
 }
 
-void init_dsp() {
+int init_dsp() {
     if (SDL_Init(SDL_INIT_EVERYTHING)) {
         printf("ERROR CREATING WINDOW: %s\n", SDL_GetError());
-        exit(1);
+        return 1;
     }
     win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 160 * FCT, 144 * FCT, 0);
     rnd = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
+    return 0;
 }
 
 int cart_info() {
@@ -123,6 +125,7 @@ int cart_info() {
         printf("UNIMPLEMENTED MAPPER $%02X\n", cart_type);
         return 1;
     }
+    printf("%02X\n", cart_type);
     switch (rom_size) {
     case 0x00:
         rom_size_bytes = 32;
@@ -159,6 +162,7 @@ void w_mem(dbyte loc, byte val) {
         // printf("big boy $%04X $%02X\n", loc, val);
         switch (cart_type) {
         case 0x00: // You supposed to write or nah? idk
+            // printf("He's tryna cook $%04X $%02X\n", loc, val);
             // rom[loc] = val;
             return;
         case 0x01:
@@ -191,8 +195,7 @@ byte rd8() {
 dbyte rd16() {
     dbyte addr1 = ++PC;
     dbyte addr2 = ++PC;
-    if (r_mem(0xFF50)) return ((dbyte)mem[addr2] << 8) | (dbyte)mem[addr1];
-    else return ((dbyte)brom[addr2] << 8) | (dbyte)brom[addr1];
+    return ((dbyte)r_mem(addr2) << 8) | (dbyte)r_mem(addr1);
 }
 
 void psh16(dbyte val) {
@@ -1588,7 +1591,7 @@ int p_instr(byte instr, byte prfx) {
     return 0;
 }
 
-int exec() {
+int do_instr() {
     byte instr = r_mem(PC);
     if (PC >= 0x8000 && 0) { // Unset for debugging
         printf("PROGRAM COUNTER PAST CARTRIDGE SPACE\n");
@@ -3028,7 +3031,7 @@ int update() {
             scn -= 4;
         }
         else {
-            int curr = exec();
+            int curr = do_instr();
             if (debug) {
                 dbg();
                 SDL_Delay(5000);
@@ -3068,15 +3071,12 @@ int main(int argc, char* argv[]) {
         printf("COULD NOT OPEN ROM\n");
         loop = 0;
     }
-    else fread(mem, 0x8000, 1, rom_file);
+    else fread(mem, 0x8000, 1, rom_file); // TODO why write to memory if just using it for cartridge header
     if (cart_info()) loop = 0;
     fopen_s(&rom_file, rom_name, "rb");
-    if (!rom_file) {
-        printf("COULD NOT OPEN ROM\n");
-        loop = 0;
-    }
+    if (!rom_file);
     else fread(rom, rom_size_bytes, 1, rom_file);
-    if (loop) init_dsp();
+    if (loop && init_dsp()) loop = 0;
     while (loop) {
         if (update()) loop = 0;
         if (rndr()) loop = 0;
