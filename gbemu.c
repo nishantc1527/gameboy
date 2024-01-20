@@ -82,7 +82,9 @@ SDL_Window* win;
 SDL_Renderer* rnd;
 SDL_Event evt;
 
-int FCT = 6;
+int FCT = 4;
+char* rom_name = "drmario.gb";
+int dis = 1;
 
 void init_reg() {
     PC = 0;
@@ -92,6 +94,15 @@ void init_reg() {
     memset(mem, 0, sizeof(mem));
     memset(dsp, 0, sizeof(dsp));
     memset(rom, 0, sizeof(rom));
+}
+
+void init_dsp() {
+    if (SDL_Init(SDL_INIT_EVERYTHING)) {
+        printf("ERROR CREATING WINDOW: %s\n", SDL_GetError());
+        exit(1);
+    }
+    win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 160 * FCT, 144 * FCT, 0);
+    rnd = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
 }
 
 int cart_info() {
@@ -126,6 +137,119 @@ int cart_info() {
     rom_size_bytes *= 0x400;
     rom_bank = 1;
     return 0;
+}
+
+byte r_mem(dbyte loc) {
+    if (!mem[0xFF50] && loc < 0x100) return brom[loc];
+    if (loc < 0x8000) {
+        switch (cart_type) {
+        case 0x00:
+            return rom[loc];
+        case 0x01:
+            if (loc < 0x4000) return rom[loc];
+            else return rom[loc + 0x4000 * rom_bank - 0x4000];
+        }
+    }
+    if (loc >= 0xE000 && loc <= 0xFDFF) loc -= 0x200;
+    return mem[loc];
+}
+
+void w_mem(dbyte loc, byte val) {
+    if (loc < 0x8000) {
+        // printf("big boy $%04X $%02X\n", loc, val);
+        switch (cart_type) {
+        case 0x00: // You supposed to write or nah? idk
+            // rom[loc] = val;
+            return;
+        case 0x01:
+            if (loc < 0x2000) { // TODO Ram enable
+                printf("uh oh 1\n");
+            }
+            else if (loc < 0x4000) {
+                if (val > 0b11) printf("uh oh 2\n");
+                rom_bank = val & 0b11111; // TODO Mask extra bits
+                if (rom_bank == 0) rom_bank++;
+            }
+            else if (loc < 0x6000) { // TODO This stuff
+                printf("uh oh 3\n");
+            }
+            else if (loc < 0x8000) { // TODO This stuff
+                printf("uh oh 4\n");
+            }
+            return;
+        }
+    }
+    if (loc >= 0xE000 && loc <= 0xFDFF) loc -= 0x200;
+    if (loc == 0xFF04) val = 0;
+    mem[loc] = val;
+}
+
+byte rd8() {
+    return r_mem(++PC);
+}
+
+dbyte rd16() {
+    dbyte addr1 = ++PC;
+    dbyte addr2 = ++PC;
+    if (r_mem(0xFF50)) return ((dbyte)mem[addr2] << 8) | (dbyte)mem[addr1];
+    else return ((dbyte)brom[addr2] << 8) | (dbyte)brom[addr1];
+}
+
+void psh16(dbyte val) {
+    byte val1 = (byte)(val >> 8);
+    byte val2 = (byte)val;
+    w_mem(SP - 1, val1);
+    w_mem(SP - 2, val2);
+    SP -= 2;
+}
+
+dbyte pop16() {
+    dbyte val1 = r_mem(SP);
+    dbyte val2 = r_mem(SP + 1);
+    SP += 2;
+    return val1 | (val2 << 8);
+}
+
+dbyte pk16() {
+    dbyte val = pop16();
+    psh16(val);
+    return val;
+}
+
+dbyte gt_AF() {
+    return (((dbyte)A) << 8) | (dbyte)F;
+}
+
+void st_AF(dbyte AF) {
+    A = (byte)(AF >> 8);
+    F = (byte)AF;
+}
+
+dbyte gt_BC() {
+    return (((dbyte)B) << 8) | (dbyte)C;
+}
+
+void st_BC(dbyte BC) {
+    B = (byte)(BC >> 8);
+    C = (byte)BC;
+}
+
+dbyte gt_DE() {
+    return (((dbyte)D) << 8) | (dbyte)E;
+}
+
+void st_DE(dbyte DE) {
+    D = (byte)(DE >> 8);
+    E = (byte)DE;
+}
+
+dbyte gt_HL() {
+    return (((dbyte)H) << 8) | (dbyte)L;
+}
+
+void st_HL(dbyte HL) {
+    H = (byte)(HL >> 8);
+    L = (byte)HL;
 }
 
 int gt_clr(byte pal, int val) {
@@ -203,117 +327,6 @@ void st_c_sub(byte var1, byte var2) {
     else cl_flg(FLG_C);
 }
 
-byte r_mem(dbyte loc) {
-    if (!mem[0xFF50] && loc < 0x100) return brom[loc];
-    if (loc < 0x8000) {
-        switch (cart_type) {
-        case 0x00:
-            return rom[loc];
-        case 0x01:
-            if (loc < 0x4000) return rom[loc];
-            else return rom[loc + 0x4000 * rom_bank - 0x4000];
-        }
-    }
-    if (loc >= 0xE000 && loc <= 0xFDFF) loc -= 0x200;
-    return mem[loc];
-}
-
-void w_mem(dbyte loc, byte val) {
-    if (loc < 0x8000) {
-        printf("big boy $%04X $%02X\n", loc, val);
-        switch (cart_type) {
-        case 0x00:
-            rom[loc] = val;
-            return;
-        case 0x01:
-            if (loc < 0x2000) { // TODO Ram enable
-                printf("uh oh 1\n");
-            }
-            else if (loc < 0x4000) {
-                if (val > 0b11) printf("uh oh 2\n");
-                rom_bank = val & 0b11111; // TODO Mask extra bits
-                if (rom_bank == 0) rom_bank++;
-            }
-            else if (loc < 0x6000) { // TODO This stuff
-                printf("uh oh 3\n");
-            }
-            else if (loc < 0x8000) { // TODO This stuff
-                printf("uh oh 4\n");
-            }
-            return;
-        }
-    }
-    if (loc >= 0xE000 && loc <= 0xFDFF) loc -= 0x200;
-    if (loc == 0xFF04) val = 0;
-    mem[loc] = val;
-}
-
-byte rd8() {
-    return r_mem(++PC);
-}
-
-dbyte rd16() {
-    dbyte addr1 = ++PC;
-    dbyte addr2 = ++PC;
-    if (r_mem(0xFF50)) return ((dbyte)mem[addr2] << 8) | (dbyte)mem[addr1];
-    else return ((dbyte)brom[addr2] << 8) | (dbyte)brom[addr1];
-}
-
-void psh16(dbyte val) {
-    if (val == 0xB702) {
-        printf("HERE\n");
-        SDL_Delay(5000);
-    }
-    byte val1 = (byte)(val >> 8);
-    byte val2 = (byte)val;
-    w_mem(SP - 1, val1);
-    w_mem(SP - 2, val2);
-    SP -= 2;
-}
-
-dbyte pop16() {
-    dbyte val1 = r_mem(SP);
-    dbyte val2 = r_mem(SP + 1);
-    SP += 2;
-    return val1 | (val2 << 8);
-}
-
-dbyte gt_AF() {
-    return (((dbyte)A) << 8) | (dbyte)F;
-}
-
-void st_AF(dbyte AF) {
-    A = (byte)(AF >> 8);
-    F = (byte)AF;
-}
-
-dbyte gt_BC() {
-    return (((dbyte)B) << 8) | (dbyte)C;
-}
-
-void st_BC(dbyte BC) {
-    B = (byte)(BC >> 8);
-    C = (byte)BC;
-}
-
-dbyte gt_DE() {
-    return (((dbyte)D) << 8) | (dbyte)E;
-}
-
-void st_DE(dbyte DE) {
-    D = (byte)(DE >> 8);
-    E = (byte)DE;
-}
-
-dbyte gt_HL() {
-    return (((dbyte)H) << 8) | (dbyte)L;
-}
-
-void st_HL(dbyte HL) {
-    H = (byte)(HL >> 8);
-    L = (byte)HL;
-}
-
 void kp() {
     PC--;
 }
@@ -365,6 +378,7 @@ int c_bit(byte reg, int bit) {
 int c_call(int flg) {
     if (flg) {
         psh16(PC + 3);
+        // printf("PUSHING $%04X\n", PC + 3);
         PC = rd16();
         kp();
         return 24;
@@ -706,6 +720,10 @@ int c_xor(int reg) {
     return 4;
 }
 
+void dbg() {
+    printf("{\n\tAF: $%04X\n\tBC: $%04X\n\tDE: $%04X\n\tHL: $%04X\n\tSP: $%04X\n\tPC: $%04X\n\tSTACK PEEK: $%04X\n\tZERO FLAG: %d\n\tSUBTRACTION FLAG: %d\n\tHALF CARRY FLAG: %d\n\tCARRY FLAG: %d\n}\n", gt_AF(), gt_BC(), gt_DE(), gt_HL(), SP, PC, pk16(), gt_flg(FLG_Z), gt_flg(FLG_N), gt_flg(FLG_H), gt_flg(FLG_C));
+}
+
 void req_intr(int intr) {
     st_bt(&mem[0xFF0F], intr);
 }
@@ -713,19 +731,19 @@ void req_intr(int intr) {
 void do_intr(int intr) {
     if (IME) {
         switch (-1) { // intr
-        case 0:
+        case INTR_VBLANK:
             printf("VBLANK INTERRUPT\n");
             break;
-        case 1:
+        case INTR_LCD:
             printf("LCD STAT INTERRUPT\n");
             break;
-        case 2:
+        case INTR_TIMER:
             printf("TIMER INTERRUPT\n");
             break;
-        case 3:
+        case INTR_SERIAL:
             printf("SERIAL INTERRUPT\n");
             break;
-        case 4:
+        case INTR_JOYPAD:
             printf("JOYPAD INTERRUPT\n");
             break;
         }
@@ -738,9 +756,9 @@ void do_intr(int intr) {
 }
 
 int chck_intr() {
-    for (int i = 0; i <= 4; i++) {
-        if (gt_bt(IF, i) && gt_bt(IE, i)) {
-            do_intr(i);
+    for (int intr = 0; intr < 5; intr++) {
+        if (gt_bt(IF, intr) && gt_bt(IE, intr)) {
+            do_intr(intr);
             return 1;
         }
     }
@@ -850,10 +868,6 @@ void upd_tim() {
     }
     else tima++;
     w_mem(0xFF05, tima);
-}
-
-void dbg() {
-    printf("{\n\tAF: $%04X\n\tBC: $%04X\n\tDE: $%04X\n\tHL: $%04X\n\tSP: $%04X\n\tPC: $%04X\n\tZERO FLAG: %d\n\tSUBTRACTION FLAG: %d\n\tHALF CARRY FLAG: %d\n\tCARRY FLAG: %d\n}\n", gt_AF(), gt_BC(), gt_DE(), gt_HL(), SP, PC, gt_flg(FLG_Z), gt_flg(FLG_N), gt_flg(FLG_H), gt_flg(FLG_C));
 }
 
 int p_instr(byte instr, byte prfx) {
@@ -1495,6 +1509,9 @@ int p_instr(byte instr, byte prfx) {
             printf("JP C $%04X\n", rd16());
             PC -= 2;
             break;
+        case 0xDF:
+            printf("RST 3\n");
+            break;
         case 0xE0:
             printf("LD ($FF00+%02X), A\n", rd8());
             PC--;
@@ -1572,7 +1589,6 @@ int p_instr(byte instr, byte prfx) {
 }
 
 int exec() {
-    int dis = 0;
     byte instr = r_mem(PC);
     if (PC >= 0x8000 && 0) { // Unset for debugging
         printf("PROGRAM COUNTER PAST CARTRIDGE SPACE\n");
@@ -2792,15 +2808,6 @@ int exec() {
     return 0;
 }
 
-void init_dsp() {
-    if (SDL_Init(SDL_INIT_EVERYTHING)) {
-        printf("ERROR CREATING WINDOW: %s\n", SDL_GetError());
-        exit(1);
-    }
-    win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 160 * FCT, 144 * FCT, 0);
-    rnd = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
-}
-
 void upd_stat() {
     byte stat = LCD_STAT;
     int curr = stat & 0b11;
@@ -3039,7 +3046,7 @@ int update() {
         chck_dma();
         upd_tim();
         chck_intr();
-        // dbg();
+        // if (PC >= 0x100) dbg();
     }
     return 0;
 }
@@ -3050,7 +3057,7 @@ int main(int argc, char* argv[]) {
     FILE* boot_rom_file;
     FILE* rom_file;
     fopen_s(&boot_rom_file, "bootrom.rom", "rb");
-    fopen_s(&rom_file, "cpu_instrs.gb", "rb");
+    fopen_s(&rom_file, rom_name, "rb");
     int loop = 1;
     if (!boot_rom_file) {
         printf("COULD NOT OPEN BOOT ROM\n");
@@ -3063,12 +3070,13 @@ int main(int argc, char* argv[]) {
     }
     else fread(mem, 0x8000, 1, rom_file);
     if (cart_info()) loop = 0;
-    fopen_s(&rom_file, "cpu_instrs.gb", "rb");
+    fopen_s(&rom_file, rom_name, "rb");
     if (!rom_file) {
         printf("COULD NOT OPEN ROM\n");
         loop = 0;
-    } else fread(rom, rom_size_bytes, 1, rom_file);
-    if(loop) init_dsp();
+    }
+    else fread(rom, rom_size_bytes, 1, rom_file);
+    if (loop) init_dsp();
     while (loop) {
         if (update()) loop = 0;
         if (rndr()) loop = 0;
