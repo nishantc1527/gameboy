@@ -1,24 +1,39 @@
 #include <stdio.h>
-#include <string.h> // So that memset doesn't give a warning
+#include <string.h>
 #include <SDL.h>
 
-#define SCRN_WIDTH  0xA0
-#define SCRN_HEIGHT 0x90
-
-#define FLG_Z       7
-#define FLG_N       6
-#define FLG_H       5
-#define FLG_C       4
+#define BTN_A       0
+#define BTN_B       1
+#define BTN_START   2
+#define BTN_SELECT  3
+#define BTN_UP      4
+#define BTN_DOWN    5
+#define BTN_LEFT    6
+#define BTN_RIGHT   7
 
 #define CLR_WHT     0
 #define CLR_L_GRY   1
 #define CLR_D_GRY   2
 #define CLR_BLK     3
 
+#define FLG_Z       7
+#define FLG_N       6
+#define FLG_H       5
+#define FLG_C       4
+
 #define HEX_WHT     0xFF
 #define HEX_L_GREY  0xD3
 #define HEX_R_GREY  0x69
 #define HEX_BLK     0x00
+
+#define INTR_VBLANK 0
+#define INTR_LCD    1
+#define INTR_TIMER  2
+#define INTR_SERIAL 3
+#define INTR_JOYPAD 4
+
+#define SCRN_WIDTH  0xA0
+#define SCRN_HEIGHT 0x90
 
 #define JOYP        r_mem(0xFF00)
 #define SB	        r_mem(0xFF01)
@@ -42,21 +57,6 @@
 #define WX          r_mem(0xFF4B)
 #define IE          r_mem(0xFFFF)
 
-#define BTN_A       0
-#define BTN_B       1
-#define BTN_START   2
-#define BTN_SELECT  3
-#define BTN_UP      4
-#define BTN_DOWN    5
-#define BTN_LEFT    6
-#define BTN_RIGHT   7
-
-#define INTR_VBLANK 0
-#define INTR_LCD    1
-#define INTR_TIMER  2
-#define INTR_SERIAL 3
-#define INTR_JOYPAD 4
-
 typedef unsigned char byte;
 typedef unsigned short dbyte;
 
@@ -78,14 +78,16 @@ byte rom_size;
 unsigned int rom_size_bytes;
 byte ram_size;
 byte rom_bank;
+int ram_enable;
 
 SDL_Window* win;
 SDL_Renderer* rnd;
 SDL_Event evt;
 
-int FCT = 4;
 char* rom_name = "space.gb";
+int FCT = 6;
 int dis = 0;
+int dbg_time = 5000;
 
 void init_reg() {
     PC = 0;
@@ -102,7 +104,7 @@ int init_dsp() {
         printf("ERROR CREATING WINDOW: %s\n", SDL_GetError());
         return 1;
     }
-    win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 160 * FCT, 144 * FCT, 0);
+    win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCRN_WIDTH * FCT, SCRN_HEIGHT * FCT, 0);
     rnd = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
     return 0;
 }
@@ -125,7 +127,7 @@ int cart_info() {
         printf("UNIMPLEMENTED MAPPER $%02X\n", cart_type);
         return 1;
     }
-    printf("%02X\n", cart_type);
+    // printf("%02X\n", cart_type);
     switch (rom_size) {
     case 0x00:
         rom_size_bytes = 32;
@@ -139,6 +141,7 @@ int cart_info() {
     }
     rom_size_bytes *= 0x400;
     rom_bank = 1;
+    ram_enable = 0;
     return 0;
 }
 
@@ -151,6 +154,15 @@ byte r_mem(dbyte loc) {
         case 0x01:
             if (loc < 0x4000) return rom[loc];
             else return rom[loc + 0x4000 * rom_bank - 0x4000];
+        }
+    }
+    if (loc >= 0xA000 && loc < 0xC000) {
+        switch (cart_type) {
+        case 0x00:
+            return 0xFF;
+        case 0x01:
+            if (ram_enable) return mem[loc];
+            else return 0xFF;
         }
     }
     if (loc >= 0xE000 && loc <= 0xFDFF) loc -= 0x200;
@@ -167,19 +179,25 @@ void w_mem(dbyte loc, byte val) {
             return;
         case 0x01:
             if (loc < 0x2000) { // TODO Ram enable
-                printf("uh oh 1\n");
+                ram_enable = 1;
             }
             else if (loc < 0x4000) {
-                if (val > 0b11) printf("uh oh 2\n");
                 rom_bank = val & 0b11111; // TODO Mask extra bits
                 if (rom_bank == 0) rom_bank++;
             }
             else if (loc < 0x6000) { // TODO This stuff
-                printf("uh oh 3\n");
             }
             else if (loc < 0x8000) { // TODO This stuff
-                printf("uh oh 4\n");
             }
+            return;
+        }
+    }
+    if (loc >= 0xA000 && loc < 0xC000) {
+        switch (cart_type) {
+        case 0x00:
+            return;
+        case 0x01:
+            if (ram_enable) mem[loc] = val;
             return;
         }
     }
@@ -381,7 +399,6 @@ int c_bit(byte reg, int bit) {
 int c_call(int flg) {
     if (flg) {
         psh16(PC + 3);
-        // printf("PUSHING $%04X\n", PC + 3);
         PC = rd16();
         kp();
         return 24;
@@ -758,17 +775,78 @@ void do_intr(int intr) {
     IME = 0;
 }
 
-int chck_intr() {
+void chck_intr() {
     for (int intr = 0; intr < 5; intr++) {
         if (gt_bt(IF, intr) && gt_bt(IE, intr)) {
             do_intr(intr);
-            return 1;
         }
     }
-    return 0;
 }
 
-int chck_in() {
+void intr_vblank_lcd(byte stat, int prev_mode, int curr_mode) {
+    int req_vblank = 0;
+    int req_lcd = 0;
+    if (prev_mode != curr_mode) {
+        if (curr_mode == 1) req_vblank = 1;
+        if (curr_mode == 0 && gt_bt(stat, 3)) req_lcd = 1;
+        if (curr_mode == 1 && gt_bt(stat, 4)) req_lcd = 1;
+        if (curr_mode == 2 && gt_bt(stat, 5)) req_lcd = 1;
+    }
+    int prev_lyc = gt_bt(stat, 2);
+    int curr_lyc = LY == LYC;
+    if (prev_lyc != curr_lyc && curr_lyc && gt_bt(stat, 6)) req_lcd = 1;
+    if (req_vblank) req_intr(INTR_VBLANK);
+    if (req_lcd) req_intr(INTR_LCD);
+}
+
+void intr_timer(byte tima) {
+    if (tima == 0xFF) req_intr(INTR_TIMER);
+}
+
+void intr_serial() {
+    // TODO
+}
+
+void intr_joypad(byte prev_joyp, byte curr_joyp) {
+    int req = 0;
+    for (int i = 0; i < 4; i++) {
+        int prev = (prev_joyp >> i) & 1;
+        int curr = (curr_joyp >> i) & 1;
+        if (prev != curr && curr == 0) req = 1;
+    }
+    if (req) req_intr(INTR_JOYPAD);
+}
+
+void upd_lcd() {
+    byte stat = LCD_STAT;
+    int prev_mode = stat & 0b11;
+    int curr_mode;
+    if (scn >= 456 - 80) curr_mode = 2;
+    else if (scn >= 456 - 80 - 168) curr_mode = 3;
+    else curr_mode = 0;
+    if (LY >= SCRN_HEIGHT) curr_mode = 1;
+    intr_vblank_lcd(stat, prev_mode, curr_mode);
+    stat &= ~(0b11);
+    stat |= curr_mode;
+    // printf("Mode: $%02X\nLY: $%02X\nLCDC: $%02X\n", curr_mode, LY, LCDC);
+    if (LY == LYC) st_bt(&stat, 2);
+    else cl_bt(&stat, 2);
+    w_mem(0xFF41, stat);
+}
+
+void upd_tim() {
+    if (!gt_bt(TAC, 2)) return;
+    byte div = DIV;
+    if (STOP) div = 0;
+    w_mem(0xFF04, div);
+    byte tima = TIMA;
+    intr_timer(tima);
+    if (tima == 0xFF) tima = TMA;
+    else tima++;
+    w_mem(0xFF05, tima);
+}
+
+int upd_in() {
     while (SDL_PollEvent(&evt)) {
         if (evt.type == SDL_QUIT) return 1;
         else if (evt.type == SDL_KEYDOWN) {
@@ -828,28 +906,26 @@ int chck_in() {
             }
         }
     }
-    byte in_reg = JOYP;
-    in_reg |= 0xF;
-    if (!gt_bt(in_reg, 4)) {
-        if (in[BTN_RIGHT]) cl_bt(&in_reg, 0);
-        if (in[BTN_LEFT]) cl_bt(&in_reg, 1);
-        if (in[BTN_UP]) cl_bt(&in_reg, 2);
-        if (in[BTN_DOWN]) cl_bt(&in_reg, 3);
+    byte curr_joyp = JOYP;
+    curr_joyp |= 0xF;
+    if (!gt_bt(curr_joyp, 4)) {
+        if (in[BTN_RIGHT]) cl_bt(&curr_joyp, 0);
+        if (in[BTN_LEFT]) cl_bt(&curr_joyp, 1);
+        if (in[BTN_UP]) cl_bt(&curr_joyp, 2);
+        if (in[BTN_DOWN]) cl_bt(&curr_joyp, 3);
     }
-    if (!gt_bt(in_reg, 5)) {
-        if (in[BTN_A]) cl_bt(&in_reg, 0);
-        if (in[BTN_B]) cl_bt(&in_reg, 1);
-        if (in[BTN_SELECT]) cl_bt(&in_reg, 2);
-        if (in[BTN_START]) cl_bt(&in_reg, 3);
+    if (!gt_bt(curr_joyp, 5)) {
+        if (in[BTN_A]) cl_bt(&curr_joyp, 0);
+        if (in[BTN_B]) cl_bt(&curr_joyp, 1);
+        if (in[BTN_SELECT]) cl_bt(&curr_joyp, 2);
+        if (in[BTN_START]) cl_bt(&curr_joyp, 3);
     }
-    int intr = 0;
-    for (int i = 0; i < 4; i++) if ((JOYP >> i) & 1 && !((in_reg >> i) & 1)) intr = 1;
-    if (intr) req_intr(4);
-    w_mem(0xFF00, in_reg);
+    intr_joypad(JOYP, curr_joyp);
+    w_mem(0xFF00, curr_joyp);
     return 0;
 }
 
-void chck_dma() {
+void upd_dma() {
     if (DMA >= 0x00 && DMA <= 0xDF) {
         byte src = DMA * 0x100;
         for (dbyte t = 0; t < 0xA0; t++) {
@@ -859,21 +935,233 @@ void chck_dma() {
     }
 }
 
-void upd_tim() {
-    if (!gt_bt(TAC, 2)) return;
-    byte div = DIV;
-    if (STOP) div = 0;
-    w_mem(0xFF04, div);
-    byte tima = TIMA;
-    if (tima == 0xFF) {
-        tima = TMA;
-        req_intr(2);
+void scnln() {
+    if (gt_bt(LCDC, 7)) {
+        if (LY < SCRN_HEIGHT) {
+            if (gt_bt(LCDC, 0)) {
+                byte ly = LY;
+                int dat_area = gt_bt(LCDC, 4);
+                int mp_area = gt_bt(LCDC, 3);
+                byte pal = BGP;
+                for (int x = 0; x < SCRN_WIDTH; x++) {
+                    byte by = (ly + SCY) % 256;
+                    int tiley = by / 8;
+                    int offy = by % 8;
+                    int bytey = offy << 1;
+                    int bx = (x + SCX) % 256;
+                    int tilex = bx / 8;
+                    int offx = bx % 8;
+                    int idx = (tiley * 32) + tilex;
+                    if (mp_area == 0) idx += 0x9800;
+                    else idx += 0x9C00;
+                    idx = r_mem(idx);
+                    if (dat_area == 0) idx = (signed char)idx + 128;
+                    idx *= 16;
+                    if (dat_area == 0) idx += 0x8800;
+                    else idx += 0x8000;
+                    byte ls = r_mem(idx + bytey);
+                    byte ms = r_mem(idx + bytey + 1);
+                    offx = 7 - offx;
+                    int clr = (gt_bt(ms, offx) << 1) | gt_bt(ls, offx);
+                    dsp[ly][x] = gt_clr(pal, clr);
+                }
+                if (gt_bt(LCDC, 5)) {
+                    mp_area = gt_bt(LCDC, 6);
+                    byte wx = WX;
+                    byte wy = WY;
+                    if (wx >= 0 && wx <= 166 && wy >= 0 && wy <= 143 && LY >= wy) {
+                        wx = wx - 7;
+                        wy = WIN_CNT;
+                        int tiley = wy / 8;
+                        int offy = wy % 8;
+                        int bytey = offy << 1;
+                        for (byte x = wx; x < SCRN_WIDTH; x++) {
+                            byte _wx = x - wx;
+                            int tilex = _wx / 8;
+                            int offx = _wx % 8;
+                            int idx = (tiley * 32) + tilex;
+                            if (mp_area == 0) idx += 0x9800;
+                            else idx += 0x9C00;
+                            idx = r_mem(idx);
+                            if (dat_area == 0) idx = (signed char)idx + 128;
+                            idx *= 16;
+                            if (dat_area == 0) idx += 0x8800;
+                            else idx += 0x8000;
+                            byte ls = r_mem(idx + bytey);
+                            byte ms = r_mem(idx + bytey + 1);
+                            offx = 7 - offx;
+                            int clr = (gt_bt(ms, offx) << 1) | gt_bt(ls, offx);
+                            dsp[ly][x] = gt_clr(pal, clr);
+                        }
+                        WIN_CNT++;
+                    }
+                }
+            }
+            else {
+                for (int x = 0; x < SCRN_WIDTH; x++) {
+                    dsp[LY][x] = CLR_WHT;
+                }
+            }
+            if (gt_bt(LCDC, 1)) { // Object Enable
+                byte ly = LY;
+                byte sz = gt_bt(LCDC, 2);
+                int cnt = 0;
+                dbyte obj[10];
+                memset(obj, 0, sizeof(obj));
+                for (dbyte mem = 0xFE00; mem <= 0xFE9F && cnt < 10; mem += 4) {
+                    int y = r_mem(mem + 0);
+                    y -= 16;
+                    if (ly < y) continue;
+                    if (sz) {
+                        if (ly >= y + 16) {
+                            continue;
+                        }
+                    }
+                    else if (ly >= y + 8) continue;
+                    obj[cnt++] = mem;
+                }
+                dbyte maxx = 0x0100;
+                dbyte maxm = 0xFFFF;
+                while (cnt--) {
+                    int midx = -1;
+                    for (int i = 0; i < 10; i++) if (obj[i]) {
+                        byte x = r_mem(obj[i] + 1);
+                        if (x < maxx || (x == maxx && obj[i] < maxm)) {
+                            if (midx == -1) midx = i;
+                            else {
+                                byte prev = r_mem(obj[midx] + 1);
+                                if (x > prev) midx = i;
+                                if (x == prev && obj[i] > obj[midx]) midx = i;
+                            }
+                        }
+                    }
+                    if (midx == -1) break;
+                    dbyte mem = obj[midx];
+                    obj[midx] = 0;
+                    maxx = r_mem(mem + 1);
+                    maxm = mem;
+                    int y = r_mem(mem + 0);
+                    int x = r_mem(mem + 1);
+                    dbyte idx = r_mem(mem + 2);
+                    byte  flg = r_mem(mem + 3);
+                    y -= 16;
+                    x -= 8;
+                    if (sz) idx &= 0xFE;
+                    idx *= 16;
+                    idx += 0x8000;
+                    byte flipx = gt_bt(flg, 5);
+                    byte flipy = gt_bt(flg, 6);
+                    byte line = ly - y;
+                    if (sz) {
+                        if (flipy) line = 15 - line;
+                    }
+                    else {
+                        if (flipy) line = 7 - line;
+                    }
+                    line <<= 1;
+                    byte ls = r_mem(idx + line + 0);
+                    byte ms = r_mem(idx + line + 1);
+                    byte pal;
+                    if (gt_bt(flg, 4)) pal = OBP1;
+                    else pal = OBP0;
+                    for (int x0 = x; x0 < x + 8; x0++) {
+                        if (x0 < 0) continue;
+                        byte posx = 7 - (x0 - x);
+                        if (flipx) posx = 7 - posx;
+                        byte clr = (gt_bt(ms, posx) << 1) | gt_bt(ls, posx);
+                        if (gt_bt(flg, 7)) {
+                            if (dsp[ly][x0] == gt_clr(BGP, 0)) dsp[ly][x0] = gt_clr(pal, clr);
+                        }
+                        else if (clr != 0) dsp[ly][x0] = gt_clr(pal, clr);
+                    }
+                }
+            }
+        }
     }
-    else tima++;
-    w_mem(0xFF05, tima);
+    int ly = LY;
+    ly++;
+    if (ly >= 154) {
+        ly = 0;
+        WIN_CNT = 0;
+        frame = 1;
+    }
+    w_mem(0xFF44, ly);
 }
 
-int p_instr(byte instr, byte prfx) {
+void rndr() {
+    for (int i = 0; i < SCRN_HEIGHT; i++) {
+        for (int j = 0; j < SCRN_WIDTH; j++) {
+            int clr = dsp[i][j];
+            if (clr == CLR_WHT) clr = HEX_WHT;
+            else if (clr == CLR_L_GRY) clr = HEX_L_GREY;
+            else if (clr == CLR_D_GRY) clr = HEX_R_GREY;
+            else if (clr == CLR_BLK) clr = HEX_BLK;
+            SDL_SetRenderDrawColor(rnd, clr, clr, clr, 0xFF);
+            SDL_Rect rct = { j * FCT, i * FCT, FCT, FCT };
+            SDL_RenderFillRect(rnd, &rct);
+        }
+    }
+    SDL_RenderPresent(rnd);
+}
+
+int print_instr(byte instr, byte prfx);
+int do_instr();
+
+int update() {
+    scn = 456;
+    frame = 0;
+    while (!frame) {
+        int curr = do_instr();
+        PC++;
+        if (curr == -1) return 1;
+        scn -= curr;
+        if (scn <= 0) {
+            scnln();
+            scn = 456;
+        }
+        upd_lcd();
+        // upd_tim();
+        if (upd_in()) return 1;
+        upd_dma();
+        chck_intr();
+        // if (PC >= 0x100) dbg();
+    }
+    return 0;
+}
+
+int main(int argc, char* argv[]) {
+    // freopen("logfile.txt", "w", stdout);
+    init_reg();
+    FILE* boot_rom_file;
+    FILE* rom_file;
+    fopen_s(&boot_rom_file, "bootrom.rom", "rb");
+    fopen_s(&rom_file, rom_name, "rb");
+    int loop = 1;
+    if (!boot_rom_file) {
+        printf("COULD NOT OPEN BOOT ROM\n");
+        loop = 0;
+    }
+    else fread(brom, 0x100, 1, boot_rom_file);
+    if (!rom_file) {
+        printf("COULD NOT OPEN ROM\n");
+        loop = 0;
+    }
+    else fread(mem, 0x8000, 1, rom_file); // TODO why write to memory if just using it for cartridge header
+    if (cart_info()) loop = 0;
+    fopen_s(&rom_file, rom_name, "rb");
+    if (!rom_file);
+    else fread(rom, rom_size_bytes, 1, rom_file);
+    if (loop && init_dsp()) loop = 0;
+    while (loop) {
+        if (update()) loop = 0;
+        if(loop) rndr();
+    }
+    dbg();
+    printf("DONE\n");
+    return 0;
+}
+
+int print_instr(byte instr, byte prfx) {
     if (!r_mem(0xFF50)) return 0;
     printf("$%04X %02X ", PC, instr);
     if (instr == 0xCB) {
@@ -1592,6 +1880,10 @@ int p_instr(byte instr, byte prfx) {
 }
 
 int do_instr() {
+    if (HALT) {
+        kp();
+        return 4;
+    }
     byte instr = r_mem(PC);
     if (PC >= 0x8000 && 0) { // Unset for debugging
         printf("PROGRAM COUNTER PAST CARTRIDGE SPACE\n");
@@ -1599,7 +1891,7 @@ int do_instr() {
     }
     if (instr == 0xCB) {
         byte prfx = rd8();
-        if (dis) p_instr(instr, prfx);
+        if (dis) print_instr(instr, prfx);
         switch (prfx) {
         case 0x00:
             return c_rlc(&B);
@@ -2115,12 +2407,12 @@ int do_instr() {
             return c_set(&A, 7);
         default:
             printf("UNIMPLEMENTED PREFIX INSTRUCTION\n");
-            p_instr(instr, prfx);
+            print_instr(instr, prfx);
             return -1;
         }
     }
     else {
-        if (dis) p_instr(instr, 0);
+        if (dis) print_instr(instr, 0);
         switch (instr) {
         case 0x00:
             return 4;
@@ -2502,7 +2794,6 @@ int do_instr() {
             return 8;
         case 0x76:
             HALT = 1;
-            // printf("IE: $%02X\nLCD Stat: $%02X\nLCDC: $%02X\n", IE, LCD_STAT, LCDC);
             return 4;
         case 0x77:
             w_mem(gt_HL(), A);
@@ -2804,284 +3095,9 @@ int do_instr() {
             return c_rst(0x0038);
         default:
             printf("UNIMPLEMENTED INSTRUCTION\n");
-            p_instr(instr, 0);
+            print_instr(instr, 0);
             return -1;
         }
     }
-    return 0;
-}
-
-void upd_stat() {
-    byte stat = LCD_STAT;
-    int curr = stat & 0b11;
-    int mode;
-    if (scn >= 456 - 80) mode = 2;
-    else if (scn >= 456 - 80 - 168) mode = 3;
-    else mode = 0;
-    if (LY >= 144) mode = 1;
-    if (mode != curr) {
-        if (mode == 1) req_intr(INTR_VBLANK);
-        int req = 0;
-        if (mode == 0 && gt_bt(stat, 3)) req = 1;
-        if (mode == 1 && gt_bt(stat, 4)) req = 1;
-        if (mode == 2 && gt_bt(stat, 5)) req = 1;
-        if (req) req_intr(INTR_LCD);
-    }
-    stat &= ~(0b11);
-    stat |= mode;
-    curr = gt_bt(stat, 2);
-    if (LY == LYC) st_bt(&stat, 2);
-    else cl_bt(&stat, 2);
-    if (gt_bt(stat, 2) != curr && gt_bt(stat, 2) && gt_bt(stat, 6)) req_intr(INTR_LCD);
-    w_mem(0xFF41, stat);
-}
-
-void scnln() {
-    if (gt_bt(LCDC, 7)) { // PPU Enable
-        if (LY < SCRN_HEIGHT) {
-            if (gt_bt(LCDC, 0)) { // Background & Window Enable
-                byte ly = LY;
-                int dat_area = gt_bt(LCDC, 4);
-                int mp_area = gt_bt(LCDC, 3);
-                byte pal = BGP;
-                for (int x = 0; x < SCRN_WIDTH; x++) {
-                    byte by = (ly + SCY) % 256;
-                    int tiley = by / 8;
-                    int offy = by % 8;
-                    int bytey = offy << 1;
-                    int bx = (x + SCX) % 256;
-                    int tilex = bx / 8;
-                    int offx = bx % 8;
-                    int idx = (tiley * 32) + tilex;
-                    if (mp_area == 0) idx += 0x9800;
-                    else idx += 0x9C00;
-                    idx = r_mem(idx);
-                    if (dat_area == 0) idx = (signed char)idx + 128;
-                    idx *= 16;
-                    if (dat_area == 0) idx += 0x8800;
-                    else idx += 0x8000;
-                    byte ls = r_mem(idx + bytey);
-                    byte ms = r_mem(idx + bytey + 1);
-                    offx = 7 - offx;
-                    int clr = (gt_bt(ms, offx) << 1) | gt_bt(ls, offx);
-                    dsp[ly][x] = gt_clr(pal, clr);
-                }
-                if (gt_bt(LCDC, 5)) {
-                    mp_area = gt_bt(LCDC, 6);
-                    byte wx = WX;
-                    byte wy = WY;
-                    if (wx >= 0 && wx <= 166 && wy >= 0 && wy <= 143 && LY >= wy) {
-                        wx = wx - 7;
-                        wy = WIN_CNT;
-                        int tiley = wy / 8;
-                        int offy = wy % 8;
-                        int bytey = offy << 1;
-                        for (byte x = wx; x < SCRN_WIDTH; x++) {
-                            byte _wx = x - wx;
-                            int tilex = _wx / 8;
-                            int offx = _wx % 8;
-                            int idx = (tiley * 32) + tilex;
-                            if (mp_area == 0) idx += 0x9800;
-                            else idx += 0x9C00;
-                            idx = r_mem(idx);
-                            if (dat_area == 0) idx = (signed char)idx + 128;
-                            idx *= 16;
-                            if (dat_area == 0) idx += 0x8800;
-                            else idx += 0x8000;
-                            byte ls = r_mem(idx + bytey);
-                            byte ms = r_mem(idx + bytey + 1);
-                            offx = 7 - offx;
-                            int clr = (gt_bt(ms, offx) << 1) | gt_bt(ls, offx);
-                            dsp[ly][x] = gt_clr(pal, clr);
-                        }
-                        WIN_CNT++;
-                    }
-                }
-            }
-            else {
-                for (int x = 0; x < SCRN_WIDTH; x++) {
-                    dsp[LY][x] = CLR_WHT;
-                }
-            }
-            if (gt_bt(LCDC, 1)) { // Object Enable
-                byte ly = LY;
-                byte sz = gt_bt(LCDC, 2);
-                int cnt = 0;
-                dbyte obj[10];
-                memset(obj, 0, sizeof(obj));
-                for (dbyte mem = 0xFE00; mem <= 0xFE9F && cnt < 10; mem += 4) {
-                    int y = r_mem(mem + 0);
-                    y -= 16;
-                    if (ly < y) continue;
-                    if (sz) {
-                        if (ly >= y + 16) {
-                            continue;
-                        }
-                    }
-                    else if (ly >= y + 8) continue;
-                    obj[cnt++] = mem;
-                }
-                dbyte maxx = 0x0100;
-                dbyte maxm = 0xFFFF;
-                while (cnt--) {
-                    int midx = -1;
-                    for (int i = 0; i < 10; i++) if (obj[i]) {
-                        byte x = r_mem(obj[i] + 1);
-                        if (x < maxx || (x == maxx && obj[i] < maxm)) {
-                            if (midx == -1) midx = i;
-                            else {
-                                byte prev = r_mem(obj[midx] + 1);
-                                if (x > prev) midx = i;
-                                if (x == prev && obj[i] > obj[midx]) midx = i;
-                            }
-                        }
-                    }
-                    if (midx == -1) break;
-                    dbyte mem = obj[midx];
-                    obj[midx] = 0;
-                    maxx = r_mem(mem + 1);
-                    maxm = mem;
-                    int y = r_mem(mem + 0);
-                    int x = r_mem(mem + 1);
-                    dbyte idx = r_mem(mem + 2);
-                    byte  flg = r_mem(mem + 3);
-                    y -= 16;
-                    x -= 8;
-                    if (sz) idx &= 0xFE;
-                    idx *= 16;
-                    idx += 0x8000;
-                    byte flipx = gt_bt(flg, 5);
-                    byte flipy = gt_bt(flg, 6);
-                    byte line = ly - y;
-                    if (sz) {
-                        if (flipy) line = 15 - line;
-                    }
-                    else {
-                        if (flipy) line = 7 - line;
-                    }
-                    line <<= 1;
-                    byte ls = r_mem(idx + line + 0);
-                    byte ms = r_mem(idx + line + 1);
-                    byte pal;
-                    if (gt_bt(flg, 4)) pal = OBP1;
-                    else pal = OBP0;
-                    for (int x0 = x; x0 < x + 8; x0++) {
-                        if (x0 < 0) continue;
-                        byte posx = 7 - (x0 - x);
-                        if (flipx) posx = 7 - posx;
-                        byte clr = (gt_bt(ms, posx) << 1) | gt_bt(ls, posx);
-                        if (gt_bt(flg, 7)) {
-                            if (dsp[ly][x0] == gt_clr(BGP, 0)) dsp[ly][x0] = gt_clr(pal, clr);
-                        }
-                        else if (clr != 0) dsp[ly][x0] = gt_clr(pal, clr);
-                    }
-                }
-            }
-        }
-        int ly = LY;
-        ly++;
-        if (ly >= 154) {
-            ly = 0;
-            WIN_CNT = 0;
-            frame = 1;
-        }
-        w_mem(0xFF44, ly);
-    }
-}
-
-void drw_screen() {
-    for (int i = 0; i < SCRN_HEIGHT; i++) {
-        for (int j = 0; j < SCRN_WIDTH; j++) {
-            int clr = dsp[i][j];
-            if (clr == CLR_WHT) clr = HEX_WHT;
-            else if (clr == CLR_L_GRY) clr = HEX_L_GREY;
-            else if (clr == CLR_D_GRY) clr = HEX_R_GREY;
-            else if (clr == CLR_BLK) clr = HEX_BLK;
-            SDL_SetRenderDrawColor(rnd, clr, clr, clr, 0xFF);
-            SDL_Rect rct;
-            rct.x = j * FCT;
-            rct.y = i * FCT;
-            rct.w = FCT;
-            rct.h = FCT;
-            SDL_RenderFillRect(rnd, &rct);
-        }
-    }
-    SDL_RenderPresent(rnd);
-}
-
-int rndr() {
-    drw_screen();
-    return 0;
-}
-
-int update() {
-    scn = 456;
-    frame = 0;
-    int debug = 0;
-
-    while (!frame) {
-        debug = 0;
-        switch (-1) { // PC
-        case 0x206E:
-        case 0x2078:
-            debug = 1;
-        }
-        if (HALT) {
-            if (chck_intr()) HALT = 0;
-            scn -= 4;
-        }
-        else {
-            int curr = do_instr();
-            if (debug) {
-                dbg();
-                SDL_Delay(5000);
-            }
-            if (curr == -1) return 1;
-            PC++;
-            scn -= curr;
-        }
-        if (scn <= 0) {
-            scnln();
-            scn = 456;
-        }
-        upd_stat();
-        chck_in();
-        chck_dma();
-        upd_tim();
-        chck_intr();
-        // if (PC >= 0x100) dbg();
-    }
-    return 0;
-}
-
-int main(int argc, char* argv[]) {
-    // freopen("logfile.txt", "w", stdout);
-    init_reg();
-    FILE* boot_rom_file;
-    FILE* rom_file;
-    fopen_s(&boot_rom_file, "bootrom.rom", "rb");
-    fopen_s(&rom_file, rom_name, "rb");
-    int loop = 1;
-    if (!boot_rom_file) {
-        printf("COULD NOT OPEN BOOT ROM\n");
-        loop = 0;
-    }
-    else fread(brom, 0x100, 1, boot_rom_file);
-    if (!rom_file) {
-        printf("COULD NOT OPEN ROM\n");
-        loop = 0;
-    }
-    else fread(mem, 0x8000, 1, rom_file); // TODO why write to memory if just using it for cartridge header
-    if (cart_info()) loop = 0;
-    fopen_s(&rom_file, rom_name, "rb");
-    if (!rom_file);
-    else fread(rom, rom_size_bytes, 1, rom_file);
-    if (loop && init_dsp()) loop = 0;
-    while (loop) {
-        if (update()) loop = 0;
-        if (rndr()) loop = 0;
-    }
-    dbg();
-    printf("DONE\n");
     return 0;
 }
