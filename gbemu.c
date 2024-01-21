@@ -21,10 +21,10 @@
 #define FLG_H       5
 #define FLG_C       4
 
-#define HEX_WHT     0xFF
-#define HEX_L_GREY  0xD3
-#define HEX_R_GREY  0x69
-#define HEX_BLK     0x00
+#define HEX_WHT     0xfc59a3
+#define HEX_L_GREY  0x87c830
+#define HEX_R_GREY  0xffd400
+#define HEX_BLK     0x8e3ccb
 
 #define INTR_VBLANK 0
 #define INTR_LCD    1
@@ -67,7 +67,7 @@ byte dsp[0x90][0xA0];
 dbyte PC;
 dbyte SP;
 byte A, B, C, D, E, F, H, L;
-byte IME, WIN_CNT, HALT, STOP;
+byte IME, WIN_CNT, HALT;
 int scn, frame;
 int in[8];
 dbyte intr_loc[] = { 0x0040, 0x0048, 0x0050, 0x0058, 0x0060 };
@@ -84,7 +84,7 @@ SDL_Window* win;
 SDL_Renderer* rnd;
 SDL_Event evt;
 
-char* rom_name = "space.gb";
+char* rom_name = "tetris.gb";
 int FCT = 6;
 int dis = 0;
 int dbg_time = 5000;
@@ -93,7 +93,6 @@ void init_reg() {
     PC = 0;
     WIN_CNT = 0;
     HALT = 0;
-    STOP = 0;
     memset(mem, 0, sizeof(mem));
     memset(dsp, 0, sizeof(dsp));
     memset(rom, 0, sizeof(rom));
@@ -834,11 +833,11 @@ void upd_lcd() {
     w_mem(0xFF41, stat);
 }
 
-void upd_tim() {
-    if (!gt_bt(TAC, 2)) return;
+void upd_tim() { // TODO this doesn't work
     byte div = DIV;
-    if (STOP) div = 0;
-    w_mem(0xFF04, div);
+    div++;
+    mem[0xFF04] = div;
+    // if (!gt_bt(TAC, 2)) return;
     byte tima = TIMA;
     intr_timer(tima);
     if (tima == 0xFF) tima = TMA;
@@ -927,7 +926,7 @@ int upd_in() {
 
 void upd_dma() {
     if (DMA >= 0x00 && DMA <= 0xDF) {
-        byte src = DMA * 0x100;
+        dbyte src = DMA * 0x100;
         for (dbyte t = 0; t < 0xA0; t++) {
             w_mem(0xFE00 + t, r_mem(src + t));
         }
@@ -969,7 +968,7 @@ void scnln() {
                     mp_area = gt_bt(LCDC, 6);
                     byte wx = WX;
                     byte wy = WY;
-                    if (wx >= 0 && wx <= 166 && wy >= 0 && wy <= 143 && LY >= wy) {
+                    if (wx >= 0 && wx < SCRN_WIDTH + 7 && wy >= 0 && wy < SCRN_HEIGHT && LY >= wy) {
                         wx = wx - 7;
                         wy = WIN_CNT;
                         int tiley = wy / 8;
@@ -1002,7 +1001,7 @@ void scnln() {
                     dsp[LY][x] = CLR_WHT;
                 }
             }
-            if (gt_bt(LCDC, 1)) { // Object Enable
+            if (gt_bt(LCDC, 1)) {
                 byte ly = LY;
                 byte sz = gt_bt(LCDC, 2);
                 int cnt = 0;
@@ -1020,6 +1019,17 @@ void scnln() {
                     else if (ly >= y + 8) continue;
                     obj[cnt++] = mem;
                 }
+                /*
+                printf("===================\n");
+                for (int i = 0; i < cnt; i++) {
+                    printf("Memory: $%04X\n", obj[i]);
+                    printf("Y: $%02X\n", r_mem(obj[i] + 0));
+                    printf("X: $%02X\n", r_mem(obj[i] + 1));
+                    printf("Tile Index: $%02X\n", r_mem(obj[i] + 2));
+                    printf("Flags: $%02X\n", r_mem(obj[i] + 3));
+                }
+                printf("===================\n");
+                */
                 dbyte maxx = 0x0100;
                 dbyte maxm = 0xFFFF;
                 while (cnt--) {
@@ -1077,15 +1087,15 @@ void scnln() {
                 }
             }
         }
+        int ly = LY;
+        ly++;
+        if (ly >= 154) {
+            ly = 0;
+            WIN_CNT = 0;
+            frame = 1;
+        }
+        w_mem(0xFF44, ly);
     }
-    int ly = LY;
-    ly++;
-    if (ly >= 154) {
-        ly = 0;
-        WIN_CNT = 0;
-        frame = 1;
-    }
-    w_mem(0xFF44, ly);
 }
 
 void rndr() {
@@ -1093,10 +1103,13 @@ void rndr() {
         for (int j = 0; j < SCRN_WIDTH; j++) {
             int clr = dsp[i][j];
             if (clr == CLR_WHT) clr = HEX_WHT;
-            else if (clr == CLR_L_GRY) clr = HEX_L_GREY;
-            else if (clr == CLR_D_GRY) clr = HEX_R_GREY;
-            else if (clr == CLR_BLK) clr = HEX_BLK;
-            SDL_SetRenderDrawColor(rnd, clr, clr, clr, 0xFF);
+            if (clr == CLR_L_GRY) clr = HEX_L_GREY;
+            if (clr == CLR_D_GRY) clr = HEX_R_GREY;
+            if (clr == CLR_BLK) clr = HEX_BLK;
+            byte r = (clr >> 8 * 2) & 0xFF;
+            byte g = (clr >> 8 * 1) & 0xFF;
+            byte b = (clr >> 8 * 0) & 0xFF;
+            SDL_SetRenderDrawColor(rnd, r, g, b, 0xFF);
             SDL_Rect rct = { j * FCT, i * FCT, FCT, FCT };
             SDL_RenderFillRect(rnd, &rct);
         }
@@ -1120,7 +1133,7 @@ int update() {
             scn = 456;
         }
         upd_lcd();
-        // upd_tim();
+        upd_tim();
         if (upd_in()) return 1;
         upd_dma();
         chck_intr();
