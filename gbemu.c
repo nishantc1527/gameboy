@@ -15,16 +15,25 @@
 #define CLR_L_GRY   1
 #define CLR_D_GRY   2
 #define CLR_BLK     3
+#define CLR_EXT     4
+
+#define CPU_FREQ    4194304
+#define DIV_FREQ    16384
+#define TIM_FREQ_1  4096
+#define TIM_FREQ_2  262144
+#define TIM_FREQ_3  65536
+#define TIM_FREQ_4  16384
 
 #define FLG_Z       7
 #define FLG_N       6
 #define FLG_H       5
 #define FLG_C       4
 
-#define HEX_WHT     0xfc59a3
-#define HEX_L_GREY  0x87c830
-#define HEX_R_GREY  0xffd400
-#define HEX_BLK     0x8e3ccb
+#define HEX_WHT     0xeeeeee
+#define HEX_L_GREY  0xf26161
+#define HEX_R_GREY  0xea0909
+#define HEX_BLK     0x9a0707
+#define HEX_EXT     0xFF0000
 
 #define INTR_VBLANK 0
 #define INTR_LCD    1
@@ -63,12 +72,14 @@ typedef unsigned short dbyte;
 byte mem[0x10000];
 byte brom[0x100];
 byte rom[0x800000];
-byte dsp[0x90][0xA0];
+byte extern_ram[0x20000];
+byte dsp[SCRN_HEIGHT][SCRN_WIDTH];
+int upd[SCRN_HEIGHT][SCRN_WIDTH];
 dbyte PC;
 dbyte SP;
 byte A, B, C, D, E, F, H, L;
 byte IME, WIN_CNT, HALT;
-int scn, frame;
+int scn, frame, tim_cnt, tim_thresh, div_cnt;
 int in[8];
 dbyte intr_loc[] = { 0x0040, 0x0048, 0x0050, 0x0058, 0x0060 };
 
@@ -78,13 +89,14 @@ byte rom_size;
 unsigned int rom_size_bytes;
 byte ram_size;
 byte rom_bank;
+byte ram_bank;
 int ram_enable;
 
 SDL_Window* win;
 SDL_Renderer* rnd;
 SDL_Event evt;
 
-char* rom_name = "tetris.gb";
+char* rom_name = "pipe_dream.gb";
 int FCT = 6;
 int dis = 0;
 int dbg_time = 5000;
@@ -96,6 +108,14 @@ void init_reg() {
     memset(mem, 0, sizeof(mem));
     memset(dsp, 0, sizeof(dsp));
     memset(rom, 0, sizeof(rom));
+    memset(extern_ram, 0, sizeof(extern_ram));
+    for (int i = 0; i < SCRN_HEIGHT; i++) {
+        for (int j = 0; j < SCRN_WIDTH; j++) {
+            upd[i][j] = 1;
+        }
+    }
+    div_cnt = 0;
+    tim_cnt = 0;
 }
 
 int init_dsp() {
@@ -120,25 +140,27 @@ int cart_info() {
     ram_size = mem[0x0149];
     switch (cart_type) {
     case 0x00:
-    case 0x01:
         break;
     default:
         printf("UNIMPLEMENTED MAPPER $%02X\n", cart_type);
         return 1;
     }
-    // printf("%02X\n", cart_type);
     switch (rom_size) {
     case 0x00:
         rom_size_bytes = 32;
-        break;
-    case 0x01:
-        rom_size_bytes = 64;
         break;
     default:
         printf("UNIMPLEMENTED ROM SIZE $%02X\n", rom_size);
         return 1;
     }
     rom_size_bytes *= 0x400;
+    switch (ram_size) {
+    case 0x00:
+        break;
+    default:
+        printf("UNIMPLEMENTED RAM SIZE $%02X\n", ram_size);
+        return 1;
+    }
     rom_bank = 1;
     ram_enable = 0;
     return 0;
@@ -150,18 +172,12 @@ byte r_mem(dbyte loc) {
         switch (cart_type) {
         case 0x00:
             return rom[loc];
-        case 0x01:
-            if (loc < 0x4000) return rom[loc];
-            else return rom[loc + 0x4000 * rom_bank - 0x4000];
         }
     }
     if (loc >= 0xA000 && loc < 0xC000) {
         switch (cart_type) {
         case 0x00:
             return 0xFF;
-        case 0x01:
-            if (ram_enable) return mem[loc];
-            else return 0xFF;
         }
     }
     if (loc >= 0xE000 && loc <= 0xFDFF) loc -= 0x200;
@@ -170,24 +186,8 @@ byte r_mem(dbyte loc) {
 
 void w_mem(dbyte loc, byte val) {
     if (loc < 0x8000) {
-        // printf("big boy $%04X $%02X\n", loc, val);
         switch (cart_type) {
-        case 0x00: // You supposed to write or nah? idk
-            // printf("He's tryna cook $%04X $%02X\n", loc, val);
-            // rom[loc] = val;
-            return;
-        case 0x01:
-            if (loc < 0x2000) { // TODO Ram enable
-                ram_enable = 1;
-            }
-            else if (loc < 0x4000) {
-                rom_bank = val & 0b11111; // TODO Mask extra bits
-                if (rom_bank == 0) rom_bank++;
-            }
-            else if (loc < 0x6000) { // TODO This stuff
-            }
-            else if (loc < 0x8000) { // TODO This stuff
-            }
+        case 0x00:
             return;
         }
     }
@@ -195,14 +195,33 @@ void w_mem(dbyte loc, byte val) {
         switch (cart_type) {
         case 0x00:
             return;
-        case 0x01:
-            if (ram_enable) mem[loc] = val;
-            return;
         }
     }
     if (loc >= 0xE000 && loc <= 0xFDFF) loc -= 0x200;
     if (loc == 0xFF04) val = 0;
+    if (loc == 0xFF07 && (val >> 2) & 1) {
+        switch (val & 0b11) {
+        case 0b00:
+            tim_thresh = TIM_FREQ_1;
+            break;
+        case 0b01:
+            tim_thresh = TIM_FREQ_2;
+            break;
+        case 0b10:
+            tim_thresh = TIM_FREQ_3;
+            break;
+        case 0b11:
+            tim_thresh = TIM_FREQ_4;
+            break;
+        }
+        tim_thresh = CPU_FREQ / tim_thresh;
+    }
     mem[loc] = val;
+}
+
+void w_pxl(int y, int x, int clr) {
+    if (dsp[y][x] != clr) upd[y][x] = 1;
+    dsp[y][x] = clr;
 }
 
 byte rd8() {
@@ -384,7 +403,7 @@ int c_and(byte reg) {
     cl_flg(FLG_N);
     st_flg(FLG_H);
     cl_flg(FLG_C);
-    return 8;
+    return 4;
 }
 
 int c_bit(byte reg, int bit) {
@@ -402,10 +421,8 @@ int c_call(int flg) {
         kp();
         return 24;
     }
-    else {
-        rd16();
-        return 12;
-    }
+    rd16();
+    return 12;
 }
 
 int c_cp(byte reg) {
@@ -438,7 +455,7 @@ int c_dec_mem(dbyte loc) {
     w_mem(loc, reg);
     st_z(reg);
     st_flg(FLG_N);
-    return 4;
+    return 12;
 }
 
 int c_inc(byte* reg) {
@@ -456,7 +473,7 @@ int c_inc_mem(dbyte loc) {
     w_mem(loc, reg);
     st_z(reg);
     cl_flg(FLG_N);
-    return 4;
+    return 12;
 }
 
 int c_jp8(int flg) {
@@ -498,14 +515,14 @@ int c_res_mem(dbyte loc, int bit) {
     byte reg = r_mem(loc);
     reg = reg & ~(1 << bit);
     w_mem(loc, reg);
-    return 8;
+    return 16;
 }
 
 int c_ret(int flg) {
     if (flg) {
         PC = pop16();
         kp();
-        return 16;
+        return 20;
     }
     else {
         return 8;
@@ -531,7 +548,7 @@ int c_rr_mem(dbyte loc) {
     st_z(reg);
     cl_flg(FLG_N);
     cl_flg(FLG_H);
-    return 8;
+    return 16;
 }
 
 int c_rrc(byte* reg) {
@@ -541,7 +558,7 @@ int c_rrc(byte* reg) {
     st_z(*reg);
     cl_flg(FLG_N);
     cl_flg(FLG_H);
-    return 4;
+    return 8;
 }
 
 int c_rrc_mem(dbyte loc) {
@@ -553,7 +570,7 @@ int c_rrc_mem(dbyte loc) {
     st_z(reg);
     cl_flg(FLG_N);
     cl_flg(FLG_H);
-    return 4;
+    return 16;
 }
 
 int c_rl(byte* reg) {
@@ -575,7 +592,7 @@ int c_rl_mem(dbyte loc) {
     st_z(reg);
     cl_flg(FLG_N);
     cl_flg(FLG_H);
-    return 8;
+    return 16;
 }
 
 int c_rlc(byte* reg) {
@@ -597,7 +614,7 @@ int c_rlc_mem(dbyte loc) {
     st_z(reg);
     cl_flg(FLG_N);
     cl_flg(FLG_H);
-    return 8;
+    return 16;
 }
 
 int c_rst(byte loc) {
@@ -644,12 +661,12 @@ int c_srl_mem(dbyte loc) {
     st_z(reg);
     cl_flg(FLG_N);
     cl_flg(FLG_H);
-    return 8;
+    return 16;
 }
 
 int c_set(byte* reg, int bit) {
     st_bt(reg, bit);
-    return 16;
+    return 8;
 }
 
 int c_set_mem(dbyte loc, int bit) {
@@ -676,7 +693,7 @@ int c_sla_mem(dbyte loc) {
     st_z(reg);
     cl_flg(FLG_N);
     cl_flg(FLG_H);
-    return 8;
+    return 16;
 }
 
 int c_sra(byte* reg) {
@@ -698,7 +715,7 @@ int c_sra_mem(dbyte loc) {
     st_z(reg);
     cl_flg(FLG_N);
     cl_flg(FLG_H);
-    return 8;
+    return 16;
 }
 
 int c_sub(byte reg) {
@@ -727,7 +744,7 @@ int c_swp_mem(dbyte loc) {
     cl_flg(FLG_N);
     cl_flg(FLG_H);
     cl_flg(FLG_C);
-    return 8;
+    return 16;
 }
 
 int c_xor(int reg) {
@@ -833,16 +850,25 @@ void upd_lcd() {
     w_mem(0xFF41, stat);
 }
 
-void upd_tim() { // TODO this doesn't work
-    byte div = DIV;
-    div++;
-    mem[0xFF04] = div;
-    // if (!gt_bt(TAC, 2)) return;
-    byte tima = TIMA;
-    intr_timer(tima);
-    if (tima == 0xFF) tima = TMA;
-    else tima++;
-    w_mem(0xFF05, tima);
+void upd_tim(int cycles) {
+    div_cnt += cycles;
+    while (div_cnt >= CPU_FREQ / DIV_FREQ) {
+        byte div = DIV;
+        div++;
+        mem[0xFF04] = div;
+        div_cnt -= CPU_FREQ / DIV_FREQ;
+    }
+    if (gt_bt(TAC, 2)) {
+        tim_cnt += cycles;
+        while (tim_cnt >= tim_thresh) {
+            byte tima = TIMA;
+            intr_timer(tima);
+            if (tima == 0xFF) tima = TMA;
+            else tima++;
+            w_mem(0xFF05, tima);
+            tim_cnt -= tim_thresh;
+        }
+    }
 }
 
 int upd_in() {
@@ -962,7 +988,7 @@ void scnln() {
                     byte ms = r_mem(idx + bytey + 1);
                     offx = 7 - offx;
                     int clr = (gt_bt(ms, offx) << 1) | gt_bt(ls, offx);
-                    dsp[ly][x] = gt_clr(pal, clr);
+                    w_pxl(ly, x, gt_clr(pal, clr));
                 }
                 if (gt_bt(LCDC, 5)) {
                     mp_area = gt_bt(LCDC, 6);
@@ -990,7 +1016,7 @@ void scnln() {
                             byte ms = r_mem(idx + bytey + 1);
                             offx = 7 - offx;
                             int clr = (gt_bt(ms, offx) << 1) | gt_bt(ls, offx);
-                            dsp[ly][x] = gt_clr(pal, clr);
+                            w_pxl(ly, x, gt_clr(pal, clr));
                         }
                         WIN_CNT++;
                     }
@@ -998,7 +1024,7 @@ void scnln() {
             }
             else {
                 for (int x = 0; x < SCRN_WIDTH; x++) {
-                    dsp[LY][x] = CLR_WHT;
+                    w_pxl(LY, x, CLR_WHT);
                 }
             }
             if (gt_bt(LCDC, 1)) {
@@ -1019,17 +1045,6 @@ void scnln() {
                     else if (ly >= y + 8) continue;
                     obj[cnt++] = mem;
                 }
-                /*
-                printf("===================\n");
-                for (int i = 0; i < cnt; i++) {
-                    printf("Memory: $%04X\n", obj[i]);
-                    printf("Y: $%02X\n", r_mem(obj[i] + 0));
-                    printf("X: $%02X\n", r_mem(obj[i] + 1));
-                    printf("Tile Index: $%02X\n", r_mem(obj[i] + 2));
-                    printf("Flags: $%02X\n", r_mem(obj[i] + 3));
-                }
-                printf("===================\n");
-                */
                 dbyte maxx = 0x0100;
                 dbyte maxm = 0xFFFF;
                 while (cnt--) {
@@ -1080,66 +1095,73 @@ void scnln() {
                         if (flipx) posx = 7 - posx;
                         byte clr = (gt_bt(ms, posx) << 1) | gt_bt(ls, posx);
                         if (gt_bt(flg, 7)) {
-                            if (dsp[ly][x0] == gt_clr(BGP, 0)) dsp[ly][x0] = gt_clr(pal, clr);
+                            if (dsp[ly][x0] == gt_clr(BGP, 0)) w_pxl(ly, x0, gt_clr(pal, clr));
                         }
-                        else if (clr != 0) dsp[ly][x0] = gt_clr(pal, clr);
+                        else if (clr != 0) w_pxl(ly, x0, gt_clr(pal, clr));
                     }
                 }
             }
         }
-        int ly = LY;
-        ly++;
-        if (ly >= 154) {
-            ly = 0;
-            WIN_CNT = 0;
-            frame = 1;
-        }
-        w_mem(0xFF44, ly);
     }
+    int ly = LY;
+    ly++;
+    if (ly >= 154) {
+        ly = 0;
+        WIN_CNT = 0;
+        frame = 1;
+    }
+    w_mem(0xFF44, ly);
 }
 
 void rndr() {
     for (int i = 0; i < SCRN_HEIGHT; i++) {
         for (int j = 0; j < SCRN_WIDTH; j++) {
-            int clr = dsp[i][j];
-            if (clr == CLR_WHT) clr = HEX_WHT;
-            if (clr == CLR_L_GRY) clr = HEX_L_GREY;
-            if (clr == CLR_D_GRY) clr = HEX_R_GREY;
-            if (clr == CLR_BLK) clr = HEX_BLK;
-            byte r = (clr >> 8 * 2) & 0xFF;
-            byte g = (clr >> 8 * 1) & 0xFF;
-            byte b = (clr >> 8 * 0) & 0xFF;
-            SDL_SetRenderDrawColor(rnd, r, g, b, 0xFF);
-            SDL_Rect rct = { j * FCT, i * FCT, FCT, FCT };
-            SDL_RenderFillRect(rnd, &rct);
+            if (upd[i][j]) {
+                int clr = dsp[i][j];
+                if (clr == CLR_WHT) clr = HEX_WHT;
+                if (clr == CLR_L_GRY) clr = HEX_L_GREY;
+                if (clr == CLR_D_GRY) clr = HEX_R_GREY;
+                if (clr == CLR_BLK) clr = HEX_BLK;
+                if (clr == CLR_EXT) clr = HEX_EXT;
+                byte r = (clr >> 8 * 2) & 0xFF;
+                byte g = (clr >> 8 * 1) & 0xFF;
+                byte b = (clr >> 8 * 0) & 0xFF;
+                SDL_SetRenderDrawColor(rnd, r, g, b, 0xFF);
+                SDL_Rect rct = { j * FCT, i * FCT, FCT, FCT };
+                SDL_RenderFillRect(rnd, &rct);
+            }
         }
     }
     SDL_RenderPresent(rnd);
+    memset(upd, 0, sizeof(upd));
 }
 
 int print_instr(byte instr, byte prfx);
 int do_instr();
 
-int update() {
-    scn = 456;
+int do_frame() {
+    scn = 0;
     frame = 0;
+    int tot_cyc = 0;
     while (!frame) {
-        int curr = do_instr();
+        int cyc = do_instr();
+        if (cyc == -1) return -1;
         PC++;
-        if (curr == -1) return 1;
-        scn -= curr;
-        if (scn <= 0) {
+        scn += cyc;
+        tot_cyc += cyc;
+        if (scn >= 456) {
             scnln();
-            scn = 456;
+            scn -= 456;
         }
         upd_lcd();
-        upd_tim();
-        if (upd_in()) return 1;
+        upd_tim(cyc);
+        if (upd_in()) return -1;
         upd_dma();
         chck_intr();
         // if (PC >= 0x100) dbg();
     }
-    return 0;
+    rndr();
+    return tot_cyc;
 }
 
 int main(int argc, char* argv[]) {
@@ -1166,8 +1188,17 @@ int main(int argc, char* argv[]) {
     else fread(rom, rom_size_bytes, 1, rom_file);
     if (loop && init_dsp()) loop = 0;
     while (loop) {
-        if (update()) loop = 0;
-        if(loop) rndr();
+        Uint32 start = SDL_GetTicks();
+        int cyc = do_frame();
+        Uint32 end = SDL_GetTicks();
+        if (cyc == -1) {
+            loop = 0;
+            continue;
+        }
+        Uint32 time_needed = (Uint32) (((float)cyc / (float)CPU_FREQ) * 1000.0);
+        Uint32 time_elapsed = end - start;
+        if (time_elapsed < time_needed) SDL_Delay(time_needed - time_elapsed);
+        else printf("PERFORMANCE DIP\n");
     }
     dbg();
     printf("DONE\n");
@@ -1744,6 +1775,9 @@ int print_instr(byte instr, byte prfx) {
         case 0xB7:
             printf("OR A\n");
             break;
+        case 0xB8:
+            printf("CP B\n");
+            break;
         case 0xBB:
             printf("CP E\n");
             break;
@@ -2047,7 +2081,8 @@ int do_instr() {
         case 0x45:
             return c_bit(L, 0);
         case 0x46:
-            return c_bit(r_mem(gt_HL()), 0);
+            c_bit(r_mem(gt_HL()), 0);
+            return 12;
         case 0x47:
             return c_bit(A, 0);
         case 0x48:
@@ -2063,7 +2098,8 @@ int do_instr() {
         case 0x4D:
             return c_bit(L, 1);
         case 0x4E:
-            return c_bit(r_mem(gt_HL()), 1);
+            c_bit(r_mem(gt_HL()), 1);
+            return 12;
         case 0x4F:
             return c_bit(A, 1);
         case 0x50:
@@ -2079,7 +2115,8 @@ int do_instr() {
         case 0x55:
             return c_bit(L, 2);
         case 0x56:
-            return c_bit(r_mem(gt_HL()), 2);
+            c_bit(r_mem(gt_HL()), 2);
+            return 12;
         case 0x57:
             return c_bit(A, 2);
         case 0x58:
@@ -2095,7 +2132,8 @@ int do_instr() {
         case 0x5D:
             return c_bit(L, 3);
         case 0x5E:
-            return c_bit(r_mem(gt_HL()), 3);
+            c_bit(r_mem(gt_HL()), 3);
+            return 12;
         case 0x5F:
             return c_bit(A, 3);
         case 0x60:
@@ -2111,7 +2149,8 @@ int do_instr() {
         case 0x65:
             return c_bit(L, 4);
         case 0x66:
-            return c_bit(r_mem(gt_HL()), 4);
+            c_bit(r_mem(gt_HL()), 4);
+            return 12;
         case 0x67:
             return c_bit(A, 4);
         case 0x68:
@@ -2127,7 +2166,8 @@ int do_instr() {
         case 0x6D:
             return c_bit(L, 5);
         case 0x6E:
-            return c_bit(r_mem(gt_HL()), 5);
+            c_bit(r_mem(gt_HL()), 5);
+            return 12;
         case 0x6F:
             return c_bit(A, 5);
         case 0x70:
@@ -2143,7 +2183,8 @@ int do_instr() {
         case 0x75:
             return c_bit(L, 6);
         case 0x76:
-            return c_bit(r_mem(gt_HL()), 6);
+            c_bit(r_mem(gt_HL()), 6);
+            return 12;
         case 0x77:
             return c_bit(A, 6);
         case 0x78:
@@ -2159,7 +2200,8 @@ int do_instr() {
         case 0x7D:
             return c_bit(L, 7);
         case 0x7E:
-            return c_bit(r_mem(gt_HL()), 7);
+            c_bit(r_mem(gt_HL()), 7);
+            return 12;
         case 0x7F:
             return c_bit(A, 7);
         case 0x80:
@@ -2351,7 +2393,8 @@ int do_instr() {
         case 0xDD:
             return c_set(&L, 3);
         case 0xDE:
-            return c_set_mem(gt_HL(), 3);
+            c_set_mem(gt_HL(), 3);
+            return 16;
         case 0xDF:
             return c_set(&A, 3);
         case 0xE0:
@@ -2367,7 +2410,8 @@ int do_instr() {
         case 0xE5:
             return c_set(&L, 4);
         case 0xE6:
-            return c_set_mem(gt_HL(), 4);
+            c_set_mem(gt_HL(), 4);
+            return 16;
         case 0xE7:
             return c_set(&A, 4);
         case 0xE8:
@@ -2383,7 +2427,8 @@ int do_instr() {
         case 0xED:
             return c_set(&L, 5);
         case 0xEE:
-            return c_set_mem(gt_HL(), 5);
+            c_set_mem(gt_HL(), 5);
+            return 16;
         case 0xEF:
             return c_set(&A, 5);
         case 0xF0:
@@ -2399,7 +2444,8 @@ int do_instr() {
         case 0xF5:
             return c_set(&L, 6);
         case 0xF6:
-            return c_set_mem(gt_HL(), 6);
+            c_set_mem(gt_HL(), 6);
+            return 16;
         case 0xF7:
             return c_set(&A, 6);
         case 0xF8:
@@ -2415,7 +2461,8 @@ int do_instr() {
         case 0xFD:
             return c_set(&L, 7);
         case 0xFE:
-            return c_set_mem(gt_HL(), 7);
+            c_set_mem(gt_HL(), 7);
+            return 16;
         case 0xFF:
             return c_set(&A, 7);
         default:
@@ -2848,7 +2895,8 @@ int do_instr() {
         case 0x85:
             return c_add(L);
         case 0x86:
-            return c_add(r_mem(gt_HL()));
+            c_add(r_mem(gt_HL()));
+            return 8;
         case 0x87:
             return c_add(A);
         case 0x88:
@@ -2864,7 +2912,8 @@ int do_instr() {
         case 0x8D:
             return c_adc(L);
         case 0x8E:
-            return c_adc(r_mem(gt_HL()));
+            c_adc(r_mem(gt_HL()));
+            return 8;
         case 0x8F:
             return c_adc(A);
         case 0x90:
@@ -2880,7 +2929,8 @@ int do_instr() {
         case 0x95:
             return c_sub(L);
         case 0x96:
-            return c_sub(r_mem(gt_HL()));
+            c_sub(r_mem(gt_HL()));
+            return 8;
         case 0x97:
             return c_sub(A);
         case 0x98:
@@ -2896,7 +2946,8 @@ int do_instr() {
         case 0x9D:
             return c_sbc(L);
         case 0x9E:
-            return c_sbc(r_mem(gt_HL()));
+            c_sbc(r_mem(gt_HL()));
+            return 8;
         case 0x9F:
             return c_sbc(A);
         case 0xA0:
@@ -2912,7 +2963,8 @@ int do_instr() {
         case 0xA5:
             return c_and(L);
         case 0xA6:
-            return c_and(r_mem(gt_HL()));
+            c_and(r_mem(gt_HL()));
+            return 8;
         case 0xA7:
             return c_and(A);
         case 0xA8:
@@ -2928,7 +2980,8 @@ int do_instr() {
         case 0xAD:
             return c_xor(L);
         case 0xAE:
-            return c_xor(r_mem(gt_HL()));
+            c_xor(r_mem(gt_HL()));
+            return 8;
         case 0xAF:
             return c_xor(A);
         case 0xB0:
@@ -2944,7 +2997,8 @@ int do_instr() {
         case 0xB5:
             return c_or(L);
         case 0xB6:
-            return c_or(r_mem(gt_HL()));
+            c_or(r_mem(gt_HL()));
+            return 8;
         case 0xB7:
             return c_or(A);
         case 0xB8:
@@ -2960,7 +3014,8 @@ int do_instr() {
         case 0xBD:
             return c_cp(L);
         case 0xBE:
-            return c_cp(r_mem(gt_HL()));
+            c_cp(r_mem(gt_HL()));
+            return 8;
         case 0xBF:
             return c_cp(A);
         case 0xC0:
@@ -2971,22 +3026,22 @@ int do_instr() {
         case 0xC2:
             return c_jp16(1 - gt_flg(FLG_Z));
         case 0xC3:
-            PC = rd16();
-            kp();
-            return 16;
+            return c_jp16(1);
         case 0xC4:
             return c_call(1 - gt_flg(FLG_Z));
         case 0xC5:
             psh16(gt_BC());
             return 16;
         case 0xC6:
-            return c_add(rd8());
+            c_add(rd8());
+            return 8;
         case 0xC7:
             return c_rst(0x0000);
         case 0xC8:
             return c_ret(gt_flg(FLG_Z));
         case 0xC9:
-            return c_ret(1);
+            c_ret(1);
+            return 16;
         case 0xCA:
             return c_jp16(gt_flg(FLG_Z));
         case 0xCC:
@@ -2994,7 +3049,8 @@ int do_instr() {
         case 0xCD:
             return c_call(1);
         case 0xCE:
-            return c_adc(rd8());
+            c_adc(rd8());
+            return 8;
         case 0xCF:
             return c_rst(0x0008);
         case 0xD0:
@@ -3010,20 +3066,23 @@ int do_instr() {
             psh16(gt_DE());
             return 16;
         case 0xD6:
-            return c_sub(rd8());
+            c_sub(rd8());
+            return 8;
         case 0xD7:
             return c_rst(0x0010);
         case 0xD8:
             return c_ret(gt_flg(FLG_C));
         case 0xD9:
             IME = 1;
-            return c_ret(1);
+            c_ret(1);
+            return 16;
         case 0xDA:
             return c_jp16(gt_flg(FLG_C));
         case 0xDC:
             return c_call(gt_flg(FLG_C));
         case 0xDE:
-            return c_sbc(rd8());
+            c_sbc(rd8());
+            return 8;
         case 0xDF:
             return c_rst(0x0018);
         case 0xE0:
@@ -3039,7 +3098,8 @@ int do_instr() {
             psh16(gt_HL());
             return 16;
         case 0xE6:
-            return c_and(rd8());
+            c_and(rd8());
+            return 8;
         case 0xE7:
             return c_rst(0x0020);
         case 0xE8:
@@ -3060,7 +3120,8 @@ int do_instr() {
             w_mem(rd16(), A);
             return 16;
         case 0xEE:
-            return c_xor(rd8());
+            c_xor(rd8());
+            return 8;
         case 0xEF:
             return c_rst(0x0028);
         case 0xF0:
@@ -3079,7 +3140,8 @@ int do_instr() {
             psh16(gt_AF());
             return 16;
         case 0xF6:
-            return c_or(rd8());
+            c_or(rd8());
+            return 8;
         case 0xF7:
             return c_rst(0x0030);
         case 0xF8:
@@ -3103,7 +3165,8 @@ int do_instr() {
             IME = 1;
             return 4;
         case 0xFE:
-            return c_cp(rd8());
+            c_cp(rd8());
+            return 8;
         case 0xFF:
             return c_rst(0x0038);
         default:
