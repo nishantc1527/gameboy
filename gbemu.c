@@ -96,10 +96,12 @@ SDL_Window* win;
 SDL_Renderer* rnd;
 SDL_Event evt;
 
-char* rom_name = "pipe_dream.gb";
-int FCT = 6;
+char* rom_name = "tetris.gb";
+int FCT_X = 6, FCT_Y = 6;
 int dis = 0;
 int dbg_time = 5000;
+
+void redraw();
 
 void init_reg() {
     PC = 0;
@@ -109,11 +111,7 @@ void init_reg() {
     memset(dsp, 0, sizeof(dsp));
     memset(rom, 0, sizeof(rom));
     memset(extern_ram, 0, sizeof(extern_ram));
-    for (int i = 0; i < SCRN_HEIGHT; i++) {
-        for (int j = 0; j < SCRN_WIDTH; j++) {
-            upd[i][j] = 1;
-        }
-    }
+    redraw();
     div_cnt = 0;
     tim_cnt = 0;
 }
@@ -123,7 +121,7 @@ int init_dsp() {
         printf("ERROR CREATING WINDOW: %s\n", SDL_GetError());
         return 1;
     }
-    win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCRN_WIDTH * FCT, SCRN_HEIGHT * FCT, 0);
+    win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCRN_WIDTH * FCT_X, SCRN_HEIGHT * FCT_Y, SDL_WINDOW_SHOWN);
     rnd = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
     return 0;
 }
@@ -149,6 +147,9 @@ int cart_info() {
     case 0x00:
         rom_size_bytes = 32;
         break;
+    case 0x05:
+        rom_size_bytes = 1024;
+        break;
     default:
         printf("UNIMPLEMENTED ROM SIZE $%02X\n", rom_size);
         return 1;
@@ -156,6 +157,7 @@ int cart_info() {
     rom_size_bytes *= 0x400;
     switch (ram_size) {
     case 0x00:
+    case 0x03:
         break;
     default:
         printf("UNIMPLEMENTED RAM SIZE $%02X\n", ram_size);
@@ -872,9 +874,30 @@ void upd_tim(int cycles) {
 }
 
 int upd_in() {
+    byte curr_joyp = JOYP;
+    curr_joyp |= 0xF;
+    if (!gt_bt(curr_joyp, 4)) {
+        if (in[BTN_RIGHT]) cl_bt(&curr_joyp, 0);
+        if (in[BTN_LEFT]) cl_bt(&curr_joyp, 1);
+        if (in[BTN_UP]) cl_bt(&curr_joyp, 2);
+        if (in[BTN_DOWN]) cl_bt(&curr_joyp, 3);
+    }
+    if (!gt_bt(curr_joyp, 5)) {
+        if (in[BTN_A]) cl_bt(&curr_joyp, 0);
+        if (in[BTN_B]) cl_bt(&curr_joyp, 1);
+        if (in[BTN_SELECT]) cl_bt(&curr_joyp, 2);
+        if (in[BTN_START]) cl_bt(&curr_joyp, 3);
+    }
+    intr_joypad(JOYP, curr_joyp);
+    w_mem(0xFF00, curr_joyp);
+    return 0;
+}
+
+int handle_in() {
     while (SDL_PollEvent(&evt)) {
-        if (evt.type == SDL_QUIT) return 1;
-        else if (evt.type == SDL_KEYDOWN) {
+        switch (evt.type) {
+        case SDL_QUIT: return 1;
+        case SDL_KEYDOWN:
             switch (evt.key.keysym.sym) {
             case SDLK_s:
                 in[BTN_A] = 1;
@@ -901,8 +924,8 @@ int upd_in() {
                 in[BTN_RIGHT] = 1;
                 break;
             }
-        }
-        else if (evt.type == SDL_KEYUP) {
+            break;
+        case SDL_KEYUP:
             switch (evt.key.keysym.sym) {
             case SDLK_s:
                 in[BTN_A] = 0;
@@ -929,25 +952,10 @@ int upd_in() {
                 in[BTN_RIGHT] = 0;
                 break;
             }
+            break;
         }
     }
-    byte curr_joyp = JOYP;
-    curr_joyp |= 0xF;
-    if (!gt_bt(curr_joyp, 4)) {
-        if (in[BTN_RIGHT]) cl_bt(&curr_joyp, 0);
-        if (in[BTN_LEFT]) cl_bt(&curr_joyp, 1);
-        if (in[BTN_UP]) cl_bt(&curr_joyp, 2);
-        if (in[BTN_DOWN]) cl_bt(&curr_joyp, 3);
-    }
-    if (!gt_bt(curr_joyp, 5)) {
-        if (in[BTN_A]) cl_bt(&curr_joyp, 0);
-        if (in[BTN_B]) cl_bt(&curr_joyp, 1);
-        if (in[BTN_SELECT]) cl_bt(&curr_joyp, 2);
-        if (in[BTN_START]) cl_bt(&curr_joyp, 3);
-    }
-    intr_joypad(JOYP, curr_joyp);
-    w_mem(0xFF00, curr_joyp);
-    return 0;
+    upd_in();
 }
 
 void upd_dma() {
@@ -961,7 +969,7 @@ void upd_dma() {
 }
 
 void scnln() {
-    if (gt_bt(LCDC, 7)) {
+    if (gt_bt(LCDC, 7)) { // TODO figure out how activation works
         if (LY < SCRN_HEIGHT) {
             if (gt_bt(LCDC, 0)) {
                 byte ly = LY;
@@ -1113,6 +1121,14 @@ void scnln() {
     w_mem(0xFF44, ly);
 }
 
+void redraw() {
+    for (int i = 0; i < SCRN_HEIGHT; i++) {
+        for (int j = 0; j < SCRN_WIDTH; j++) {
+            upd[i][j] = 1;
+        }
+    }
+}
+
 void rndr() {
     for (int i = 0; i < SCRN_HEIGHT; i++) {
         for (int j = 0; j < SCRN_WIDTH; j++) {
@@ -1127,7 +1143,7 @@ void rndr() {
                 byte g = (clr >> 8 * 1) & 0xFF;
                 byte b = (clr >> 8 * 0) & 0xFF;
                 SDL_SetRenderDrawColor(rnd, r, g, b, 0xFF);
-                SDL_Rect rct = { j * FCT, i * FCT, FCT, FCT };
+                SDL_Rect rct = { j * FCT_X, i * FCT_Y, FCT_X, FCT_Y };
                 SDL_RenderFillRect(rnd, &rct);
             }
         }
@@ -1155,7 +1171,7 @@ int do_frame() {
         }
         upd_lcd();
         upd_tim(cyc);
-        if (upd_in()) return -1;
+        if (handle_in()) return -1;
         upd_dma();
         chck_intr();
         // if (PC >= 0x100) dbg();
@@ -1181,7 +1197,7 @@ int main(int argc, char* argv[]) {
         printf("COULD NOT OPEN ROM\n");
         loop = 0;
     }
-    else fread(mem, 0x8000, 1, rom_file); // TODO why write to memory if just using it for cartridge header
+    else fread(mem, 0x8000, 1, rom_file); // Put only first bank in memory
     if (cart_info()) loop = 0;
     fopen_s(&rom_file, rom_name, "rb");
     if (!rom_file);
