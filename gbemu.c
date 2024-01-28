@@ -85,19 +85,17 @@ dbyte intr_loc[] = { 0x0040, 0x0048, 0x0050, 0x0058, 0x0060 };
 
 char title[20];
 byte cart_type;
-byte rom_size;
-unsigned int rom_size_bytes;
-byte ram_size;
-byte rom_bank;
-byte ram_bank;
+byte rom_size, rom_bank, upper_rom_bank;
+byte ram_size, ram_bank;
 int ram_enable;
+mbc1_mode;
 
 SDL_Window* win;
 SDL_Renderer* rnd;
 SDL_Event evt;
 
 char* rom_name = "tetris.gb";
-int FCT_X = 6, FCT_Y = 6;
+int FCT_X = 4, FCT_Y = 4;
 int dis = 0;
 int dbg_time = 5000;
 
@@ -138,6 +136,7 @@ int cart_info() {
     ram_size = mem[0x0149];
     switch (cart_type) {
     case 0x00:
+    case 0x01:
         break;
     default:
         printf("UNIMPLEMENTED MAPPER $%02X\n", cart_type);
@@ -145,19 +144,15 @@ int cart_info() {
     }
     switch (rom_size) {
     case 0x00:
-        rom_size_bytes = 32;
-        break;
-    case 0x05:
-        rom_size_bytes = 1024;
+    case 0x01:
+    case 0x03:
         break;
     default:
         printf("UNIMPLEMENTED ROM SIZE $%02X\n", rom_size);
         return 1;
     }
-    rom_size_bytes *= 0x400;
     switch (ram_size) {
     case 0x00:
-    case 0x03:
         break;
     default:
         printf("UNIMPLEMENTED RAM SIZE $%02X\n", ram_size);
@@ -165,6 +160,19 @@ int cart_info() {
     }
     rom_bank = 1;
     ram_enable = 0;
+    if (cart_type == 0x01) {
+        mbc1_mode = 0;
+        upper_rom_bank = 0;
+        switch (ram_size) {
+        case 0x00:
+        case 0x01:
+        case 0x02:
+            break;
+        default:
+            printf("RAM SIZE NOT AVAILABLE\n");
+            return 1;
+        }
+    }
     return 0;
 }
 
@@ -174,11 +182,28 @@ byte r_mem(dbyte loc) {
         switch (cart_type) {
         case 0x00:
             return rom[loc];
+        case 0x01:
+            if (loc < 0x4000) return rom[loc];
+            else return rom[loc + 0x4000 * rom_bank - 0x4000];
         }
     }
     if (loc >= 0xA000 && loc < 0xC000) {
         switch (cart_type) {
         case 0x00:
+            return 0xFF;
+        case 0x01:
+            if (ram_enable) {
+                switch (ram_size) {
+                case 0x00:
+                    return 0xFF;
+                case 0x02:
+                    return extern_ram[loc];                          //  8 kilobytes - 1 bank
+                case 0x03:
+                    loc -= 0xA000;
+                    if (mbc1_mode == 0) return extern_ram[loc];
+                    else return extern_ram[loc + 0x2000 * ram_bank]; // 32 kilobytes - 4 banks
+                }
+            }
             return 0xFF;
         }
     }
@@ -191,11 +216,38 @@ void w_mem(dbyte loc, byte val) {
         switch (cart_type) {
         case 0x00:
             return;
+        case 0x01:
+            if (loc < 0x2000) {
+                if ((val & 0xF) == 0xA) ram_enable = 1;
+                else ram_enable = 0;
+            }
+            else if (loc < 0x4000) {
+                rom_bank = val & 0b11111;
+                if (rom_bank == 0) rom_bank = 1;
+                rom_bank &= (1 << (rom_size + 1)) - 1;
+            }
+            else if (loc < 0x6000) {
+                val &= 0b11;
+                if (mbc1_mode) {
+                    ram_bank = val;
+                } else {
+                    val &= 0b11;
+                    if (rom_size >= 0x05) rom_bank |= val << 5;
+                    if (ram_size == 0x03) ram_bank = val;
+                }
+            }
+            else if (loc < 0x8000) {
+                mbc1_mode = val & 1;
+            }
+            return;
         }
     }
     if (loc >= 0xA000 && loc < 0xC000) {
         switch (cart_type) {
         case 0x00:
+            return;
+        case 0x01:
+            if (ram_enable) extern_ram[loc] = val;
             return;
         }
     }
@@ -956,6 +1008,7 @@ int handle_in() {
         }
     }
     upd_in();
+    return 0;
 }
 
 void upd_dma() {
@@ -1201,7 +1254,7 @@ int main(int argc, char* argv[]) {
     if (cart_info()) loop = 0;
     fopen_s(&rom_file, rom_name, "rb");
     if (!rom_file);
-    else fread(rom, rom_size_bytes, 1, rom_file);
+    else fread(rom, (1LL << rom_size) * 0x8000 , 1, rom_file);
     if (loop && init_dsp()) loop = 0;
     while (loop) {
         Uint32 start = SDL_GetTicks();
@@ -1211,7 +1264,7 @@ int main(int argc, char* argv[]) {
             loop = 0;
             continue;
         }
-        Uint32 time_needed = (Uint32) (((float)cyc / (float)CPU_FREQ) * 1000.0);
+        Uint32 time_needed = (Uint32)(((float)cyc / (float)CPU_FREQ) * 1000.0);
         Uint32 time_elapsed = end - start;
         if (time_elapsed < time_needed) SDL_Delay(time_needed - time_elapsed);
         else printf("PERFORMANCE DIP\n");
