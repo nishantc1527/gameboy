@@ -88,13 +88,14 @@ byte cart_type;
 byte rom_size, rom_bank, upper_rom_bank;
 byte ram_size, ram_bank;
 int ram_enable;
-mbc1_mode;
+int mbc1_mode;
+int mbc3_rtc_reg;
 
 SDL_Window* win;
 SDL_Renderer* rnd;
 SDL_Event evt;
 
-char* rom_name = "tetris.gb";
+char* rom_name = "pokered.gb";
 int FCT_X = 4, FCT_Y = 4;
 int dis = 0;
 int dbg_time = 5000;
@@ -137,6 +138,7 @@ int cart_info() {
     switch (cart_type) {
     case 0x00:
     case 0x01:
+    case 0x13:
         break;
     default:
         printf("UNIMPLEMENTED MAPPER $%02X\n", cart_type);
@@ -146,6 +148,7 @@ int cart_info() {
     case 0x00:
     case 0x01:
     case 0x03:
+    case 0x05:
         break;
     default:
         printf("UNIMPLEMENTED ROM SIZE $%02X\n", rom_size);
@@ -153,6 +156,7 @@ int cart_info() {
     }
     switch (ram_size) {
     case 0x00:
+    case 0x03:
         break;
     default:
         printf("UNIMPLEMENTED RAM SIZE $%02X\n", ram_size);
@@ -163,12 +167,21 @@ int cart_info() {
     if (cart_type == 0x01) {
         mbc1_mode = 0;
         upper_rom_bank = 0;
-        switch (ram_size) {
-        case 0x00:
-        case 0x01:
-        case 0x02:
-            break;
-        default:
+        if (rom_size > 0x06) {
+            printf("ROM SIZE NOT AVAILABLE\n");
+            return 1;
+        }
+        if (ram_size > 0x03) {
+            printf("RAM SIZE NOT AVAILABLE\n");
+            return 1;
+        }
+    }
+    if (cart_type == 0x13) {
+        if (rom_size > 0x06) {
+            printf("ROM SIZE NOT AVAILABLE\n");
+            return 1;
+        }
+        if (ram_size > 0x03) {
             printf("RAM SIZE NOT AVAILABLE\n");
             return 1;
         }
@@ -176,78 +189,215 @@ int cart_info() {
     return 0;
 }
 
+void save() {
+    switch (cart_type) {
+    case 0x13:
+    {
+        char file_name[30] = "";
+        strcat_s(file_name, sizeof(file_name), title);
+        strcat_s(file_name, sizeof(file_name), ".sav");
+        FILE* save_file = fopen(file_name, "wb");
+        fwrite(extern_ram, 1, sizeof(extern_ram), save_file);
+        fclose(save_file);
+    }
+    }
+}
+
+void load() {
+    switch (cart_type) {
+    case 0x13:
+    {
+        char file_name[30] = "";
+        strcat_s(file_name, sizeof(file_name), title);
+        strcat_s(file_name, sizeof(file_name), ".sav");
+        FILE* save_file = fopen(file_name, "rb");
+        fread(extern_ram, 0x20000, 1, save_file);
+    }
+    }
+}
+
+byte no_mbc_read_rom(dbyte loc) {
+    return rom[loc];
+}
+
+byte no_mbc_read_ram(dbyte loc) {
+    return 0xFF;
+}
+
+byte mbc1_read_rom(dbyte loc) {
+    if (loc < 0x4000) return rom[loc];
+    else return rom[loc + 0x4000 * rom_bank - 0x4000];
+}
+
+byte mbc1_read_ram(dbyte loc) {
+    if (ram_enable) {
+        switch (ram_size) {
+        case 0x00:
+            return 0xFF;
+        case 0x02:
+            return extern_ram[loc];                          //  8 kilobytes - 1 bank
+        case 0x03:
+            loc -= 0xA000;
+            if (mbc1_mode == 0) return extern_ram[loc];
+            else return extern_ram[loc + 0x2000 * ram_bank]; // 32 kilobytes - 4 banks
+        }
+    }
+    return 0xFF;
+}
+
+byte mbc3_read_rom(dbyte loc) {
+    if (loc < 0x4000) return rom[loc];
+    else return rom[loc + 0x4000 * rom_bank - 0x4000];
+}
+
+byte mbc3_read_ram(dbyte loc) {
+    if (ram_enable) {
+        if (ram_bank <= 0x03) {
+            switch (ram_size) {
+            case 0x00:
+                return 0xFF;
+            case 0x02:
+                return extern_ram[loc - 0xA000];
+            case 0x03:
+            {
+                dbyte _loc = loc - 0xA000 + 0x2000 * ram_bank;
+                return extern_ram[_loc];
+            }
+            }
+        }
+        else if (loc >= 0x08 && loc <= 0x0C) {
+            // TODO
+        }
+    }
+    return 0xFF;
+}
+
 byte r_mem(dbyte loc) {
     if (!mem[0xFF50] && loc < 0x100) return brom[loc];
     if (loc < 0x8000) {
         switch (cart_type) {
         case 0x00:
-            return rom[loc];
+            return no_mbc_read_rom(loc);
         case 0x01:
-            if (loc < 0x4000) return rom[loc];
-            else return rom[loc + 0x4000 * rom_bank - 0x4000];
+            return mbc1_read_rom(loc);
+        case 0x13:
+            return mbc3_read_rom(loc);
         }
     }
     if (loc >= 0xA000 && loc < 0xC000) {
         switch (cart_type) {
         case 0x00:
-            return 0xFF;
+            return no_mbc_read_ram(loc);
         case 0x01:
-            if (ram_enable) {
-                switch (ram_size) {
-                case 0x00:
-                    return 0xFF;
-                case 0x02:
-                    return extern_ram[loc];                          //  8 kilobytes - 1 bank
-                case 0x03:
-                    loc -= 0xA000;
-                    if (mbc1_mode == 0) return extern_ram[loc];
-                    else return extern_ram[loc + 0x2000 * ram_bank]; // 32 kilobytes - 4 banks
-                }
-            }
-            return 0xFF;
+            return mbc1_read_ram(loc);
+        case 0x13:
+            return mbc3_read_ram(loc);
         }
     }
     if (loc >= 0xE000 && loc <= 0xFDFF) loc -= 0x200;
     return mem[loc];
 }
 
+void no_mbc_write_rom(dbyte loc, byte val) {
+}
+
+void no_mbc_write_ram(dbyte loc, byte val) {
+}
+
+void mbc1_write_rom(dbyte loc, byte val) {
+    if (loc < 0x2000) {
+        if ((val & 0xF) == 0xA) ram_enable = 1;
+        else ram_enable = 0;
+    }
+    else if (loc < 0x4000) {
+        rom_bank = val & 0b11111;
+        if (rom_bank == 0) rom_bank = 1;
+        rom_bank &= (1 << (rom_size + 1)) - 1;
+    }
+    else if (loc < 0x6000) {
+        val &= 0b11;
+        if (mbc1_mode) {
+            ram_bank = val;
+        }
+        else {
+            val &= 0b11;
+            if (rom_size >= 0x05) rom_bank |= val << 5;
+            if (ram_size == 0x03) ram_bank = val;
+        }
+    }
+    else if (loc < 0x8000) {
+        mbc1_mode = val & 1;
+    }
+}
+
+void mbc1_write_ram(dbyte loc, byte val) {
+    if (ram_enable) extern_ram[loc] = val;
+}
+
+void mbc3_write_rom(dbyte loc, byte val) {
+    if (loc < 0x2000) {
+        if ((val & 0xF) == 0xA) ram_enable = 1;
+        else ram_enable = 0;
+    }
+    else if (loc < 0x4000) {
+        rom_bank = val & 0b1111111;
+        if (rom_bank == 0) rom_bank++;
+    }
+    else if (loc < 0x6000) {
+        ram_bank = val;
+    }
+    else if (loc < 0x8000) {
+        // TODO
+    }
+}
+
+void mbc3_write_ram(dbyte loc, byte val) {
+    if (ram_enable) {
+        if (ram_bank <= 0x03) {
+            switch (ram_size) {
+            case 0x00:
+                return;
+            case 0x02:
+                extern_ram[loc - 0xA000] = val;
+                return;
+            case 0x03:
+            {
+                dbyte _loc = loc - 0xA000 + 0x2000 * ram_bank;
+                extern_ram[_loc] = val;
+                return;
+            }
+            }
+        }
+        else if (ram_bank >= 0x08 && ram_bank <= 0x0C) {
+            // TODO
+        }
+    }
+}
+
 void w_mem(dbyte loc, byte val) {
     if (loc < 0x8000) {
         switch (cart_type) {
         case 0x00:
+            no_mbc_write_rom(loc, val);
             return;
         case 0x01:
-            if (loc < 0x2000) {
-                if ((val & 0xF) == 0xA) ram_enable = 1;
-                else ram_enable = 0;
-            }
-            else if (loc < 0x4000) {
-                rom_bank = val & 0b11111;
-                if (rom_bank == 0) rom_bank = 1;
-                rom_bank &= (1 << (rom_size + 1)) - 1;
-            }
-            else if (loc < 0x6000) {
-                val &= 0b11;
-                if (mbc1_mode) {
-                    ram_bank = val;
-                } else {
-                    val &= 0b11;
-                    if (rom_size >= 0x05) rom_bank |= val << 5;
-                    if (ram_size == 0x03) ram_bank = val;
-                }
-            }
-            else if (loc < 0x8000) {
-                mbc1_mode = val & 1;
-            }
+            mbc1_write_rom(loc, val);
+            return;
+        case 0x13:
+            mbc3_write_rom(loc, val);
             return;
         }
     }
     if (loc >= 0xA000 && loc < 0xC000) {
         switch (cart_type) {
         case 0x00:
+            no_mbc_write_ram(loc, val);
             return;
         case 0x01:
-            if (ram_enable) extern_ram[loc] = val;
+            mbc3_write_ram(loc, val);
+            return;
+        case 0x13:
+            mbc3_write_ram(loc, val);
             return;
         }
     }
@@ -1256,6 +1406,7 @@ int main(int argc, char* argv[]) {
     if (!rom_file);
     else fread(rom, (1LL << rom_size) * 0x8000 , 1, rom_file);
     if (loop && init_dsp()) loop = 0;
+    load();
     while (loop) {
         Uint32 start = SDL_GetTicks();
         int cyc = do_frame();
@@ -1267,8 +1418,8 @@ int main(int argc, char* argv[]) {
         Uint32 time_needed = (Uint32)(((float)cyc / (float)CPU_FREQ) * 1000.0);
         Uint32 time_elapsed = end - start;
         if (time_elapsed < time_needed) SDL_Delay(time_needed - time_elapsed);
-        else printf("PERFORMANCE DIP\n");
     }
+    save();
     dbg();
     printf("DONE\n");
     return 0;
