@@ -30,9 +30,9 @@
 #define FLG_C       4
 
 #define HEX_WHT     0xeeeeee
-#define HEX_L_GREY  0xf26161
-#define HEX_R_GREY  0xea0909
-#define HEX_BLK     0x9a0707
+#define HEX_L_GREY  0xab00ff
+#define HEX_R_GREY  0x4c00a4
+#define HEX_BLK     0x31004a
 #define HEX_EXT     0xFF0000
 
 #define INTR_VBLANK 0
@@ -96,7 +96,7 @@ SDL_Renderer* rnd;
 SDL_Event evt;
 
 char* rom_name = "pokered.gb";
-int FCT_X = 4, FCT_Y = 4;
+int FCT_X = 2, FCT_Y = 2;
 int dis = 0;
 int dbg_time = 5000;
 
@@ -211,9 +211,21 @@ void load() {
         strcat_s(file_name, sizeof(file_name), title);
         strcat_s(file_name, sizeof(file_name), ".sav");
         FILE* save_file = fopen(file_name, "rb");
+        if (!save_file) {
+            printf("COULD NOT LOAD SAVE FILE\n");
+            return;
+        }
         fread(extern_ram, 0x20000, 1, save_file);
     }
     }
+}
+
+// Sets the right checksum for pokemon red and blue so you
+// can run it after hacking and stuff
+void set_checksum() {
+    byte sum = 255;
+    for (dbyte loc = 0x2598; loc <= 0x3522; loc++) sum -= extern_ram[loc];
+    extern_ram[0x3523] = sum;
 }
 
 byte no_mbc_read_rom(dbyte loc) {
@@ -1407,6 +1419,7 @@ int main(int argc, char* argv[]) {
     else fread(rom, (1LL << rom_size) * 0x8000 , 1, rom_file);
     if (loop && init_dsp()) loop = 0;
     load();
+    set_checksum();
     while (loop) {
         Uint32 start = SDL_GetTicks();
         int cyc = do_frame();
