@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include "logo.h"
 #include <SDL.h>
 
 #define BTN_A       0
@@ -122,6 +123,15 @@ int init_dsp() {
     }
     win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCRN_WIDTH * FCT_X, SCRN_HEIGHT * FCT_Y, SDL_WINDOW_SHOWN);
     rnd = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
+    Uint32 rmask, gmask, bmask, amask;
+    rmask = 0x000000ff;
+    gmask = 0x0000ff00;
+    bmask = 0x00ff0000;
+    amask = (logo.bytes_per_pixel == 3) ? 0 : 0xff000000;
+    SDL_Surface* icon = SDL_CreateRGBSurfaceFrom((void*)logo.pixel_data, logo.width, logo.height, logo.bytes_per_pixel * 8, logo.bytes_per_pixel * logo.width, rmask, gmask, bmask, amask);
+    SDL_SetWindowIcon(win, icon);
+    SDL_FreeSurface(icon);
+
     return 0;
 }
 
@@ -1053,8 +1063,8 @@ void upd_lcd() {
     byte stat = LCD_STAT;
     int prev_mode = stat & 0b11;
     int curr_mode;
-    if (scn >= 456 - 80) curr_mode = 2;
-    else if (scn >= 456 - 80 - 168) curr_mode = 3;
+    if (scn <= 80) curr_mode = 2;
+    else if (scn <= 172) curr_mode = 3; // TODO length of mode 3 can change
     else curr_mode = 0;
     if (LY >= SCRN_HEIGHT) curr_mode = 1;
     intr_vblank_lcd(stat, prev_mode, curr_mode);
@@ -1184,7 +1194,7 @@ void upd_dma() {
 }
 
 void scnln() {
-    if (gt_bt(LCDC, 7)) { // TODO figure out how activation works
+    if (gt_bt(LCDC, 7)) {
         if (LY < SCRN_HEIGHT) {
             if (gt_bt(LCDC, 0)) {
                 byte ly = LY;
@@ -1325,15 +1335,16 @@ void scnln() {
                 }
             }
         }
+        int ly = LY;
+        ly++;
+        if (ly >= 154) {
+            ly = 0;
+            WIN_CNT = 0;
+            frame = 1;
+        }
+        w_mem(0xFF44, ly);
     }
-    int ly = LY;
-    ly++;
-    if (ly >= 154) {
-        ly = 0;
-        WIN_CNT = 0;
-        frame = 1;
-    }
-    w_mem(0xFF44, ly);
+    else w_mem(0xFF44, 0);
 }
 
 void redraw() {
