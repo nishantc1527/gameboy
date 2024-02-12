@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <string.h>
-#include "logo.h"
 #include <SDL.h>
 
 #define BTN_A       0
@@ -65,6 +64,12 @@
 #define OBP1        r_mem(0xFF49)
 #define WY          r_mem(0xFF4A)
 #define WX          r_mem(0xFF4B)
+#define VBK         r_mem(0xFF4F)
+#define HDMA1       r_mem(0xFF51)
+#define HDMA2       r_mem(0xFF52)
+#define HDMA3       r_mem(0xFF53)
+#define HDMA4       r_mem(0xFF54)
+#define HDMA5       r_mem(0xFF55)
 #define IE          r_mem(0xFFFF)
 
 typedef unsigned char byte;
@@ -73,6 +78,7 @@ typedef unsigned short dbyte;
 byte mem[0x10000];
 byte brom[0x100];
 byte rom[0x800000];
+byte vram[0x4000];
 byte extern_ram[0x20000];
 byte dsp[SCRN_HEIGHT][SCRN_WIDTH];
 int upd[SCRN_HEIGHT][SCRN_WIDTH];
@@ -80,7 +86,8 @@ dbyte PC;
 dbyte SP;
 byte A, B, C, D, E, F, H, L;
 byte IME, WIN_CNT, HALT;
-int scn, frame, tim_cnt, tim_thresh, div_cnt;
+int CGB;
+int scn, frame, tim_cnt, tim_thresh, div_cnt, hdma;
 int in[8];
 dbyte intr_loc[] = { 0x0040, 0x0048, 0x0050, 0x0058, 0x0060 };
 
@@ -123,15 +130,6 @@ int init_dsp() {
     }
     win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCRN_WIDTH * FCT_X, SCRN_HEIGHT * FCT_Y, SDL_WINDOW_SHOWN);
     rnd = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
-    Uint32 rmask, gmask, bmask, amask;
-    rmask = 0x000000ff;
-    gmask = 0x0000ff00;
-    bmask = 0x00ff0000;
-    amask = (logo.bytes_per_pixel == 3) ? 0 : 0xff000000;
-    SDL_Surface* icon = SDL_CreateRGBSurfaceFrom((void*)logo.pixel_data, logo.width, logo.height, logo.bytes_per_pixel * 8, logo.bytes_per_pixel * logo.width, rmask, gmask, bmask, amask);
-    SDL_SetWindowIcon(win, icon);
-    SDL_FreeSurface(icon);
-
     return 0;
 }
 
@@ -142,6 +140,8 @@ int cart_info() {
         if (!mem[i]) break;
         title[i - 0x0134] = mem[i];
     }
+    if (mem[0x0143] == 0x80 || mem[0x0143] == 0xC0) CGB = 1;
+    else CGB = 0;
     cart_type = mem[0x0147];
     rom_size = mem[0x0148];
     ram_size = mem[0x0149];
@@ -232,7 +232,7 @@ void load() {
 
 // Sets the right checksum for pokemon red and blue so you
 // can run it after hacking and stuff
-void set_checksum() {
+void set_checksum_pokemon() {
     byte sum = 255;
     for (dbyte loc = 0x2598; loc <= 0x3522; loc++) sum -= extern_ram[loc];
     extern_ram[0x3523] = sum;
@@ -294,28 +294,45 @@ byte mbc3_read_ram(dbyte loc) {
     return 0xFF;
 }
 
+byte read_rom(dbyte loc) {
+    switch (cart_type) {
+    case 0x00:
+        return no_mbc_read_rom(loc);
+    case 0x01:
+        return mbc1_read_rom(loc);
+    case 0x13:
+        return mbc3_read_rom(loc);
+    }
+    return 0xFF;
+}
+
+byte read_vram_bank(dbyte loc, int bank) {
+    return vram[loc + 0x2000 * bank];
+}
+
+byte read_vram(dbyte loc) {
+    loc -= 0x8000;
+    if (CGB) return read_vram_bank(loc, mem[0xFF4F] & 1);
+    else return vram[loc];
+}
+
+byte read_extern_ram(dbyte loc) {
+    switch (cart_type) {
+    case 0x00:
+        return no_mbc_read_ram(loc);
+    case 0x01:
+        return mbc1_read_ram(loc);
+    case 0x13:
+        return mbc3_read_ram(loc);
+    }
+    return 0xFF;
+}
+
 byte r_mem(dbyte loc) {
     if (!mem[0xFF50] && loc < 0x100) return brom[loc];
-    if (loc < 0x8000) {
-        switch (cart_type) {
-        case 0x00:
-            return no_mbc_read_rom(loc);
-        case 0x01:
-            return mbc1_read_rom(loc);
-        case 0x13:
-            return mbc3_read_rom(loc);
-        }
-    }
-    if (loc >= 0xA000 && loc < 0xC000) {
-        switch (cart_type) {
-        case 0x00:
-            return no_mbc_read_ram(loc);
-        case 0x01:
-            return mbc1_read_ram(loc);
-        case 0x13:
-            return mbc3_read_ram(loc);
-        }
-    }
+    if (loc < 0x8000) return read_rom(loc);
+    if (loc >= 0x8000 && loc < 0xA000) return read_vram(loc);
+    if (loc >= 0xA000 && loc < 0xC000) return read_extern_ram(loc);
     if (loc >= 0xE000 && loc <= 0xFDFF) loc -= 0x200;
     return mem[loc];
 }
@@ -396,33 +413,52 @@ void mbc3_write_ram(dbyte loc, byte val) {
     }
 }
 
+void write_rom(dbyte loc, byte val) {
+    switch (cart_type) {
+    case 0x00:
+        no_mbc_write_rom(loc, val);
+        return;
+    case 0x01:
+        mbc1_write_rom(loc, val);
+        return;
+    case 0x13:
+        mbc3_write_rom(loc, val);
+        return;
+    }
+}
+
+void write_vram(dbyte loc, byte val) {
+    if (CGB) {
+        if (VBK & 1) vram[loc + 0x2000] = val;
+        else vram[loc] = val;
+    }
+    else vram[loc] = val;
+}
+
+void write_extern_ram(dbyte loc, byte val) {
+    switch (cart_type) {
+    case 0x00:
+        no_mbc_write_ram(loc, val);
+        return;
+    case 0x01:
+        mbc3_write_ram(loc, val);
+        return;
+    case 0x13:
+        mbc3_write_ram(loc, val);
+        return;
+    }
+}
+
 void w_mem(dbyte loc, byte val) {
     if (loc < 0x8000) {
-        switch (cart_type) {
-        case 0x00:
-            no_mbc_write_rom(loc, val);
-            return;
-        case 0x01:
-            mbc1_write_rom(loc, val);
-            return;
-        case 0x13:
-            mbc3_write_rom(loc, val);
-            return;
-        }
+        write_rom(loc, val);
+        return;
     }
-    if (loc >= 0xA000 && loc < 0xC000) {
-        switch (cart_type) {
-        case 0x00:
-            no_mbc_write_ram(loc, val);
-            return;
-        case 0x01:
-            mbc3_write_ram(loc, val);
-            return;
-        case 0x13:
-            mbc3_write_ram(loc, val);
-            return;
-        }
+    if (loc >= 0x8000 && loc < 0xA000) {
+        write_vram(loc, val);
+        return;
     }
+    if (loc >= 0xA000 && loc < 0xC000) return write_extern_ram(loc, val);
     if (loc >= 0xE000 && loc <= 0xFDFF) loc -= 0x200;
     if (loc == 0xFF04) val = 0;
     if (loc == 0xFF07 && (val >> 2) & 1) {
@@ -441,6 +477,9 @@ void w_mem(dbyte loc, byte val) {
             break;
         }
         tim_thresh = CPU_FREQ / tim_thresh;
+    }
+    if (loc == 0xFF55) {
+        hdma = 1;
     }
     mem[loc] = val;
 }
@@ -1184,12 +1223,24 @@ int handle_in() {
 }
 
 void upd_dma() {
-    if (DMA >= 0x00 && DMA <= 0xDF) {
-        dbyte src = DMA * 0x100;
-        for (dbyte t = 0; t < 0xA0; t++) {
-            w_mem(0xFE00 + t, r_mem(src + t));
+    if (CGB) {
+        if (hdma) {
+            dbyte src = (((dbyte)HDMA1 << 8) | HDMA2) & 0xFFF0;
+            dbyte dst = (((dbyte)HDMA3 << 8) | HDMA4) & 0xFFF0;
+            for (dbyte t = 0; t < 0xA0; t++) {
+                w_mem(dst + t, r_mem(src + t));
+            }
         }
-        w_mem(0xFF46, 0xFF);
+        hdma = 0;
+    }
+    else {
+        if (DMA >= 0x00 && DMA <= 0xDF) {
+            dbyte src = DMA * 0x100;
+            for (dbyte t = 0; t < 0xA0; t++) {
+                w_mem(0xFE00 + t, r_mem(src + t));
+            }
+            w_mem(0xFF46, 0xFF);
+        }
     }
 }
 
@@ -1430,7 +1481,7 @@ int main(int argc, char* argv[]) {
     else fread(rom, (1LL << rom_size) * 0x8000 , 1, rom_file);
     if (loop && init_dsp()) loop = 0;
     load();
-    set_checksum();
+    set_checksum_pokemon();
     while (loop) {
         Uint32 start = SDL_GetTicks();
         int cyc = do_frame();
