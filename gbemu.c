@@ -64,12 +64,6 @@
 #define OBP1        r_mem(0xFF49)
 #define WY          r_mem(0xFF4A)
 #define WX          r_mem(0xFF4B)
-#define VBK         r_mem(0xFF4F)
-#define HDMA1       r_mem(0xFF51)
-#define HDMA2       r_mem(0xFF52)
-#define HDMA3       r_mem(0xFF53)
-#define HDMA4       r_mem(0xFF54)
-#define HDMA5       r_mem(0xFF55)
 #define IE          r_mem(0xFFFF)
 
 typedef unsigned char byte;
@@ -78,7 +72,6 @@ typedef unsigned short dbyte;
 byte mem[0x10000];
 byte brom[0x100];
 byte rom[0x800000];
-byte vram[0x4000];
 byte extern_ram[0x20000];
 byte dsp[SCRN_HEIGHT][SCRN_WIDTH];
 int upd[SCRN_HEIGHT][SCRN_WIDTH];
@@ -86,8 +79,7 @@ dbyte PC;
 dbyte SP;
 byte A, B, C, D, E, F, H, L;
 byte IME, WIN_CNT, HALT;
-int CGB;
-int scn, frame, tim_cnt, tim_thresh, div_cnt, hdma;
+int scn, frame, tim_cnt, tim_thresh, div_cnt;
 int in[8];
 dbyte intr_loc[] = { 0x0040, 0x0048, 0x0050, 0x0058, 0x0060 };
 
@@ -140,8 +132,6 @@ int cart_info() {
         if (!mem[i]) break;
         title[i - 0x0134] = mem[i];
     }
-    if (mem[0x0143] == 0x80 || mem[0x0143] == 0xC0) CGB = 1;
-    else CGB = 0;
     cart_type = mem[0x0147];
     rom_size = mem[0x0148];
     ram_size = mem[0x0149];
@@ -232,7 +222,7 @@ void load() {
 
 // Sets the right checksum for pokemon red and blue so you
 // can run it after hacking and stuff
-void set_checksum_pokemon() {
+void set_checksum() {
     byte sum = 255;
     for (dbyte loc = 0x2598; loc <= 0x3522; loc++) sum -= extern_ram[loc];
     extern_ram[0x3523] = sum;
@@ -294,45 +284,28 @@ byte mbc3_read_ram(dbyte loc) {
     return 0xFF;
 }
 
-byte read_rom(dbyte loc) {
-    switch (cart_type) {
-    case 0x00:
-        return no_mbc_read_rom(loc);
-    case 0x01:
-        return mbc1_read_rom(loc);
-    case 0x13:
-        return mbc3_read_rom(loc);
-    }
-    return 0xFF;
-}
-
-byte read_vram_bank(dbyte loc, int bank) {
-    return vram[loc + 0x2000 * bank];
-}
-
-byte read_vram(dbyte loc) {
-    loc -= 0x8000;
-    if (CGB) return read_vram_bank(loc, mem[0xFF4F] & 1);
-    else return vram[loc];
-}
-
-byte read_extern_ram(dbyte loc) {
-    switch (cart_type) {
-    case 0x00:
-        return no_mbc_read_ram(loc);
-    case 0x01:
-        return mbc1_read_ram(loc);
-    case 0x13:
-        return mbc3_read_ram(loc);
-    }
-    return 0xFF;
-}
-
 byte r_mem(dbyte loc) {
     if (!mem[0xFF50] && loc < 0x100) return brom[loc];
-    if (loc < 0x8000) return read_rom(loc);
-    if (loc >= 0x8000 && loc < 0xA000) return read_vram(loc);
-    if (loc >= 0xA000 && loc < 0xC000) return read_extern_ram(loc);
+    if (loc < 0x8000) {
+        switch (cart_type) {
+        case 0x00:
+            return no_mbc_read_rom(loc);
+        case 0x01:
+            return mbc1_read_rom(loc);
+        case 0x13:
+            return mbc3_read_rom(loc);
+        }
+    }
+    if (loc >= 0xA000 && loc < 0xC000) {
+        switch (cart_type) {
+        case 0x00:
+            return no_mbc_read_ram(loc);
+        case 0x01:
+            return mbc1_read_ram(loc);
+        case 0x13:
+            return mbc3_read_ram(loc);
+        }
+    }
     if (loc >= 0xE000 && loc <= 0xFDFF) loc -= 0x200;
     return mem[loc];
 }
@@ -413,52 +386,33 @@ void mbc3_write_ram(dbyte loc, byte val) {
     }
 }
 
-void write_rom(dbyte loc, byte val) {
-    switch (cart_type) {
-    case 0x00:
-        no_mbc_write_rom(loc, val);
-        return;
-    case 0x01:
-        mbc1_write_rom(loc, val);
-        return;
-    case 0x13:
-        mbc3_write_rom(loc, val);
-        return;
-    }
-}
-
-void write_vram(dbyte loc, byte val) {
-    if (CGB) {
-        if (VBK & 1) vram[loc + 0x2000] = val;
-        else vram[loc] = val;
-    }
-    else vram[loc] = val;
-}
-
-void write_extern_ram(dbyte loc, byte val) {
-    switch (cart_type) {
-    case 0x00:
-        no_mbc_write_ram(loc, val);
-        return;
-    case 0x01:
-        mbc3_write_ram(loc, val);
-        return;
-    case 0x13:
-        mbc3_write_ram(loc, val);
-        return;
-    }
-}
-
 void w_mem(dbyte loc, byte val) {
     if (loc < 0x8000) {
-        write_rom(loc, val);
-        return;
+        switch (cart_type) {
+        case 0x00:
+            no_mbc_write_rom(loc, val);
+            return;
+        case 0x01:
+            mbc1_write_rom(loc, val);
+            return;
+        case 0x13:
+            mbc3_write_rom(loc, val);
+            return;
+        }
     }
-    if (loc >= 0x8000 && loc < 0xA000) {
-        write_vram(loc, val);
-        return;
+    if (loc >= 0xA000 && loc < 0xC000) {
+        switch (cart_type) {
+        case 0x00:
+            no_mbc_write_ram(loc, val);
+            return;
+        case 0x01:
+            mbc3_write_ram(loc, val);
+            return;
+        case 0x13:
+            mbc3_write_ram(loc, val);
+            return;
+        }
     }
-    if (loc >= 0xA000 && loc < 0xC000) return write_extern_ram(loc, val);
     if (loc >= 0xE000 && loc <= 0xFDFF) loc -= 0x200;
     if (loc == 0xFF04) val = 0;
     if (loc == 0xFF07 && (val >> 2) & 1) {
@@ -478,9 +432,6 @@ void w_mem(dbyte loc, byte val) {
         }
         tim_thresh = CPU_FREQ / tim_thresh;
     }
-    if (loc == 0xFF55) {
-        hdma = 1;
-    }
     mem[loc] = val;
 }
 
@@ -499,7 +450,7 @@ dbyte rd16() {
     return ((dbyte)r_mem(addr2) << 8) | (dbyte)r_mem(addr1);
 }
 
-void psh16(dbyte val) {
+void psh(dbyte val) {
     byte val1 = (byte)(val >> 8);
     byte val2 = (byte)val;
     w_mem(SP - 1, val1);
@@ -507,16 +458,16 @@ void psh16(dbyte val) {
     SP -= 2;
 }
 
-dbyte pop16() {
+dbyte pop() {
     dbyte val1 = r_mem(SP);
     dbyte val2 = r_mem(SP + 1);
     SP += 2;
     return val1 | (val2 << 8);
 }
 
-dbyte pk16() {
-    dbyte val = pop16();
-    psh16(val);
+dbyte pk() {
+    dbyte val = pop();
+    psh(val);
     return val;
 }
 
@@ -681,7 +632,7 @@ int c_bit(byte reg, int bit) {
 
 int c_call(int flg) {
     if (flg) {
-        psh16(PC + 3);
+        psh(PC + 3);
         PC = rd16();
         kp();
         return 24;
@@ -785,7 +736,7 @@ int c_res_mem(dbyte loc, int bit) {
 
 int c_ret(int flg) {
     if (flg) {
-        PC = pop16();
+        PC = pop();
         kp();
         return 20;
     }
@@ -883,7 +834,7 @@ int c_rlc_mem(dbyte loc) {
 }
 
 int c_rst(byte loc) {
-    psh16(PC + 1);
+    psh(PC + 1);
     PC = loc;
     kp();
     return 16;
@@ -1022,7 +973,7 @@ int c_xor(int reg) {
 }
 
 void dbg() {
-    printf("{\n\tAF: $%04X\n\tBC: $%04X\n\tDE: $%04X\n\tHL: $%04X\n\tSP: $%04X\n\tPC: $%04X\n\tSTACK PEEK: $%04X\n\tZERO FLAG: %d\n\tSUBTRACTION FLAG: %d\n\tHALF CARRY FLAG: %d\n\tCARRY FLAG: %d\n}\n", gt_AF(), gt_BC(), gt_DE(), gt_HL(), SP, PC, pk16(), gt_flg(FLG_Z), gt_flg(FLG_N), gt_flg(FLG_H), gt_flg(FLG_C));
+    printf("{\n\tAF: $%04X\n\tBC: $%04X\n\tDE: $%04X\n\tHL: $%04X\n\tSP: $%04X\n\tPC: $%04X\n\tSTACK PEEK: $%04X\n\tZERO FLAG: %d\n\tSUBTRACTION FLAG: %d\n\tHALF CARRY FLAG: %d\n\tCARRY FLAG: %d\n}\n", gt_AF(), gt_BC(), gt_DE(), gt_HL(), SP, PC, pk(), gt_flg(FLG_Z), gt_flg(FLG_N), gt_flg(FLG_H), gt_flg(FLG_C));
 }
 
 void req_intr(int intr) {
@@ -1049,7 +1000,7 @@ void do_intr(int intr) {
             break;
         }
         cl_bt(&mem[0xFF0F], intr);
-        psh16(PC);
+        psh(PC);
         PC = intr_loc[intr];
     }
     HALT = 0;
@@ -1223,24 +1174,12 @@ int handle_in() {
 }
 
 void upd_dma() {
-    if (CGB) {
-        if (hdma) {
-            dbyte src = (((dbyte)HDMA1 << 8) | HDMA2) & 0xFFF0;
-            dbyte dst = (((dbyte)HDMA3 << 8) | HDMA4) & 0xFFF0;
-            for (dbyte t = 0; t < 0xA0; t++) {
-                w_mem(dst + t, r_mem(src + t));
-            }
+    if (DMA >= 0x00 && DMA <= 0xDF) {
+        dbyte src = DMA * 0x100;
+        for (dbyte t = 0; t < 0xA0; t++) {
+            w_mem(0xFE00 + t, r_mem(src + t));
         }
-        hdma = 0;
-    }
-    else {
-        if (DMA >= 0x00 && DMA <= 0xDF) {
-            dbyte src = DMA * 0x100;
-            for (dbyte t = 0; t < 0xA0; t++) {
-                w_mem(0xFE00 + t, r_mem(src + t));
-            }
-            w_mem(0xFF46, 0xFF);
-        }
+        w_mem(0xFF46, 0xFF);
     }
 }
 
@@ -1451,14 +1390,12 @@ int do_frame() {
         if (handle_in()) return -1;
         upd_dma();
         chck_intr();
-        // if (PC >= 0x100) dbg();
     }
     rndr();
     return tot_cyc;
 }
 
 int main(int argc, char* argv[]) {
-    // freopen("logfile.txt", "w", stdout);
     init_reg();
     FILE* boot_rom_file;
     FILE* rom_file;
@@ -1478,10 +1415,10 @@ int main(int argc, char* argv[]) {
     if (cart_info()) loop = 0;
     fopen_s(&rom_file, rom_name, "rb");
     if (!rom_file);
-    else fread(rom, (1LL << rom_size) * 0x8000 , 1, rom_file);
+    else fread(rom, (1LL << rom_size) * 0x8000, 1, rom_file);
     if (loop && init_dsp()) loop = 0;
     load();
-    set_checksum_pokemon();
+    set_checksum();
     while (loop) {
         Uint32 start = SDL_GetTicks();
         int cyc = do_frame();
@@ -3316,7 +3253,7 @@ int do_instr() {
         case 0xC0:
             return c_ret(1 - gt_flg(FLG_Z));
         case 0xC1:
-            st_BC(pop16());
+            st_BC(pop());
             return 12;
         case 0xC2:
             return c_jp16(1 - gt_flg(FLG_Z));
@@ -3325,7 +3262,7 @@ int do_instr() {
         case 0xC4:
             return c_call(1 - gt_flg(FLG_Z));
         case 0xC5:
-            psh16(gt_BC());
+            psh(gt_BC());
             return 16;
         case 0xC6:
             c_add(rd8());
@@ -3351,14 +3288,14 @@ int do_instr() {
         case 0xD0:
             return c_ret(1 - gt_flg(FLG_C));
         case 0xD1:
-            st_DE(pop16());
+            st_DE(pop());
             return 12;
         case 0xD2:
             return c_jp16(1 - gt_flg(FLG_C));
         case 0xD4:
             return c_call(1 - gt_flg(FLG_C));
         case 0xD5:
-            psh16(gt_DE());
+            psh(gt_DE());
             return 16;
         case 0xD6:
             c_sub(rd8());
@@ -3384,13 +3321,13 @@ int do_instr() {
             w_mem(0xFF00 + (dbyte)rd8(), A);
             return 12;
         case 0xE1:
-            st_HL(pop16());
+            st_HL(pop());
             return 12;
         case 0xE2:
             w_mem(0xFF00 + C, A);
             return 8;
         case 0xE5:
-            psh16(gt_HL());
+            psh(gt_HL());
             return 16;
         case 0xE6:
             c_and(rd8());
@@ -3423,7 +3360,7 @@ int do_instr() {
             A = r_mem(0xFF00 + (dbyte)rd8());
             return 12;
         case 0xF1:
-            st_AF(pop16() & 0xFFF0);
+            st_AF(pop() & 0xFFF0);
             return 12;
         case 0xF2:
             A = r_mem(0xFF00 + C);
@@ -3432,7 +3369,7 @@ int do_instr() {
             IME = 0;
             return 4;
         case 0xF5:
-            psh16(gt_AF());
+            psh(gt_AF());
             return 16;
         case 0xF6:
             c_or(rd8());
