@@ -96,9 +96,10 @@ SDL_Renderer* rnd;
 SDL_Event evt;
 
 char* rom_name = "pokered.gb";
-int FCT_X = 2, FCT_Y = 2;
+int FCT_X = 5, FCT_Y = 5;
 int dis = 0;
 int dbg_time = 5000;
+int pokemon = 0;
 
 void redraw();
 
@@ -1418,7 +1419,8 @@ int main(int argc, char* argv[]) {
     else fread(rom, (1LL << rom_size) * 0x8000, 1, rom_file);
     if (loop && init_dsp()) loop = 0;
     load();
-    set_checksum();
+    if(pokemon) set_checksum();
+    printf("\n");
     while (loop) {
         Uint32 start = SDL_GetTicks();
         int cyc = do_frame();
