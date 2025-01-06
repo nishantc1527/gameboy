@@ -38,6 +38,16 @@ Whenever Pokemon is booted up, it runs a checksum verification to ensure the sav
 
 If you want to learn more about hacking the save file, [here](https://bulbapedia.bulbagarden.net/wiki/Save_data_structure_(Generation_I)) is a good reference file.
 
+## Customization
+
+Customization is not featured directly in the GUI, but it is easy to tweak anything through the file itself.
+
+For colors, there are macros defined at the top of the page called `HEX_WHT` through `HEX_BLK` (ignore `HEX_EXT` that's for debugging). You can change the hexcode of each tone (white, light grey, dark grey, and black).
+
+For screen size, you can change the variables `FCT_X` and `FCT_Y`, which scale the x and y axises. 
+
+For controls, look for the function called `handle_in()`. You will see two switch cases, one for key pressed and one for key released. Edit the corresponding key (usually in both switch cases) to change the key. You can use [this file](https://github.com/libsdl-org/SDL/blob/SDL2/include/SDL_keycode.h) to see the keycode needed.
+
 # Usage
 
 This project is mostly educational and wasn't intended to be distributed. If you want to run it, however, you can do so by doing the following:
