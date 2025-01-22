@@ -54,7 +54,7 @@ This project is mostly educational and wasn't intended to be distributed. If you
 
 1. Install [Visual Studio 2022](https://visualstudio.microsoft.com/) and [SDL](https://www.libsdl.org/) and set it up using [this tutorial](https://lazyfoo.net/tutorials/SDL/01_hello_SDL/windows/msvc2019/index.php). Make sure you have the C++ component installed for Visual Studio then create a project. Note: Visual Studio is only supported on Windows, so if you are on another operating system you may have to tweak the file to get SDL working on whatever environment you are on ([example of setting it up on Linux](https://lazyfoo.net/tutorials/SDL/01_hello_SDL/linux/index.php)).
 2. Install the boot ROM [here](https://gbdev.gg8.se/wiki/articles/Gameboy_Bootstrap_ROM#Disassemblies) and name it `bootrom.rom`. Make sure the file is in the top level of the project directory (...\<solution>\\\<project>).
-3. Dump the ROM file to your computer. [I like to use this cartridge](https://krikzz.com/our-products/cartridges/edgbx7.html), but if that's too expensive [this alternative is cheaper](https://krikzz.com/our-products/cartridges/edgbx3.html). Downloading the ROM from the internet is piracy and it is illegal to do.
+3. Dump the ROM file to your computer. GBxCart is an affordable cartridge dumper for the Gameboy. Downloading the ROM from the internet is piracy and it is illegal to do.
 4. Place the rom file in the same place you put the boot rom. Find the variable named `rom_name` and rename the variable to the name of your file.
 
 Now when you run the file hopefully the emulator should be working. If you wanna make the window smaller/bigger, you can change the `FCT_X` and `FCT_Y` variables.
