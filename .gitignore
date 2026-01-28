@@ -1,0 +1,13 @@
+build/
+roms/
+rust/target/
+.cache/
+
+*.gb
+*.gbc
+*.sav
+!test_roms/**/*.gb
+
+compile_commands.json
+.venv/
+tests/__pycache__/
