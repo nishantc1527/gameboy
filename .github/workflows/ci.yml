@@ -1,0 +1,32 @@
+name: Gameboy tests
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'true'
+    - uses: dtolnay/rust-toolchain@stable
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y build-essential python3 make cmake git pkg-config
+        cargo install cbindgen
+        git clone https://github.com/libsdl-org/SDL.git
+        cd SDL
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DSDL_UNIX_CONSOLE_BUILD=ON
+        cmake --build build
+        sudo cmake --install build
+    - name: Runs tests
+      run: |
+        make test

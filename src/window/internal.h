@@ -1,0 +1,8 @@
+#pragma once
+
+#include <stdint.h>
+
+#include "gbemu/ppu.h"
+
+extern uint32_t buf[SCRN_HEIGHT][SCRN_WIDTH];
+extern SDL_Texture* txt;
