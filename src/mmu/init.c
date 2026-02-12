@@ -27,7 +27,6 @@ int get_rom_info(void) {
     case 0x00:
     case 0x01:
     case 0x03:
-    case 0x11:
     case 0x13:
       break;
     default:
@@ -43,7 +42,6 @@ int get_rom_info(void) {
     case 0x03:
     case 0x04:
     case 0x05:
-    case 0x07:
       break;
     default:
       SDL_LogError(SDL_LOG_CATEGORY_ERROR, "UNIMPLEMENTED ROM SIZE $%02X\n",

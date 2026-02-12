@@ -2,7 +2,6 @@
 
 A cycle-accurate emulator for the [Nintendo Gameboy](https://en.wikipedia.org/wiki/Game_Boy) that can play most commercial games (such as Pokemon and Tetris).
 
-The emulator core is written in C and Rust, with tests written in Python.
 
 # Demos
 
@@ -16,35 +15,12 @@ Tetris:
 
 View more demos in the [assets](assets/) folder.
 
-# Building
-
-Requirements:
-* C compiler (like `gcc`)
-* Rust toolchain (see [rustup](https://rustup.rs/))
-* [cbindgen](https://github.com/mozilla/cbindgen?tab=readme-ov-file#quick-start)
-* Make
-* [SDL3](https://github.com/libsdl-org/SDL/blob/main/INSTALL.md)
-* pkg-config (make sure it can detect SDL3 by running `pkg-config --libs sdl3`)
-* (optional) python3 for testing
-* (optional) clang-format to format code
-
-After setting up all dependencies, run `make all` to build the project. After building, the executable should be in `build/gbemu[.exe]`. To pass a ROM file, use the command line option `[-r/--rom rom file]`. Run the executable with no command line options to see usage.
-
-If you installed python3, run `make test` to run the pytest tests. If you installed `clang-format` then run `make format` to format the project.
-
-The emulator should now run correctly. If you have any issues, [open an issue](https://github.com/nishantc1527/gameboy/issues/new) on Github.
-
 # Motivation
 
-This emulator is intended to be 100% accurate compared to the original Gameboy. To achieve this, I want it to pass every popular test ROM suite as well as custom made test ROMs that test obscure behavior and weird edge cases.
-
-Accurate emulators are a major component of [game preservation](https://en.wikipedia.org/wiki/Video_game_preservation) by ensuring that every game made for original hardware is digitally archived on the internet with zero changes.
 
 # Features
 
 ## Mappers
-
-Supports the following mappers:
 
 * [No mapper](https://gbhwdb.gekkio.fi/cartridges/no-mapper.html)
 * [MBC1](https://gbhwdb.gekkio.fi/cartridges/mbc1.html)
@@ -80,7 +56,6 @@ Supports boot ROM functionality, meaning whenever the emulator is turned on it l
 
 This emulator supports a headless mode to not spawn a window (`-h or --headless`). It also includes an option to tell it that it's running a specific kind of test ROM (eg. `-t or --test blargg`). It will then watch the test and output the result when finished (pass or fail).
 
-Using this interface, there are several python testing scripts in the [tests](tests/) directory that batch run test ROM suites using the headless mode and verifies the output using [pytest](https://docs.pytest.org/en/stable/). These tests have been integrated into the repository's continuous integration workflow to catch breaking changes.
 
 ## Pokemon Save File Patching (Gen I)
 
