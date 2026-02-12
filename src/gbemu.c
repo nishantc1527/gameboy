@@ -2,6 +2,7 @@
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL_timer.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "gbemu/cpu.h"
 #include "gbemu/mmu.h"
@@ -9,7 +10,6 @@
 #include "gbemu/ppu.h"
 #include "gbemu/window.h"
 #include "rom_locs.h"
-#include "rust.h"
 
 char* rom_name = NULL;
 uint8_t test_category = -1;

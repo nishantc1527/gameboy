@@ -1,18 +1,10 @@
 CC            ?= gcc
-CARGO         ?= cargo
-CBINDS        ?= cbindgen
 FORMAT        ?= clang-format
 
 VENV          := .venv
 PYTHON        := $(VENV)/bin/python3
 PIP           := $(VENV)/bin/pip3
 REQS          := requirements.txt
-
-RUST_DIR      := rust
-RUST_LIB      := $(RUST_DIR)/target/release/librust.a
-RUST_HDR      := include/rust.h
-RUST_MANIFEST := $(RUST_DIR)/Cargo.toml
-RUST_CRATE    := rust
 
 BIN           := gbemu
 BUILD_DIR     := build
@@ -24,7 +16,6 @@ CFLAGS        := -Wall -Wextra -Wpedantic -O2 -std=c2x
 LDLIBS        := $(shell pkg-config --libs sdl3)
 
 C_SRCS        := $(shell find $(SRC_DIR) -name "*.c")
-RUST_SRCS     := $(shell find $(RUST_DIR)/src -name "*.rs")
 OBJS          := $(C_SRCS:%.c=$(BUILD_DIR)/%.o)
 DEPS          := $(OBJS:.o=.d)
 
@@ -32,23 +23,15 @@ DEPS          := $(OBJS:.o=.d)
 
 all: $(BUILD_DIR)/$(BIN)
 
-$(BUILD_DIR)/$(BIN): $(RUST_LIB) $(OBJS)
-	$(CC) $(OBJS) $(RUST_LIB) -o $@ $(LDLIBS)
-
-$(OBJS): $(RUST_HDR)
-$(RUST_HDR): $(RUST_LIB)
+$(BUILD_DIR)/$(BIN): $(OBJS)
+	$(CC) $(OBJS) -o $@ $(LDLIBS)
 
 $(BUILD_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -MMD -MP -c $< -o $@
 
-$(RUST_LIB): $(RUST_MANIFEST) $(RUST_SRCS)
-	$(CARGO) build --manifest-path $(RUST_MANIFEST) --release
-	$(CBINDS) $(RUST_DIR) --crate $(RUST_CRATE) --output $(RUST_HDR)
-
 clean:
 	rm -rf $(BUILD_DIR) $(RUST_HDR)
-	$(CARGO) clean --manifest-path $(RUST_MANIFEST)
 
 format:
 	$(FORMAT) -i $(C_SRCS) $(shell find $(SRC_DIR) -name "*.h")
