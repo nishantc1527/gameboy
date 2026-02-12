@@ -2,10 +2,7 @@
 
 A cycle-accurate emulator for the [Nintendo Gameboy](https://en.wikipedia.org/wiki/Game_Boy) that can play most commercial games (such as Pokemon and Tetris).
 
-* Emulator core written in C, with Rust implementing the memory management unit via [FFI](https://en.wikipedia.org/wiki/Foreign_function_interface).
-* Uses the [SDL3](https://wiki.libsdl.org/SDL3/FrontPage) library for windowing and rendering.
-* Python3 + [pytest](https://docs.pytest.org/en/stable/) for automated testing + continuous integration.
-* Built with [GNU Make](https://www.gnu.org/software/make/).
+The emulator core is written in C and Rust, with tests written in Python.
 
 # Demos
 
@@ -19,13 +16,35 @@ Tetris:
 
 View more demos in the [assets](assets/) folder.
 
+# Building
+
+Requirements:
+* C compiler (like `gcc`)
+* Rust toolchain (see [rustup](https://rustup.rs/))
+* [cbindgen](https://github.com/mozilla/cbindgen?tab=readme-ov-file#quick-start)
+* Make
+* [SDL3](https://github.com/libsdl-org/SDL/blob/main/INSTALL.md)
+* pkg-config (make sure it can detect SDL3 by running `pkg-config --libs sdl3`)
+* (optional) python3 for testing
+* (optional) clang-format to format code
+
+After setting up all dependencies, run `make all` to build the project. After building, the executable should be in `build/gbemu[.exe]`. To pass a ROM file, use the command line option `[-r/--rom rom file]`. Run the executable with no command line options to see usage.
+
+If you installed python3, run `make test` to run the pytest tests. If you installed `clang-format` then run `make format` to format the project.
+
+The emulator should now run correctly. If you have any issues, [open an issue](https://github.com/nishantc1527/gameboy/issues/new) on Github.
+
 # Motivation
 
-I made this project to learn more about systems concepts such as CPU emulation, virtual memory management, scanline-based rendering, and hardware interrupts. However, the emulator still prioritizes accuracy and user experience. There is a CLI interface, customizable keyboard controls and display options, and there is an automated testing pipeline to ensure accuracy throughout development.
+This emulator is intended to be 100% accurate compared to the original Gameboy. To achieve this, I want it to pass every popular test ROM suite as well as custom made test ROMs that test obscure behavior and weird edge cases.
+
+Accurate emulators are a major component of [game preservation](https://en.wikipedia.org/wiki/Video_game_preservation) by ensuring that every game made for original hardware is digitally archived on the internet with zero changes.
 
 # Features
 
 ## Mappers
+
+Supports the following mappers:
 
 * [No mapper](https://gbhwdb.gekkio.fi/cartridges/no-mapper.html)
 * [MBC1](https://gbhwdb.gekkio.fi/cartridges/mbc1.html)
@@ -61,7 +80,7 @@ Supports boot ROM functionality, meaning whenever the emulator is turned on it l
 
 This emulator supports a headless mode to not spawn a window (`-h or --headless`). It also includes an option to tell it that it's running a specific kind of test ROM (eg. `-t or --test blargg`). It will then watch the test and output the result when finished (pass or fail).
 
-Using this interface, there are several python testing scripts in the [tests](tests/) directory that batch run multiple test ROM suites using the headless mode and verify the output using [pytest](https://docs.pytest.org/en/stable/). These tests have been integrated into the repository's continuous integration workflow to catch regressions and breaking changes.
+Using this interface, there are several python testing scripts in the [tests](tests/) directory that batch run test ROM suites using the headless mode and verifies the output using [pytest](https://docs.pytest.org/en/stable/). These tests have been integrated into the repository's continuous integration workflow to catch breaking changes.
 
 ## Pokemon Save File Patching (Gen I)
 
@@ -86,38 +105,6 @@ These features are planned or in active development.
 * Audio
 * Basic UI
 * More memory bank controllers
-
-# Installing
-
-NOTE: On Windows, it would be easiest to use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install). Using Cygwin or Mingw-w64 is possible, but you'll need to configure the rustup toolchain and manually download a lot of software not available through their package managers.
-
-Here's an example of setting everything up on Ubuntu:
-
-```shell
-sudo apt update
-sudo apt install -y build-essential python3 make cmake git pkg-config
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh # install rust toolchain
-cargo install cbindgen # install cbindgen
-git clone https://github.com/libsdl-org/SDL.git # some apt repositories don't have sdl3, so install and build it from source
-cd SDL
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build
-sudo cmake --install build
-```
-
-Here are the step by step instructions. 
-
-1. Install the latest stable release of [SDL3](https://github.com/libsdl-org/SDL/releases) for your operating system. For some systems, you may need to [build it from source](https://github.com/libsdl-org/SDL/blob/main/docs/INTRO-cmake.md#configure-and-build). Install [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/) and make sure it can see `SDL3` (run `pkg-config --cflags sdl3` to verify).
-2. Install a rust toolchain. The easiest way to do this is through [rustup](https://rustup.rs/). If you're on Windows (and not on WSL), make sure to use the `stable-x86_64-pc-windows-gnu` toolchain. Install [cbindgen](https://github.com/mozilla/cbindgen) using cargo by running `cargo install cbindgen`.
-3. Dump the ROM file of whatever game you want to play to your computer. [GBxCart](https://www.gbxcart.com/) is an affordable cartridge dumper for the Gameboy that you can order on most online shopping websites. Downloading the ROM file from the internet is piracy and it is illegal to do. (NOTE: If you wanted to play Pokemon Red/Blue but didn't have the original game, check out the [pokered disassembly project](https://github.com/pret/pokered). You can build it from source by following their [build instructions](https://github.com/pret/pokered/blob/master/INSTALL.md)).
-4. (optional) In order to run tests, you need to install [python3](https://www.python.org/downloads/).
-5. (optional) In order to format the project using `make format`, you need to install `clang-format`. The easiest way to do this is by installing the [LLVM](https://releases.llvm.org/download.html) project. 
-
-After setting up all dependencies, run `make all` to build the project. After building, the executable should be in `build/gbemu[.exe]`. To pass a ROM file, use the command line option `[-r/--rom rom file]`. Run the executable with no command line options (`./build/gbemu`) to see usage.
-
-If you installed python3, run `make test` to run the pytest tests. If you installed `clang-format` then run `make format` to format the project.
-
-The emulator should now run correctly. If you have any issues, [open an issue](https://github.com/nishantc1527/gameboy/issues/new) on Github or email me at <nishantc1527@gmail.com>.
 
 # References
 
