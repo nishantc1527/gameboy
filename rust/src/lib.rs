@@ -20,7 +20,7 @@ extern "C" fn mmu_init(
             .expect("Could not read boot rom file name")
     };
     Box::into_raw(Box::new(
-        mmu::MMU::new(rom_str, boot_rom_str)
+        MMU::new(rom_str, boot_rom_str)
             .expect("Something went wrong opening the boot rom or rom file"),
     ))
 }

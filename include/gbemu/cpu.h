@@ -2,15 +2,15 @@
 
 #include <stdint.h>
 
-#define JOYP r_mem(0xFF00)
-#define SB r_mem(0xFF01)
-#define SC r_mem(0xFF02)
-#define DIV r_mem(0xFF04)
-#define TIMA r_mem(0xFF05)
-#define TMA r_mem(0xFF06)
-#define TAC r_mem(0xFF07)
-#define IF r_mem(0xFF0F)
-#define IE r_mem(0xFFFF)
+#define JOYP mmu_r_mem(mmu, 0xFF00)
+#define SB mmu_r_mem(mmu, 0xFF01)
+#define SC mmu_r_mem(mmu, 0xFF02)
+#define DIV mmu_r_mem(mmu, 0xFF04)
+#define TIMA mmu_r_mem(mmu, 0xFF05)
+#define TMA mmu_r_mem(mmu, 0xFF06)
+#define TAC mmu_r_mem(mmu, 0xFF07)
+#define IF mmu_r_mem(mmu, 0xFF0F)
+#define IE mmu_r_mem(mmu, 0xFFFF)
 
 #define TEST_BLARGG 0
 #define TEST_MOONEYE 1
@@ -56,3 +56,14 @@ void check_dma(void);
 
 // Fetch, decode, and execute CPU instruction
 int exec_instr(void);
+
+uint8_t rd8(void);
+uint16_t rd16(void);
+
+void push(uint16_t val);
+uint16_t pop(void);
+uint16_t pk(void);
+
+void kp(void);
+
+extern int swp_done;

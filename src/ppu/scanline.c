@@ -34,15 +34,15 @@ void do_scanline(void) {
             idx += 0x9800;
           else
             idx += 0x9C00;
-          idx = r_mem(idx);
+          idx = mmu_r_mem(mmu, idx);
           if (dat_area == 0) idx = (signed char)idx + 128;
           idx *= 16;
           if (dat_area == 0)
             idx += 0x8800;
           else
             idx += 0x8000;
-          uint8_t ls = r_mem(idx + uint8_ty);
-          uint8_t ms = r_mem(idx + uint8_ty + 1);
+          uint8_t ls = mmu_r_mem(mmu, idx + uint8_ty);
+          uint8_t ms = mmu_r_mem(mmu, idx + uint8_ty + 1);
           offx = 7 - offx;
           int clr = (get_bit(ms, offx) << 1) | get_bit(ls, offx);
           w_pxl(ly, x, gt_clr(pal, clr));
@@ -66,15 +66,15 @@ void do_scanline(void) {
                 idx += 0x9800;
               else
                 idx += 0x9C00;
-              idx = r_mem(idx);
+              idx = mmu_r_mem(mmu, idx);
               if (dat_area == 0) idx = (signed char)idx + 128;
               idx *= 16;
               if (dat_area == 0)
                 idx += 0x8800;
               else
                 idx += 0x8000;
-              uint8_t ls = r_mem(idx + uint8_ty);
-              uint8_t ms = r_mem(idx + uint8_ty + 1);
+              uint8_t ls = mmu_r_mem(mmu, idx + uint8_ty);
+              uint8_t ms = mmu_r_mem(mmu, idx + uint8_ty + 1);
               offx = 7 - offx;
               int clr = (get_bit(ms, offx) << 1) | get_bit(ls, offx);
               w_pxl(ly, x, gt_clr(pal, clr));
@@ -94,7 +94,7 @@ void do_scanline(void) {
         uint16_t obj[10] = {0};
         for (uint16_t mem_loc = 0xFE00; mem_loc <= 0xFE9F && cnt < 10;
              mem_loc += 4) {
-          int y = r_mem(mem_loc + 0);
+          int y = mmu_r_mem(mmu, mem_loc + 0);
           y -= 16;
           if (ly < y) continue;
           if (sz) {
@@ -111,12 +111,12 @@ void do_scanline(void) {
           int midx = -1;
           for (int i = 0; i < 10; i++)
             if (obj[i]) {
-              uint8_t x = r_mem(obj[i] + 1);
+              uint8_t x = mmu_r_mem(mmu, obj[i] + 1);
               if (x < maxx || (x == maxx && obj[i] < maxm)) {
                 if (midx == -1)
                   midx = i;
                 else {
-                  uint8_t prev = r_mem(obj[midx] + 1);
+                  uint8_t prev = mmu_r_mem(mmu, obj[midx] + 1);
                   if (x > prev) midx = i;
                   if (x == prev && obj[i] > obj[midx]) midx = i;
                 }
@@ -125,12 +125,12 @@ void do_scanline(void) {
           if (midx == -1) break;
           uint16_t mem_loc = obj[midx];
           obj[midx] = 0;
-          maxx = r_mem(mem_loc + 1);
+          maxx = mmu_r_mem(mmu, mem_loc + 1);
           maxm = mem_loc;
-          int y = r_mem(mem_loc + 0);
-          int x = r_mem(mem_loc + 1);
-          uint16_t idx = r_mem(mem_loc + 2);
-          uint8_t flg = r_mem(mem_loc + 3);
+          int y = mmu_r_mem(mmu, mem_loc + 0);
+          int x = mmu_r_mem(mmu, mem_loc + 1);
+          uint16_t idx = mmu_r_mem(mmu, mem_loc + 2);
+          uint8_t flg = mmu_r_mem(mmu, mem_loc + 3);
           y -= 16;
           x -= 8;
           if (sz) idx &= 0xFE;
@@ -145,8 +145,8 @@ void do_scanline(void) {
             if (flipy) line = 7 - line;
           }
           line <<= 1;
-          uint8_t ls = r_mem(idx + line + 0);
-          uint8_t ms = r_mem(idx + line + 1);
+          uint8_t ls = mmu_r_mem(mmu, idx + line + 0);
+          uint8_t ms = mmu_r_mem(mmu, idx + line + 1);
           uint8_t pal;
           if (get_bit(flg, 4))
             pal = OBP1;
@@ -173,7 +173,7 @@ void do_scanline(void) {
       WIN_CNT = 0;
       frame = 1;
     }
-    w_mem(0xFF44, ly);
+    mmu_w_mem(mmu, 0xFF44, ly);
   } else
-    w_mem(0xFF44, 0);
+    mmu_w_mem(mmu, 0xFF44, 0);
 }

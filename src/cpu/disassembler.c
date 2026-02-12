@@ -5,7 +5,7 @@
 #include "gbemu/mmu.h"
 
 int print_instr(uint8_t instr, uint8_t prfx) {
-  if (!r_mem(0xFF50)) return 0;
+  if (!mmu_r_mem(mmu, 0xFF50)) return 0;
   printf("$%04X %02X ", PC, instr);
   if (instr == 0xCB) {
     printf("%02X ", prfx);
@@ -33,6 +33,9 @@ int print_instr(uint8_t instr, uint8_t prfx) {
         break;
       case 0x3F:
         printf("SRL A\n");
+        break;
+      case 0x4F:
+        printf("BIT 1, A\n");
         break;
       case 0x50:
         printf("BIT 2, B\n");

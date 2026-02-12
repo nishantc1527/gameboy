@@ -26,7 +26,7 @@ void update_lcd(void) {
     set_bit(&stat, 2);
   else
     clear_bit(&stat, 2);
-  w_mem(0xFF41, stat);
+  mmu_w_mem(mmu, 0xFF41, stat);
 }
 
 int update_input(void) {
@@ -45,6 +45,6 @@ int update_input(void) {
     if (in[BTN_START]) clear_bit(&curr_joyp, 3);
   }
   intr_joypad(JOYP, curr_joyp);
-  w_mem(0xFF00, curr_joyp);
+  mmu_w_mem(mmu, 0xFF00, curr_joyp);
   return 0;
 }

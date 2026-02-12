@@ -52,7 +52,7 @@ impl MMU {
         rom_size = rom[0x0148];
         ram_size = rom[0x0149];
         match cart_type {
-            0x00 | 0x01 | 0x03 | 0x13 => (),
+            0x00 | 0x01 | 0x03 | 0x11 | 0x13 => (),
             _ => {
                 log_err!("UNIMPLEMENTED MAPPER ${:02X}\n", cart_type);
                 return None;
@@ -60,7 +60,7 @@ impl MMU {
         }
         log_info!("USING MAPPER: ${:02X}\n", cart_type);
         match rom_size {
-            0x00 | 0x01 | 0x03 | 0x04 | 0x05 => (),
+            0x00 | 0x01 | 0x03 | 0x04 | 0x05 | 0x07 => (),
             _ => {
                 log_err!("UNIMPLEMENTED ROM SIZE: ${:02X}\n", rom_size);
                 return None;
@@ -124,20 +124,20 @@ impl MMU {
         }
         match loc {
             ..0x8000 => {
-                return match self.cart_type {
+                match self.cart_type {
                     0x00 => self.no_mbc_read_rom(loc),
                     0x01 | 0x03 => self.mbc1_read_rom(loc),
                     0x13 => self.mbc3_read_rom(loc),
                     _ => 0xFF,
-                };
+                }
             }
             0xA000..0xC000 => {
-                return match self.cart_type {
+                match self.cart_type {
                     0x00 => self.no_mbc_read_ram(loc),
                     0x01 | 0x03 => self.mbc1_read_ram(loc),
                     0x13 => self.mbc3_read_ram(loc),
                     _ => 0xFF,
-                };
+                }
             }
             mut loc => {
                 if loc >= 0xE000 && loc <= 0xFDFF {

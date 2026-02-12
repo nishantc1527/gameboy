@@ -11,6 +11,8 @@
 #include "rom_locs.h"
 #include "rust.h"
 
+MMU* mmu = NULL;
+
 char* rom_name = NULL;
 uint8_t test_category = -1;
 uint8_t headless = 0;
@@ -60,51 +62,13 @@ SDL_AppResult SDL_AppInit(void** appstate __attribute__((unused)),
     SDL_LogError(SDL_LOG_CATEGORY_ERROR, "MUST PROVIDE ROM FILE\n");
     return SDL_APP_FAILURE;
   }
-
   // SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "INITIALIZING\n");
   init_reg();
-  FILE* boot_rom_file = fopen(BOOT_ROM_FILE, "rb");
-  if (!boot_rom_file) {
-    SDL_LogError(SDL_LOG_CATEGORY_ERROR, "COULD NOT OPEN BOOT ROM\n");
-    return SDL_APP_FAILURE;
-  }
-  FILE* rom_file = fopen(rom_name, "rb");
-  if (!fread(brom, 0x100, 1, boot_rom_file)) {
-    SDL_LogError(SDL_LOG_CATEGORY_ERROR, "COULD NOT READ BOOT ROM FILE\n");
-    return SDL_APP_FAILURE;
-  }
-  fclose(boot_rom_file);
-  // SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "LOADED BOOT ROM\n");
-  if (!rom_file) {
-    SDL_LogError(SDL_LOG_CATEGORY_ERROR, "COULD NOT OPEN ROM\n");
-    return SDL_APP_FAILURE;
-  }
-  if (!fread(mem, 0x8000, 1, rom_file)) {  // Put only first bank in memory
-    SDL_LogError(SDL_LOG_CATEGORY_ERROR, "COULD NOT READ ROM FILE\n");
-    return SDL_APP_FAILURE;
-  }
-  // SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "LOADED ROM\n");
-  if (get_rom_info()) {
-    fclose(rom_file);
-    return SDL_APP_FAILURE;
-  }
-  fclose(rom_file);
-  rom_file = fopen(rom_name, "rb");
-  if (rom_file) {
-    if (!fread(rom, (1LL << rom_size) * 0x8000, 1, rom_file)) {
-      SDL_LogError(SDL_LOG_CATEGORY_ERROR, "COULD NOT READ ROM FILE\n");
-      return SDL_APP_FAILURE;
-    }
-    fclose(rom_file);
-  } else {
-    SDL_LogError(SDL_LOG_CATEGORY_ERROR, "COULD NOT OPEN ROM\n");
-    return SDL_APP_FAILURE;
-  }
+  mmu = mmu_init(rom_name, BOOT_ROM_FILE);
   if (init_window()) return SDL_APP_FAILURE;
   init_ppu();
-  load();
+  mmu_load(mmu);
   if (pokemon_enabled) p_init_data();
-
   return SDL_APP_CONTINUE;
 }
 
@@ -139,15 +103,6 @@ SDL_AppResult SDL_AppIterate(void* appstate __attribute__((unused))) {
     }
     tot_ticks -= frame_ticks;
   }
-  if (test_category == TEST_BLARGG) {
-    char* results[2] = {"Passed", "Failed"};
-    for (int i = 0; i < 2; i++) {
-      if (strstr(test_out, results[i])) {
-        printf("%s", results[i]);
-        return SDL_APP_SUCCESS;
-      }
-    }
-  }
   if (!headless) {
     render();
     // draw_ui();
@@ -172,6 +127,7 @@ void SDL_AppQuit(void* appstate __attribute__((unused)), SDL_AppResult result) {
       // SDL_LogError(SDL_LOG_CATEGORY_ERROR, "FAILURE\n");
       break;
   }
-  save();
+  mmu_save(mmu);
+  if (mmu) mmu_free(mmu);
   // SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "DONE\n");
 }
