@@ -38,8 +38,12 @@ void mbc3_write_rom(uint16_t loc, uint8_t val) {
     else
       ram_enable = 0;
   } else if (loc < 0x4000) {
+    uint8_t old = rom_bank;
     rom_bank = val & 0b1111111;
     if (rom_bank == 0) rom_bank++;
+    if (old != rom_bank) {
+      printf("new bank: %d\n", rom_bank);
+    }
   } else if (loc < 0x6000) {
     ram_bank = val;
   } else if (loc < 0x8000) {
