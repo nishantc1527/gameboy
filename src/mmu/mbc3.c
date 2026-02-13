@@ -5,7 +5,6 @@
 #include "internal.h"
 
 uint8_t mbc3_read_rom(uint16_t loc) {
-  printf("(rom bank: %d)\n", rom_bank);
   if (loc < 0x4000)
     return rom[loc];
   else
