@@ -549,9 +549,8 @@ int exec_instr(void) {
         return -1;
     }
   } else {
-#ifdef ENABLE_DISASSEMBLY
-    print_instr(instr, 0);
-#endif
+    if (disassemble && print_instr(instr, 0))
+      ;  // return -1 when completing disassembler
     switch (instr) {
       case 0x00:
         return 4;
