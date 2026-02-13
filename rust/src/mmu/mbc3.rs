@@ -30,9 +30,13 @@ impl MMU {
         match loc {
             ..0x2000 => self.ram_enable = (val & 0xF) == 0xA,
             0x2000..0x4000 => {
+                let old = self.rom_bank;
                 self.rom_bank = val & 0b1111111;
                 if self.rom_bank == 0 {
                     self.rom_bank = 1;
+                }
+                if old != self.rom_bank {
+                    println!("new bank: {}", self.rom_bank);
                 }
             }
             0x4000..0x6000 => {
