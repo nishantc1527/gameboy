@@ -2,6 +2,7 @@ use super::MMU;
 
 impl MMU {
     pub(super) fn mbc3_read_rom(&self, loc: u16) -> u8 {
+        println!("(rom bank: {})", self.rom_bank);
         match loc {
             ..0x4000 => self.rom[loc as usize],
             loc => self.rom[(loc + 0x4000 * (self.rom_bank as u16 - 1)) as usize],
