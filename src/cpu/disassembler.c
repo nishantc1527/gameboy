@@ -1,3 +1,4 @@
+#include <SDL3/SDL_log.h>
 #include <stdint.h>
 #include <stdio.h>
 
