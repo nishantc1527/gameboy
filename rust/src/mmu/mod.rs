@@ -36,13 +36,13 @@ impl MMU {
         let ram_enable;
         let mut mbc1_1mb_mode = false;
 
-        log_info!("OPENING BOOT ROM FILE\n");
+        // log_info!("OPENING BOOT ROM FILE\n");
         let mut boot_rom_file = File::open(Path::new(boot_rom_file_name)).ok()?;
         boot_rom_file.read(&mut brom).ok()?;
-        log_info!("OPENING ROM FILE\n");
+        // log_info!("OPENING ROM FILE\n");
         let mut rom_file = File::open(Path::new(rom_file_name)).ok()?;
         rom_file.read(&mut rom).ok()?;
-        log_info!("SUCCESSFULLY READ FILES\n");
+        // log_info!("SUCCESSFULLY READ FILES\n");
 
         for i in 0x0134u16..=0x0142u16 {
             rom_title.push(rom[i as usize] as char);
@@ -58,7 +58,7 @@ impl MMU {
                 return None;
             }
         }
-        log_info!("USING MAPPER: ${:02X}\n", cart_type);
+        // log_info!("USING MAPPER: ${:02X}\n", cart_type);
         match rom_size {
             0x00 | 0x01 | 0x03 | 0x04 | 0x05 | 0x07 => (),
             _ => {
@@ -66,7 +66,7 @@ impl MMU {
                 return None;
             }
         }
-        log_info!("USING ROM SIZE: ${:02X}", rom_size);
+        // log_info!("USING ROM SIZE: ${:02X}", rom_size);
         match ram_size {
             0x00 | 0x02 | 0x03 => (),
             _ => {
@@ -74,7 +74,7 @@ impl MMU {
                 return None;
             }
         }
-        log_info!("USING RAM SIZE: ${:02X}\n", ram_size);
+        // log_info!("USING RAM SIZE: ${:02X}\n", ram_size);
         rom_bank = 1;
         ram_enable = false;
 
@@ -123,22 +123,18 @@ impl MMU {
             return self.brom[loc as usize];
         }
         match loc {
-            ..0x8000 => {
-                match self.cart_type {
-                    0x00 => self.no_mbc_read_rom(loc),
-                    0x01 | 0x03 => self.mbc1_read_rom(loc),
-                    0x13 => self.mbc3_read_rom(loc),
-                    _ => 0xFF,
-                }
-            }
-            0xA000..0xC000 => {
-                match self.cart_type {
-                    0x00 => self.no_mbc_read_ram(loc),
-                    0x01 | 0x03 => self.mbc1_read_ram(loc),
-                    0x13 => self.mbc3_read_ram(loc),
-                    _ => 0xFF,
-                }
-            }
+            ..0x8000 => match self.cart_type {
+                0x00 => self.no_mbc_read_rom(loc),
+                0x01 | 0x03 => self.mbc1_read_rom(loc),
+                0x13 => self.mbc3_read_rom(loc),
+                _ => 0xFF,
+            },
+            0xA000..0xC000 => match self.cart_type {
+                0x00 => self.no_mbc_read_ram(loc),
+                0x01 | 0x03 => self.mbc1_read_ram(loc),
+                0x13 => self.mbc3_read_ram(loc),
+                _ => 0xFF,
+            },
             mut loc => {
                 if loc >= 0xE000 && loc <= 0xFDFF {
                     loc -= 0x2000;
