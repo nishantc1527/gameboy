@@ -729,6 +729,6 @@ int print_instr(uint8_t instr, uint8_t prfx) {
     }
   }
   printf("A:%d F:%d B:%d C:%d D:%d E:%d H:%d L:%d SP:%d PC:%d PCMEM:%d\n", A, F,
-         B, C, D, E, H, L, SP, PC, mem[PC]);
+         B, C, D, E, H, L, SP, PC, r_mem(PC));
   return 0;
 }
