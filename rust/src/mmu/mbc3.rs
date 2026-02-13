@@ -1,3 +1,5 @@
+use std::io::Write;
+
 use super::MMU;
 
 impl MMU {
@@ -37,6 +39,7 @@ impl MMU {
                 }
                 if old != self.rom_bank {
                     println!("new bank: {}", self.rom_bank);
+                    std::io::stdout().flush();
                 }
             }
             0x4000..0x6000 => {
