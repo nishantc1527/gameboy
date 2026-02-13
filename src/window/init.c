@@ -26,7 +26,8 @@ int init_window(void) {
                    SDL_GetError());
       return 1;
     }
-    if (!SDL_CreateWindowAndRenderer(rom_title, SCRN_WIDTH * SCALE_X,
+    if (!SDL_CreateWindowAndRenderer(mmu_get_rom_title(mmu),
+                                     SCRN_WIDTH * SCALE_X,
                                      SCRN_HEIGHT * SCALE_Y, 0, &win, &rnd)) {
       SDL_LogError(SDL_LOG_CATEGORY_VIDEO,
                    "ERROR CREATING WINDOW & RENDERER: %s\n", SDL_GetError());

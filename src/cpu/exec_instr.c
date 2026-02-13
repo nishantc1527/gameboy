@@ -6,12 +6,46 @@
 #include "gbemu/mmu.h"
 #include "internal.h"
 
+int swp_done = 0;
+
+uint8_t rd8(void) { return mmu_r_mem(mmu, ++PC); }
+
+uint16_t rd16(void) {
+  uint16_t addr1 = ++PC;
+  uint16_t addr2 = ++PC;
+  return ((uint16_t)mmu_r_mem(mmu, addr2) << 8) |
+         (uint16_t)mmu_r_mem(mmu, addr1);
+}
+
+void push(uint16_t val) {
+  uint8_t val1 = (uint8_t)(val >> 8);
+  uint8_t val2 = (uint8_t)val;
+  mmu_w_mem(mmu, SP - 1, val1);
+  mmu_w_mem(mmu, SP - 2, val2);
+  SP -= 2;
+}
+
+uint16_t pop(void) {
+  uint16_t val1 = mmu_r_mem(mmu, SP);
+  uint16_t val2 = mmu_r_mem(mmu, SP + 1);
+  SP += 2;
+  return val1 | (val2 << 8);
+}
+
+uint16_t pk(void) {
+  uint16_t val = pop();
+  push(val);
+  return val;
+}
+
+void kp(void) { PC--; }
+
 int exec_instr(void) {
   if (HALT) {
     kp();
     return 4;
   }
-  uint8_t instr = r_mem(PC);
+  uint8_t instr = mmu_r_mem(mmu, PC);
   if (instr == 0xCB) {
     uint8_t prfx = rd8();
     if (disassemble && print_instr(instr, prfx))
@@ -128,6 +162,7 @@ int exec_instr(void) {
       case 0x36:
         return c_swp_mem(gt_HL());
       case 0x37:
+        swp_done = 1;
         return c_swp(&A);
       case 0x38:
         return c_srl(&B);
@@ -158,7 +193,7 @@ int exec_instr(void) {
       case 0x45:
         return c_bit(L, 0);
       case 0x46:
-        c_bit(r_mem(gt_HL()), 0);
+        c_bit(mmu_r_mem(mmu, gt_HL()), 0);
         return 12;
       case 0x47:
         return c_bit(A, 0);
@@ -175,7 +210,7 @@ int exec_instr(void) {
       case 0x4D:
         return c_bit(L, 1);
       case 0x4E:
-        c_bit(r_mem(gt_HL()), 1);
+        c_bit(mmu_r_mem(mmu, gt_HL()), 1);
         return 12;
       case 0x4F:
         return c_bit(A, 1);
@@ -192,7 +227,7 @@ int exec_instr(void) {
       case 0x55:
         return c_bit(L, 2);
       case 0x56:
-        c_bit(r_mem(gt_HL()), 2);
+        c_bit(mmu_r_mem(mmu, gt_HL()), 2);
         return 12;
       case 0x57:
         return c_bit(A, 2);
@@ -209,7 +244,7 @@ int exec_instr(void) {
       case 0x5D:
         return c_bit(L, 3);
       case 0x5E:
-        c_bit(r_mem(gt_HL()), 3);
+        c_bit(mmu_r_mem(mmu, gt_HL()), 3);
         return 12;
       case 0x5F:
         return c_bit(A, 3);
@@ -226,7 +261,7 @@ int exec_instr(void) {
       case 0x65:
         return c_bit(L, 4);
       case 0x66:
-        c_bit(r_mem(gt_HL()), 4);
+        c_bit(mmu_r_mem(mmu, gt_HL()), 4);
         return 12;
       case 0x67:
         return c_bit(A, 4);
@@ -243,7 +278,7 @@ int exec_instr(void) {
       case 0x6D:
         return c_bit(L, 5);
       case 0x6E:
-        c_bit(r_mem(gt_HL()), 5);
+        c_bit(mmu_r_mem(mmu, gt_HL()), 5);
         return 12;
       case 0x6F:
         return c_bit(A, 5);
@@ -260,7 +295,7 @@ int exec_instr(void) {
       case 0x75:
         return c_bit(L, 6);
       case 0x76:
-        c_bit(r_mem(gt_HL()), 6);
+        c_bit(mmu_r_mem(mmu, gt_HL()), 6);
         return 12;
       case 0x77:
         return c_bit(A, 6);
@@ -277,7 +312,7 @@ int exec_instr(void) {
       case 0x7D:
         return c_bit(L, 7);
       case 0x7E:
-        c_bit(r_mem(gt_HL()), 7);
+        c_bit(mmu_r_mem(mmu, gt_HL()), 7);
         return 12;
       case 0x7F:
         return c_bit(A, 7);
@@ -550,7 +585,7 @@ int exec_instr(void) {
     }
   } else {
     if (disassemble && print_instr(instr, 0))
-      ;  // return -1 when completing disassembler
+      ; // return -1 when completing disassembler
     switch (instr) {
       case 0x00:
         return 4;
@@ -558,7 +593,7 @@ int exec_instr(void) {
         st_BC(rd16());
         return 12;
       case 0x02:
-        w_mem(gt_BC(), A);
+        mmu_w_mem(mmu, gt_BC(), A);
         return 8;
       case 0x03:
         st_BC(gt_BC() + 1);
@@ -576,8 +611,8 @@ int exec_instr(void) {
         return 4;
       case 0x08: {
         uint16_t addr = rd16();
-        w_mem(addr, (uint8_t)(SP & 0xFF));
-        w_mem(addr + 1, (uint8_t)((SP >> 8) & 0xFF));
+        mmu_w_mem(mmu, addr, (uint8_t)(SP & 0xFF));
+        mmu_w_mem(mmu, addr + 1, (uint8_t)((SP >> 8) & 0xFF));
         return 20;
       }
       case 0x09:
@@ -587,7 +622,7 @@ int exec_instr(void) {
         cl_flg(FLG_N);
         return 8;
       case 0x0A:
-        A = r_mem(gt_BC());
+        A = mmu_r_mem(mmu, gt_BC());
         return 8;
       case 0x0B:
         st_BC(gt_BC() - 1);
@@ -609,7 +644,7 @@ int exec_instr(void) {
         st_DE(rd16());
         return 12;
       case 0x12:
-        w_mem(gt_DE(), A);
+        mmu_w_mem(mmu, gt_DE(), A);
         return 8;
       case 0x13:
         st_DE(gt_DE() + 1);
@@ -635,7 +670,7 @@ int exec_instr(void) {
         cl_flg(FLG_N);
         return 8;
       case 0x1A:
-        A = r_mem(gt_DE());
+        A = mmu_r_mem(mmu, gt_DE());
         return 8;
       case 0x1B:
         st_DE(gt_DE() - 1);
@@ -657,7 +692,7 @@ int exec_instr(void) {
         st_HL(rd16());
         return 12;
       case 0x22:
-        w_mem(gt_HL(), A);
+        mmu_w_mem(mmu, gt_HL(), A);
         st_HL(gt_HL() + 1);
         return 8;
       case 0x23:
@@ -700,7 +735,7 @@ int exec_instr(void) {
         cl_flg(FLG_N);
         return 8;
       case 0x2A:
-        A = r_mem(gt_HL());
+        A = mmu_r_mem(mmu, gt_HL());
         st_HL(gt_HL() + 1);
         return 8;
       case 0x2B:
@@ -721,7 +756,7 @@ int exec_instr(void) {
         SP = rd16();
         return 12;
       case 0x32:
-        w_mem(gt_HL(), A);
+        mmu_w_mem(mmu, gt_HL(), A);
         st_HL(gt_HL() - 1);
         return 8;
       case 0x33:
@@ -732,7 +767,7 @@ int exec_instr(void) {
       case 0x35:
         return c_dec_mem(gt_HL());
       case 0x36:
-        w_mem(gt_HL(), rd8());
+        mmu_w_mem(mmu, gt_HL(), rd8());
         return 12;
       case 0x37:
         cl_flg(FLG_N);
@@ -748,7 +783,7 @@ int exec_instr(void) {
         cl_flg(FLG_N);
         return 8;
       case 0x3A:
-        A = r_mem(gt_HL());
+        A = mmu_r_mem(mmu, gt_HL());
         st_HL(gt_HL() - 1);
         return 8;
       case 0x3B:
@@ -788,7 +823,7 @@ int exec_instr(void) {
         B = L;
         return 4;
       case 0x46:
-        B = r_mem(gt_HL());
+        B = mmu_r_mem(mmu, gt_HL());
         return 8;
       case 0x47:
         B = A;
@@ -812,7 +847,7 @@ int exec_instr(void) {
         C = L;
         return 4;
       case 0x4E:
-        C = r_mem(gt_HL());
+        C = mmu_r_mem(mmu, gt_HL());
         return 8;
       case 0x4F:
         C = A;
@@ -836,7 +871,7 @@ int exec_instr(void) {
         D = L;
         return 4;
       case 0x56:
-        D = r_mem(gt_HL());
+        D = mmu_r_mem(mmu, gt_HL());
         return 8;
       case 0x57:
         D = A;
@@ -860,7 +895,7 @@ int exec_instr(void) {
         E = L;
         return 4;
       case 0x5E:
-        E = r_mem(gt_HL());
+        E = mmu_r_mem(mmu, gt_HL());
         return 8;
       case 0x5F:
         E = A;
@@ -884,7 +919,7 @@ int exec_instr(void) {
         H = L;
         return 4;
       case 0x66:
-        H = r_mem(gt_HL());
+        H = mmu_r_mem(mmu, gt_HL());
         return 8;
       case 0x67:
         H = A;
@@ -908,34 +943,34 @@ int exec_instr(void) {
         L = L;  // NOLINT
         return 4;
       case 0x6E:
-        L = r_mem(gt_HL());
+        L = mmu_r_mem(mmu, gt_HL());
         return 8;
       case 0x6F:
         L = A;
         return 4;
       case 0x70:
-        w_mem(gt_HL(), B);
+        mmu_w_mem(mmu, gt_HL(), B);
         return 8;
       case 0x71:
-        w_mem(gt_HL(), C);
+        mmu_w_mem(mmu, gt_HL(), C);
         return 8;
       case 0x72:
-        w_mem(gt_HL(), D);
+        mmu_w_mem(mmu, gt_HL(), D);
         return 8;
       case 0x73:
-        w_mem(gt_HL(), E);
+        mmu_w_mem(mmu, gt_HL(), E);
         return 8;
       case 0x74:
-        w_mem(gt_HL(), H);
+        mmu_w_mem(mmu, gt_HL(), H);
         return 8;
       case 0x75:
-        w_mem(gt_HL(), L);
+        mmu_w_mem(mmu, gt_HL(), L);
         return 8;
       case 0x76:
         HALT = 1;
         return 4;
       case 0x77:
-        w_mem(gt_HL(), A);
+        mmu_w_mem(mmu, gt_HL(), A);
         return 8;
       case 0x78:
         A = B;
@@ -956,7 +991,7 @@ int exec_instr(void) {
         A = L;
         return 4;
       case 0x7E:
-        A = r_mem(gt_HL());
+        A = mmu_r_mem(mmu, gt_HL());
         return 8;
       case 0x7F:
         A = A;  // NOLINT
@@ -974,7 +1009,7 @@ int exec_instr(void) {
       case 0x85:
         return c_add(L);
       case 0x86:
-        c_add(r_mem(gt_HL()));
+        c_add(mmu_r_mem(mmu, gt_HL()));
         return 8;
       case 0x87:
         return c_add(A);
@@ -991,7 +1026,7 @@ int exec_instr(void) {
       case 0x8D:
         return c_adc(L);
       case 0x8E:
-        c_adc(r_mem(gt_HL()));
+        c_adc(mmu_r_mem(mmu, gt_HL()));
         return 8;
       case 0x8F:
         return c_adc(A);
@@ -1008,7 +1043,7 @@ int exec_instr(void) {
       case 0x95:
         return c_sub(L);
       case 0x96:
-        c_sub(r_mem(gt_HL()));
+        c_sub(mmu_r_mem(mmu, gt_HL()));
         return 8;
       case 0x97:
         return c_sub(A);
@@ -1025,7 +1060,7 @@ int exec_instr(void) {
       case 0x9D:
         return c_sbc(L);
       case 0x9E:
-        c_sbc(r_mem(gt_HL()));
+        c_sbc(mmu_r_mem(mmu, gt_HL()));
         return 8;
       case 0x9F:
         return c_sbc(A);
@@ -1042,7 +1077,7 @@ int exec_instr(void) {
       case 0xA5:
         return c_and(L);
       case 0xA6:
-        c_and(r_mem(gt_HL()));
+        c_and(mmu_r_mem(mmu, gt_HL()));
         return 8;
       case 0xA7:
         return c_and(A);
@@ -1059,7 +1094,7 @@ int exec_instr(void) {
       case 0xAD:
         return c_xor(L);
       case 0xAE:
-        c_xor(r_mem(gt_HL()));
+        c_xor(mmu_r_mem(mmu, gt_HL()));
         return 8;
       case 0xAF:
         return c_xor(A);
@@ -1076,7 +1111,7 @@ int exec_instr(void) {
       case 0xB5:
         return c_or(L);
       case 0xB6:
-        c_or(r_mem(gt_HL()));
+        c_or(mmu_r_mem(mmu, gt_HL()));
         return 8;
       case 0xB7:
         return c_or(A);
@@ -1093,7 +1128,7 @@ int exec_instr(void) {
       case 0xBD:
         return c_cp(L);
       case 0xBE:
-        c_cp(r_mem(gt_HL()));
+        c_cp(mmu_r_mem(mmu, gt_HL()));
         return 8;
       case 0xBF:
         return c_cp(A);
@@ -1165,13 +1200,13 @@ int exec_instr(void) {
       case 0xDF:
         return c_rst(0x0018);
       case 0xE0:
-        w_mem(0xFF00 + (uint16_t)rd8(), A);
+        mmu_w_mem(mmu, 0xFF00 + (uint16_t)rd8(), A);
         return 12;
       case 0xE1:
         st_HL(pop());
         return 12;
       case 0xE2:
-        w_mem(0xFF00 + C, A);
+        mmu_w_mem(mmu, 0xFF00 + C, A);
         return 8;
       case 0xE5:
         push(gt_HL());
@@ -1195,7 +1230,7 @@ int exec_instr(void) {
         kp();
         return 4;
       case 0xEA:
-        w_mem(rd16(), A);
+        mmu_w_mem(mmu, rd16(), A);
         return 16;
       case 0xEE:
         c_xor(rd8());
@@ -1203,13 +1238,13 @@ int exec_instr(void) {
       case 0xEF:
         return c_rst(0x0028);
       case 0xF0:
-        A = r_mem(0xFF00 + (uint16_t)rd8());
+        A = mmu_r_mem(mmu, 0xFF00 + (uint16_t)rd8());
         return 12;
       case 0xF1:
         st_AF(pop() & 0xFFF0);
         return 12;
       case 0xF2:
-        A = r_mem(0xFF00 + C);
+        A = mmu_r_mem(mmu, 0xFF00 + C);
         return 8;
       case 0xF3:
         IME = 0;
@@ -1236,7 +1271,7 @@ int exec_instr(void) {
         SP = gt_HL();
         return 8;
       case 0xFA:
-        A = r_mem(rd16());
+        A = mmu_r_mem(mmu, rd16());
         return 16;
       case 0xFB:
         IME = 1;
@@ -1245,7 +1280,7 @@ int exec_instr(void) {
         c_cp(rd8());
         return 8;
       case 0xFF:
-        return c_rst(0x0038);
+          return c_rst(0x0038);
       default:
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "UNIMPLEMENTED INSTRUCTION\n");
         print_instr(instr, 0);

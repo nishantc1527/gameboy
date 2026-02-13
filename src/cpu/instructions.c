@@ -83,10 +83,10 @@ int c_dec(uint8_t* reg) {
 }
 
 int c_dec_mem(uint16_t loc) {
-  uint8_t reg = r_mem(loc);
+  uint8_t reg = mmu_r_mem(mmu, loc);
   st_h_sub(reg, 1);
   reg = reg - 1;
-  w_mem(loc, reg);
+  mmu_w_mem(mmu, loc, reg);
   st_z(reg);
   st_flg(FLG_N);
   return 12;
@@ -101,10 +101,10 @@ int c_inc(uint8_t* reg) {
 }
 
 int c_inc_mem(uint16_t loc) {
-  uint8_t reg = r_mem(loc);
+  uint8_t reg = mmu_r_mem(mmu, loc);
   st_h_add(reg, 1);
   reg = reg + 1;
-  w_mem(loc, reg);
+  mmu_w_mem(mmu, loc, reg);
   st_z(reg);
   cl_flg(FLG_N);
   return 12;
@@ -144,9 +144,9 @@ int c_res(uint8_t* reg, int bit) {
 }
 
 int c_res_mem(uint16_t loc, int bit) {
-  uint8_t reg = r_mem(loc);
+  uint8_t reg = mmu_r_mem(mmu, loc);
   reg = reg & ~(1 << bit);
-  w_mem(loc, reg);
+  mmu_w_mem(mmu, loc, reg);
   return 16;
 }
 
@@ -170,11 +170,11 @@ int c_rr(uint8_t* reg) {
 }
 
 int c_rr_mem(uint16_t loc) {
-  uint8_t reg = r_mem(loc);
+  uint8_t reg = mmu_r_mem(mmu, loc);
   int carry = gt_flg(FLG_C);
   st_c_rr(reg);
   reg = (reg >> 1) | (carry << 7);
-  w_mem(loc, reg);
+  mmu_w_mem(mmu, loc, reg);
   st_z(reg);
   cl_flg(FLG_N);
   cl_flg(FLG_H);
@@ -192,11 +192,11 @@ int c_rrc(uint8_t* reg) {
 }
 
 int c_rrc_mem(uint16_t loc) {
-  uint8_t reg = r_mem(loc);
+  uint8_t reg = mmu_r_mem(mmu, loc);
   int carry = reg & 1;
   st_c_rr(reg);
   reg = (reg >> 1) | (carry << 7);
-  w_mem(loc, reg);
+  mmu_w_mem(mmu, loc, reg);
   st_z(reg);
   cl_flg(FLG_N);
   cl_flg(FLG_H);
@@ -214,11 +214,11 @@ int c_rl(uint8_t* reg) {
 }
 
 int c_rl_mem(uint16_t loc) {
-  uint8_t reg = r_mem(loc);
+  uint8_t reg = mmu_r_mem(mmu, loc);
   int carry = gt_flg(FLG_C);
   st_c_rl(reg);
   reg = (reg << 1) | carry;
-  w_mem(loc, reg);
+  mmu_w_mem(mmu, loc, reg);
   st_z(reg);
   cl_flg(FLG_N);
   cl_flg(FLG_H);
@@ -236,11 +236,11 @@ int c_rlc(uint8_t* reg) {
 }
 
 int c_rlc_mem(uint16_t loc) {
-  uint8_t reg = r_mem(loc);
+  uint8_t reg = mmu_r_mem(mmu, loc);
   int carry = (reg >> 7) & 1;
   st_c_rl(reg);
   reg = (reg << 1) | carry;
-  w_mem(loc, reg);
+  mmu_w_mem(mmu, loc, reg);
   st_z(reg);
   cl_flg(FLG_N);
   cl_flg(FLG_H);
@@ -283,13 +283,13 @@ int c_srl(uint8_t* reg) {
 }
 
 int c_srl_mem(uint16_t loc) {
-  uint8_t reg = r_mem(loc);
+  uint8_t reg = mmu_r_mem(mmu, loc);
   if (reg & 1)
     st_flg(FLG_C);
   else
     cl_flg(FLG_C);
   reg = reg >> 1;
-  w_mem(loc, reg);
+  mmu_w_mem(mmu, loc, reg);
   st_z(reg);
   cl_flg(FLG_N);
   cl_flg(FLG_H);
@@ -302,9 +302,9 @@ int c_set(uint8_t* reg, int bit) {
 }
 
 int c_set_mem(uint16_t loc, int bit) {
-  uint8_t reg = r_mem(loc);
+  uint8_t reg = mmu_r_mem(mmu, loc);
   set_bit(&reg, bit);
-  w_mem(loc, reg);
+  mmu_w_mem(mmu, loc, reg);
   return 16;
 }
 
@@ -318,10 +318,10 @@ int c_sla(uint8_t* reg) {
 }
 
 int c_sla_mem(uint16_t loc) {
-  uint8_t reg = r_mem(loc);
+  uint8_t reg = mmu_r_mem(mmu, loc);
   st_c_rl(reg);
   reg = reg << 1;
-  w_mem(loc, reg);
+  mmu_w_mem(mmu, loc, reg);
   st_z(reg);
   cl_flg(FLG_N);
   cl_flg(FLG_H);
@@ -339,11 +339,11 @@ int c_sra(uint8_t* reg) {
 }
 
 int c_sra_mem(uint16_t loc) {
-  uint8_t reg = r_mem(loc);
+  uint8_t reg = mmu_r_mem(mmu, loc);
   st_c_rr(reg);
   int bt = (reg >> 7) & 1;
   reg = (reg >> 1) | (bt << 7);
-  w_mem(loc, reg);
+  mmu_w_mem(mmu, loc, reg);
   st_z(reg);
   cl_flg(FLG_N);
   cl_flg(FLG_H);
@@ -369,9 +369,9 @@ int c_swp(uint8_t* reg) {
 }
 
 int c_swp_mem(uint16_t loc) {
-  uint8_t reg = r_mem(loc);
+  uint8_t reg = mmu_r_mem(mmu, loc);
   reg = (reg >> 4) | (reg << 4);
-  w_mem(loc, reg);
+  mmu_w_mem(mmu, loc, reg);
   st_z(reg);
   cl_flg(FLG_N);
   cl_flg(FLG_H);

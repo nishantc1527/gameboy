@@ -12,4 +12,5 @@ compile_commands.json
 .venv/
 tests/__pycache__/
 
+.idea/
 *.log

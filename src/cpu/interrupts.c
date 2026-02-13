@@ -6,11 +6,17 @@
 int in[8];
 uint16_t intr_loc[] = {0x0040, 0x0048, 0x0050, 0x0058, 0x0060};
 
-void req_intr(int intr) { set_bit(&mem[0xFF0F], intr); }
+void req_intr(int intr) {
+  uint8_t val = mmu_r_mem_raw(mmu, 0xFF0F);
+  set_bit(&val, intr);
+  mmu_w_mem_raw(mmu, 0xFF0F, val);
+}
 
 void do_intr(int intr) {
   if (IME) {
-    clear_bit(&mem[0xFF0F], intr);
+    uint8_t val = mmu_r_mem_raw(mmu, 0xFF0F);
+    clear_bit(&val, intr);
+    mmu_w_mem_raw(mmu, 0xFF0F, val);
     push(PC);
     PC = intr_loc[intr];
   }
