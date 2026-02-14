@@ -18,7 +18,7 @@ jobs:
         submodules: 'true'
     - uses: libsdl-org/setup-sdl@v1
       with:
-        version: 3-latest
+        version: 3.4.0
         install-linux-dependencies: true
     - uses: dtolnay/rust-toolchain@stable
     - name: Install dependencies
