@@ -65,5 +65,3 @@ uint16_t pop(void);
 uint16_t pk(void);
 
 void kp(void);
-
-extern int swp_done;

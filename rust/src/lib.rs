@@ -8,6 +8,7 @@ use std::ffi::{CStr, c_char};
 extern "C" fn mmu_init(
     rom_file_name: *const c_char,
     boot_rom_file_name: *const c_char,
+    test_category: u8,
 ) -> *mut MMU {
     let rom_str = unsafe {
         CStr::from_ptr(rom_file_name)
@@ -20,7 +21,7 @@ extern "C" fn mmu_init(
             .expect("Could not read boot rom file name")
     };
     Box::into_raw(Box::new(
-        MMU::new(rom_str, boot_rom_str)
+        MMU::new(rom_str, boot_rom_str, test_category)
             .expect("Something went wrong opening the boot rom or rom file"),
     ))
 }

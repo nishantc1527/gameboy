@@ -1,21 +1,40 @@
 import subprocess
-
 import pytest
 
-BLARGG_FILES = [
+roms = [
     "test_roms/blargg/cpu_instrs/cpu_instrs.gb",
-    "test_roms/blargg/instr_timing/instr_timing.gb",
+    "test_roms/blargg/instr_timing/instr_timing.gb"
 ]
 
-@pytest.mark.parametrize("rom", BLARGG_FILES)
-def test_blargg(rom):
-    res = subprocess.run(
-        ["./build/gbemu", "-r", rom, "-t", "blargg", "-h"],
+@pytest.mark.timeout(20)
+@pytest.mark.parametrize("rom_path", roms)
+def test_blargg_rom(rom_path):
+    cmd = ["./build/gbemu", "-r", rom_path, "--test", "blargg", "--headless"]
+    process = subprocess.Popen(
+        cmd,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
         text=True,
-        timeout=120,
+        bufsize=1
     )
-    output = res.stdout + res.stderr
-    assert res.returncode == 0, f"Emulator crashed on {rom}\n{output}"
-    assert "Passed" in output, f"Blargg failed on {rom}\n{output}"
+    full_output = []
+    status = "TIMEOUT"
+    try:
+        for line in iter(process.stdout.readline, ""):
+            full_output.append(line)
+            if "Passed" in line:
+                status = "PASSED"
+                process.terminate()
+                break
+            if "Failed" in line:
+                status = "FAILED"
+                process.terminate()
+                break
+    except Exception as e:
+        process.kill()
+        pytest.fail(f"Error during execution: {e}")
+    finally:
+        process.wait(timeout=5)
+
+    print("".join(full_output))
+    assert status == "PASSED", f"ROM {rom_path} failed with output: {''.join(full_output)}"

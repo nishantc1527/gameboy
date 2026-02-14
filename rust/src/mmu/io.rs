@@ -4,8 +4,6 @@ use std::{
     path::Path,
 };
 
-use crate::log_info;
-
 use super::MMU;
 
 impl MMU {

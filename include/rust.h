@@ -5,7 +5,9 @@
 
 typedef struct MMU MMU;
 
-struct MMU *mmu_init(const char *rom_file_name, const char *boot_rom_file_name);
+struct MMU *mmu_init(const char *rom_file_name,
+                     const char *boot_rom_file_name,
+                     uint8_t test_category);
 
 uint8_t mmu_r_mem(const struct MMU *mmu, uint16_t loc);
 

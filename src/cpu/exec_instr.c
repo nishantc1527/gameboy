@@ -6,8 +6,6 @@
 #include "gbemu/mmu.h"
 #include "internal.h"
 
-int swp_done = 0;
-
 uint8_t rd8(void) { return mmu_r_mem(mmu, ++PC); }
 
 uint16_t rd16(void) {
@@ -162,7 +160,6 @@ int exec_instr(void) {
       case 0x36:
         return c_swp_mem(gt_HL());
       case 0x37:
-        swp_done = 1;
         return c_swp(&A);
       case 0x38:
         return c_srl(&B);
@@ -585,7 +582,7 @@ int exec_instr(void) {
     }
   } else {
     if (disassemble && print_instr(instr, 0))
-      ; // return -1 when completing disassembler
+      ;  // return -1 when completing disassembler
     switch (instr) {
       case 0x00:
         return 4;
@@ -1280,7 +1277,7 @@ int exec_instr(void) {
         c_cp(rd8());
         return 8;
       case 0xFF:
-          return c_rst(0x0038);
+        return c_rst(0x0038);
       default:
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "UNIMPLEMENTED INSTRUCTION\n");
         print_instr(instr, 0);

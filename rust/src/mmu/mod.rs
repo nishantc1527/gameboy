@@ -3,8 +3,14 @@ mod mbc1;
 mod mbc3;
 mod no_mbc;
 
-use crate::{log_err, log_info};
+use crate::log_err;
 use std::{fs::File, io::Read, path::Path};
+
+#[repr(u8)]
+enum TestCategory {
+    Blargg = 0,
+    Mooneye = 1,
+}
 
 pub struct MMU {
     rom_title: String,
@@ -19,10 +25,11 @@ pub struct MMU {
     ram_bank: u8,
     ram_enable: bool,
     mbc1_1mb_mode: bool,
+    test_category: u8,
 }
 
 impl MMU {
-    pub fn new(rom_file_name: &str, boot_rom_file_name: &str) -> Option<MMU> {
+    pub fn new(rom_file_name: &str, boot_rom_file_name: &str, test_category: u8) -> Option<MMU> {
         let mut rom_title = String::new();
         let cart_type: u8;
         let rom_size: u8;
@@ -115,6 +122,7 @@ impl MMU {
             ram_bank,
             ram_enable,
             mbc1_1mb_mode,
+            test_category,
         })
     }
 
@@ -169,6 +177,9 @@ impl MMU {
             mut loc => {
                 if loc >= 0xE000 && loc <= 0xFDFF {
                     loc -= 0x2000;
+                }
+                if self.test_category == TestCategory::Blargg as u8 && loc == 0xFF01 {
+                    print!("{}", val as char);
                 }
                 if loc == 0xFF04 {
                     self.mem[loc as usize] = 0x00;

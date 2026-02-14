@@ -17,8 +17,6 @@ char* rom_name = NULL;
 uint8_t test_category = -1;
 uint8_t headless = 0;
 uint8_t disassemble = 0;
-char* test_out;
-int test_out_idx;
 
 SDL_AppResult usage() {
   SDL_LogError(SDL_LOG_CATEGORY_ERROR,
@@ -45,9 +43,6 @@ SDL_AppResult SDL_AppInit(void** appstate __attribute__((unused)),
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "UNKNOWN TEST: %s\n", s);
         return SDL_APP_FAILURE;
       }
-      test_out = (char*)malloc(1000 * sizeof(char));
-      test_out[0] = '\0';
-      test_out_idx = 0;
     } else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--headless"))
       headless = 1;
     else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--disassembly"))
@@ -64,7 +59,7 @@ SDL_AppResult SDL_AppInit(void** appstate __attribute__((unused)),
   }
   // SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "INITIALIZING\n");
   init_reg();
-  mmu = mmu_init(rom_name, BOOT_ROM_FILE);
+  mmu = mmu_init(rom_name, BOOT_ROM_FILE, test_category);
   if (init_window()) return SDL_APP_FAILURE;
   init_ppu();
   mmu_load(mmu);
@@ -80,11 +75,11 @@ SDL_AppResult SDL_AppIterate(void* appstate __attribute__((unused))) {
   scn = 0;
   Uint64 frame_cyc = (Uint64)SCANLINE_LEN * (Uint64)SCANLINES;
   Uint64 frame_ticks = (frame_cyc * perf_freq) / CPU_FREQ;
-  if (tot_ticks >= frame_ticks * 10) {
+  if (!headless && tot_ticks >= frame_ticks * 10) {
     // SDL_LogWarn(SDL_LOG_CATEGORY_RENDER, "Performance drop by %d frames\n",
     // (int)(tot_ticks / frame_ticks));
     tot_ticks = 0;
-  } else if (tot_ticks >= frame_ticks) {
+  } else if (headless || tot_ticks >= frame_ticks) {
     frame = 0;
     while (!frame) {
       const int cyc = exec_instr();
