@@ -24,9 +24,8 @@ jobs:
         cargo install cbindgen
     - uses: libsdl-org/setup-sdl@v1
       with:
-        version: 3.4.0
+        version: 3.2.30
         install-linux-dependencies: true
         cmake-arguments: -DSDL_UNIX_CONSOLE_BUILD=ON
     - name: Runs tests
-      run: |
-        make test
+      run: make test
