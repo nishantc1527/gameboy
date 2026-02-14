@@ -23,10 +23,5 @@ jobs:
         version: 3-latest
         install-linux-dependencies: true
         cmake-arguments: -DSDL_UNIX_CONSOLE_BUILD=ON
-    - name: Install dependencies
-      run: |
-        sudo apt update
-        sudo apt install -y build-essential python3 make git pkg-config
-        which cbindgen || cargo install cbindgen
-    - name: Runs tests
-      run: make test
+    - run: which cbindgen || cargo install cbindgen
+    - run: make test
