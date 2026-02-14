@@ -26,6 +26,7 @@ jobs:
       with:
         version: 3.4.0
         install-linux-dependencies: true
+        cmake-arguments: -DSDL_UNIX_CONSOLE_BUILD=ON
     - name: Runs tests
       run: |
         make test
