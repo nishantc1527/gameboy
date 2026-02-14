@@ -16,16 +16,16 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: 'true'
-    - uses: libsdl-org/setup-sdl@v1
-      with:
-        version: 3.4.0
-        install-linux-dependencies: true
     - uses: dtolnay/rust-toolchain@stable
     - name: Install dependencies
       run: |
         sudo apt update
         sudo apt install -y build-essential python3 make git pkg-config
         cargo install cbindgen
+    - uses: libsdl-org/setup-sdl@v1
+      with:
+        version: 3.4.0
+        install-linux-dependencies: true
     - name: Runs tests
       run: |
         make test
