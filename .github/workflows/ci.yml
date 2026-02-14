@@ -17,6 +17,7 @@ jobs:
       with:
         submodules: 'true'
     - uses: dtolnay/rust-toolchain@stable
+    - uses: Swatinem/rust-cache@v2.8.2
     - uses: libsdl-org/setup-sdl@main
       with:
         version: 3-latest
@@ -26,6 +27,6 @@ jobs:
       run: |
         sudo apt update
         sudo apt install -y build-essential python3 make git pkg-config
-        cargo install cbindgen
+        which cbindgen || cargo install cbindgen
     - name: Runs tests
       run: make test
