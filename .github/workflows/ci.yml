@@ -24,7 +24,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install -y build-essential python3 make cmake git pkg-config
+        sudo apt install -y build-essential python3 make git pkg-config
         cargo install cbindgen
     - name: Runs tests
       run: |
