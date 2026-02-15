@@ -53,7 +53,7 @@ $(RUST_LIB): $(RUST_MANIFEST) $(RUST_SRCS)
 	$(CBINDS) $(RUST_DIR) --crate $(RUST_CRATE) --output $(RUST_HDR)
 
 clean:
-	rm -rf $(BUILD_DIR) $(RUST_HDR)
+	rm -rf $(BUILD_DIR) $(RUST_HDR) $(VENV)
 	$(CARGO) clean --manifest-path $(RUST_MANIFEST)
 
 format:
@@ -61,6 +61,7 @@ format:
 
 $(PYTHON):
 	python3 -m venv $(VENV)
+	$(VENV)/bin/python3 -m ensurepip --default-pip
 	$(PIP) install --upgrade pip
 
 test: $(PYTHON) $(BUILD_DIR)/$(BIN)
