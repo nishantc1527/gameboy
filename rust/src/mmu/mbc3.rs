@@ -1,10 +1,10 @@
-use super::MMU;
+use super::Mmu;
 
-impl MMU {
+impl Mmu {
     pub(super) fn mbc3_read_rom(&self, loc: u16) -> u8 {
         match loc {
             ..0x4000 => self.rom[loc as usize],
-            loc => self.rom[(loc as u32 + 0x4000 * (self.rom_bank as u32 - 1)) as usize],
+            loc => self.rom[loc as usize + 0x4000 * (self.rom_bank as usize - 1)],
         }
     }
 

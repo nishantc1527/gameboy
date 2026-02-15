@@ -1,6 +1,6 @@
-use super::MMU;
+use super::Mmu;
 
-impl MMU {
+impl Mmu {
     pub(super) fn no_mbc_read_rom(&self, loc: u16) -> u8 {
         self.rom[loc as usize]
     }

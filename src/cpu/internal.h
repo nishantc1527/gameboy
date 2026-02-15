@@ -20,7 +20,7 @@ extern uint16_t intr_loc[];
 int c_adc(uint8_t reg);
 int c_add(uint8_t reg);
 int c_and(uint8_t reg);
-int c_bit(uint8_t reg, int bit);
+int c_bit(uint8_t reg, uint8_t bit);
 int c_call(int flg);
 int c_cp(uint8_t reg);
 int c_cpl(uint8_t* reg);
@@ -31,7 +31,7 @@ int c_inc_mem(uint16_t loc);
 int c_jp8(int flg);
 int c_jp16(int flg);
 int c_or(uint8_t reg);
-int c_res(uint8_t* reg, int bit);
+int c_res(uint8_t* reg, uint8_t bit);
 int c_res_mem(uint16_t loc, int bit);
 int c_ret(int flg);
 int c_rr(uint8_t* reg);
@@ -46,8 +46,8 @@ int c_rst(uint8_t loc);
 int c_sbc(uint8_t reg);
 int c_srl(uint8_t* reg);
 int c_srl_mem(uint16_t loc);
-int c_set(uint8_t* reg, int bit);
-int c_set_mem(uint16_t loc, int bit);
+int c_set(uint8_t* reg, uint8_t bit);
+int c_set_mem(uint16_t loc, uint8_t bit);
 int c_sla(uint8_t* reg);
 int c_sla_mem(uint16_t loc);
 int c_sra(uint8_t* reg);
@@ -55,7 +55,7 @@ int c_sra_mem(uint16_t loc);
 int c_sub(uint8_t reg);
 int c_swp(uint8_t* reg);
 int c_swp_mem(uint16_t loc);
-int c_xor(int reg);
+int c_xor(uint8_t reg);
 
 // Print instruction to stdout (disassembly)
 int print_instr(uint8_t instr, uint8_t prfx);
@@ -75,8 +75,8 @@ void st_c_add16(uint16_t var1, uint16_t var2);
 void st_c_sub(uint8_t var1, uint8_t var2);
 
 // Interrupt functions
-void req_intr(int intr);
-void do_intr(int intr);
+void req_intr(uint8_t intr);
+void do_intr(uint8_t intr);
 
 // Get and set 16-bit registers
 uint16_t gt_AF(void);

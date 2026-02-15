@@ -6,13 +6,12 @@ mod no_mbc;
 use crate::log_err;
 use std::{fs::File, io::Read, path::Path};
 
-#[repr(u8)]
+#[repr(i8)]
 enum TestCategory {
     Blargg = 0,
-    Mooneye = 1,
 }
 
-pub struct MMU {
+pub struct Mmu {
     rom_title: String,
     cart_type: u8,
     rom_size: u8,
@@ -25,41 +24,38 @@ pub struct MMU {
     ram_bank: u8,
     ram_enable: bool,
     mbc1_1mb_mode: bool,
-    test_category: u8,
+    test_category: i8,
 }
 
-impl MMU {
-    pub fn new(rom_file_name: &str, boot_rom_file_name: &str, test_category: u8) -> Option<MMU> {
+impl Mmu {
+    pub fn new(rom_file_name: &str, boot_rom_file_name: &str, test_category: i8) -> Option<Mmu> {
         let mut rom_title = String::new();
-        let cart_type: u8;
-        let rom_size: u8;
-        let ram_size: u8;
         let mem = vec![0u8; 0x800000];
         let mut brom = vec![0u8; 0x100];
         let mut rom = vec![0u8; 0x800000];
         let extern_ram = vec![0u8; 0x20000];
-        let rom_bank: u8;
         let ram_bank: u8 = 0;
-        let ram_enable;
         let mut mbc1_1mb_mode = false;
-
         // log_info!("OPENING BOOT ROM FILE\n");
         let mut boot_rom_file = File::open(Path::new(boot_rom_file_name)).ok()?;
-        boot_rom_file.read(&mut brom).ok()?;
+        if boot_rom_file.read(&mut brom).ok()? != 0x100 {
+            log_err!("COULD NOT READ FULL BOOT ROM");
+            return None;
+        }
         // log_info!("OPENING ROM FILE\n");
         let mut rom_file = File::open(Path::new(rom_file_name)).ok()?;
-        rom_file.read(&mut rom).ok()?;
+        let _ = rom_file.read(&mut rom).ok()?;
         // log_info!("SUCCESSFULLY READ FILES\n");
 
-        for i in 0x0134u16..=0x0142u16 {
-            rom_title.push(rom[i as usize] as char);
-        }
+        (0x0134usize..=0x0142usize).for_each(|i| {
+            rom_title.push(rom[i] as char);
+        });
         rom_title.push('\0');
-        cart_type = rom[0x0147];
-        rom_size = rom[0x0148];
-        ram_size = rom[0x0149];
+        let cart_type: u8 = rom[0x0147];
+        let rom_size: u8 = rom[0x0148];
+        let ram_size: u8 = rom[0x0149];
         match cart_type {
-            0x00 | 0x01 | 0x03 | 0x11 | 0x13 => (),
+            0x00 | 0x01 | 0x02 | 0x03 | 0x11 | 0x13 => (),
             _ => {
                 log_err!("UNIMPLEMENTED MAPPER ${:02X}\n", cart_type);
                 return None;
@@ -82,8 +78,8 @@ impl MMU {
             }
         }
         // log_info!("USING RAM SIZE: ${:02X}\n", ram_size);
-        rom_bank = 1;
-        ram_enable = false;
+        let rom_bank: u8 = 1;
+        let ram_enable = false;
 
         match cart_type {
             0x01 | 0x03 => {
@@ -109,7 +105,7 @@ impl MMU {
             }
             _ => (),
         }
-        Some(MMU {
+        Some(Mmu {
             rom_title,
             cart_type,
             rom_size,
@@ -144,7 +140,7 @@ impl MMU {
                 _ => 0xFF,
             },
             mut loc => {
-                if loc >= 0xE000 && loc <= 0xFDFF {
+                if (0xE000..=0xFDFF).contains(&loc) {
                     loc -= 0x2000;
                 }
                 self.mem[loc as usize]
@@ -175,10 +171,10 @@ impl MMU {
                 _ => (),
             },
             mut loc => {
-                if loc >= 0xE000 && loc <= 0xFDFF {
+                if (0xE000..=0xFDFF).contains(&loc) {
                     loc -= 0x2000;
                 }
-                if self.test_category == TestCategory::Blargg as u8 && loc == 0xFF01 {
+                if self.test_category == TestCategory::Blargg as i8 && loc == 0xFF01 {
                     print!("{}", val as char);
                 }
                 if loc == 0xFF04 {

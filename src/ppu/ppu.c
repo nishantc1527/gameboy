@@ -11,7 +11,7 @@ void init_ppu(void) { WIN_CNT = 0; }
 void update_lcd(void) {
   uint8_t stat = LCD_STAT;
   int prev_mode = stat & 0b11;
-  int curr_mode;
+  uint8_t curr_mode;
   if (scn <= 80)
     curr_mode = 2;
   else if (scn <= 172)
@@ -20,7 +20,7 @@ void update_lcd(void) {
     curr_mode = 0;
   if (LY >= SCRN_HEIGHT) curr_mode = 1;
   intr_vblank_lcd(stat, prev_mode, curr_mode);
-  stat &= ~(0b11);
+  stat &= (uint8_t)~(0b11);
   stat |= curr_mode;
   if (LY == LYC)
     set_bit(&stat, 2);

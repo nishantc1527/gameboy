@@ -28,14 +28,18 @@ extern uint16_t PC, SP;
 extern uint32_t tim_thresh;
 
 extern char* rom_name;
-extern uint8_t test_category;
+extern int test_category;
 extern uint8_t disassemble;
 
 static inline uint8_t get_bit(uint8_t var, uint8_t bt) {
   return (var >> bt) & 1;
 }
-static inline void set_bit(uint8_t* var, uint8_t bt) { *var |= (1 << bt); }
-static inline void clear_bit(uint8_t* var, uint8_t bt) { *var &= ~(1 << bt); }
+static inline void set_bit(uint8_t* var, uint8_t bt) {
+  *var |= (uint8_t)(1 << bt);
+}
+static inline void clear_bit(uint8_t* var, uint8_t bt) {
+  *var &= (uint8_t)~(1 << bt);
+}
 static inline uint8_t gt_flg(uint8_t flg) { return get_bit(F, flg); }
 
 // Check interrupts
@@ -49,7 +53,7 @@ void intr_joypad(uint8_t prev_joyp, uint8_t curr_joyp);
 void init_reg(void);
 
 // Update timer
-void update_timer(int cycles);
+void update_timer(uint8_t cycles);
 
 // Perform DMA transfer
 void check_dma(void);

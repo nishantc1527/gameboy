@@ -1,7 +1,6 @@
 #define SDL_MAIN_USE_CALLBACKS
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL_timer.h>
-#include <stdio.h>
 
 #include "gbemu/cpu.h"
 #include "gbemu/mmu.h"
@@ -11,10 +10,10 @@
 #include "rom_locs.h"
 #include "rust.h"
 
-MMU* mmu = NULL;
+Mmu* mmu = NULL;
 
 char* rom_name = NULL;
-uint8_t test_category = -1;
+int test_category = -1;
 uint8_t headless = 0;
 uint8_t disassemble = 0;
 
@@ -59,7 +58,7 @@ SDL_AppResult SDL_AppInit(void** appstate __attribute__((unused)),
   }
   // SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "INITIALIZING\n");
   init_reg();
-  mmu = mmu_init(rom_name, BOOT_ROM_FILE, test_category);
+  mmu = mmu_init(rom_name, BOOT_ROM_FILE, (int8_t)test_category);
   if (init_window()) return SDL_APP_FAILURE;
   init_ppu();
   mmu_load(mmu);
@@ -85,13 +84,13 @@ SDL_AppResult SDL_AppIterate(void* appstate __attribute__((unused))) {
       const int cyc = exec_instr();
       if (cyc == -1) return SDL_APP_FAILURE;
       PC++;
-      scn += cyc;
+      scn = (uint16_t)(scn + cyc);
       if (scn >= SCANLINE_LEN) {
         do_scanline();
         scn -= SCANLINE_LEN;
       }
       update_lcd();
-      update_timer(cyc);
+      update_timer((uint8_t)cyc);
       check_dma();
       check_interrupt();
       update_input();

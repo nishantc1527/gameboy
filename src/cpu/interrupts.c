@@ -6,13 +6,13 @@
 int in[8];
 uint16_t intr_loc[] = {0x0040, 0x0048, 0x0050, 0x0058, 0x0060};
 
-void req_intr(int intr) {
+void req_intr(uint8_t intr) {
   uint8_t val = mmu_r_mem_raw(mmu, 0xFF0F);
   set_bit(&val, intr);
   mmu_w_mem_raw(mmu, 0xFF0F, val);
 }
 
-void do_intr(int intr) {
+void do_intr(uint8_t intr) {
   if (IME) {
     uint8_t val = mmu_r_mem_raw(mmu, 0xFF0F);
     clear_bit(&val, intr);
@@ -25,7 +25,7 @@ void do_intr(int intr) {
 }
 
 void check_interrupt(void) {
-  for (int intr = 0; intr < 5; intr++) {
+  for (uint8_t intr = 0; intr < 5; intr++) {
     if (get_bit(IF, intr) && get_bit(IE, intr)) {
       do_intr(intr);
     }

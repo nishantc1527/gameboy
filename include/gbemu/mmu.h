@@ -2,4 +2,4 @@
 
 #include "rust.h"
 
-extern MMU* mmu;
+extern Mmu* mmu;

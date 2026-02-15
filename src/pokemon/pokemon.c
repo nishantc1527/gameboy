@@ -1,6 +1,5 @@
 #include "gbemu/pokemon.h"
 
-#include <SDL3/SDL_log.h>
 #include <stdint.h>
 
 #include "gbemu/mmu.h"
@@ -15,8 +14,8 @@ void p_init_data() {
 }
 
 void p_get_name(char name[]) {
-  const uint16_t n = 0xB;
-  const uint16_t src = 0x2598;
+  constexpr uint16_t n = 0xB;
+  constexpr uint16_t src = 0x2598;
   uint8_t enc[n];
   for (uint16_t i = src; i < src + n; i++) enc[i - src] = mmu_r_ram_raw(mmu, i);
   p_string_convert(name, n, enc);

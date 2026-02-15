@@ -4,9 +4,9 @@ use std::{
     path::Path,
 };
 
-use super::MMU;
+use super::Mmu;
 
-impl MMU {
+impl Mmu {
     pub fn save(&self) -> Result<(), std::io::Error> {
         match self.cart_type {
             0x03 | 0x13 => {
@@ -25,7 +25,7 @@ impl MMU {
             0x03 | 0x13 => {
                 let file_name = format!("{}.sav", self.rom_title);
                 let mut file = File::open(Path::new(file_name.as_str()))?;
-                file.read(&mut self.extern_ram)?;
+                let _ = file.read(&mut self.extern_ram)?;
                 // log_info!("LOADED GAME FROM: {}\n", file_name);
             }
             _ => (),

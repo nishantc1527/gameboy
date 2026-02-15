@@ -18,9 +18,9 @@ void render(void) {
       if (clr == CLR_L_GRY) clr = HEX_L_GREY;
       if (clr == CLR_D_GRY) clr = HEX_R_GREY;
       if (clr == CLR_BLK) clr = HEX_BLK;
-      uint8_t r = (clr >> 8 * 2) & 0xFF;
-      uint8_t g = (clr >> 8 * 1) & 0xFF;
-      uint8_t b = (clr >> 8 * 0) & 0xFF;
+      uint8_t r = (uint8_t)(clr >> 8 * 2);
+      uint8_t g = (uint8_t)(clr >> 8 * 1);
+      uint8_t b = (uint8_t)(clr >> 8 * 0);
       uint32_t col = ((uint32_t)r << 24) | ((uint32_t)g << 16) |
                      ((uint32_t)b << 8) | ((uint32_t)SDL_ALPHA_OPAQUE << 0);
       buf[i][j] = col;

@@ -2,6 +2,8 @@ CC            ?= gcc
 CARGO         ?= cargo
 CBINDS        ?= cbindgen
 FORMAT        ?= clang-format
+TIDY          ?= clang-tidy
+CPPCHECK      ?= cppcheck
 
 VENV          := .venv
 PYTHON        := $(VENV)/bin/python3
@@ -18,17 +20,21 @@ BIN           := gbemu
 BUILD_DIR     := build
 SRC_DIR       := src
 
-INC_DIRS      := config include vendor
-CPPFLAGS      := $(foreach d, $(INC_DIRS), -I$(d)) $(shell pkg-config --cflags sdl3)
-CFLAGS        := -Wall -Wextra -Wpedantic -O2 -std=c2x
+INC_DIRS      := config include
+LIB_DIR       := vendor
+
+CFLAGS        := -O2 -std=c2x
+CPPFLAGS      := $(foreach d, $(INC_DIRS), -I$(d)) $(foreach d, $(LIB_DIR), -isystem $(d)) $(shell pkg-config --cflags sdl3)
 LDLIBS        := $(shell pkg-config --libs sdl3)
+VERIFY_FLAGS  := -Wall -Wextra -Wpedantic -Werror
 
 C_SRCS        := $(shell find $(SRC_DIR) -name "*.c")
+C_HDRS        := $(shell find include/gbemu/ -name "*.h")
 RUST_SRCS     := $(shell find $(RUST_DIR)/src -name "*.rs")
 OBJS          := $(C_SRCS:%.c=$(BUILD_DIR)/%.o)
 DEPS          := $(OBJS:.o=.d)
 
-.PHONY: all clean format test
+.PHONY: all clean format test verify
 
 all: $(BUILD_DIR)/$(BIN)
 
@@ -51,7 +57,7 @@ clean:
 	$(CARGO) clean --manifest-path $(RUST_MANIFEST)
 
 format:
-	$(FORMAT) -i $(C_SRCS) $(shell find $(SRC_DIR) -name "*.h")
+	$(FORMAT) -i $(C_SRCS) $(C_HDRS)
 
 $(PYTHON):
 	python3 -m venv $(VENV)
@@ -59,6 +65,15 @@ $(PYTHON):
 
 test: $(PYTHON) $(BUILD_DIR)/$(BIN)
 	$(PYTHON) -m pip install -r $(REQS)
-	$(PYTHON) -m pytest -v
+	$(PYTHON) -m pytest -v -n auto
+
+verify: clean $(RUST_HDR)
+	$(FORMAT) --dry-run -Werror $(C_SRCS) $(C_HDRS)
+	$(CARGO) fmt --check --manifest-path $(RUST_MANIFEST)
+	$(CARGO) clippy --manifest-path $(RUST_MANIFEST) -- -D warnings # -D clippy::pedantic
+# $(TIDY) $(C_SRCS) -header-filter='.*' --checks='*' --warnings-as-errors='*' -- $(CFLAGS) $(CPPFLAGS)
+# $(CPPCHECK) --enable=all --inconclusive --error-exitcode=1 $(SRC_DIR) include/
+	$(MAKE) $(BUILD_DIR)/$(BIN) CFLAGS="$(CFLAGS) $(VERIFY_FLAGS)" LDLIBS="$(LDLIBS) $(VERIFY_FLAGS)"
+	$(MAKE) test
 
 -include $(DEPS)

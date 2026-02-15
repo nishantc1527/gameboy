@@ -1,6 +1,5 @@
 #include <SDL3/SDL_log.h>
 #include <stdint.h>
-#include <stdio.h>
 
 #include "gbemu/cpu.h"
 #include "gbemu/mmu.h"
@@ -11,7 +10,7 @@ uint8_t rd8(void) { return mmu_r_mem(mmu, ++PC); }
 uint16_t rd16(void) {
   uint16_t addr1 = ++PC;
   uint16_t addr2 = ++PC;
-  return ((uint16_t)mmu_r_mem(mmu, addr2) << 8) |
+  return (uint16_t)((uint16_t)mmu_r_mem(mmu, addr2) << 8) |
          (uint16_t)mmu_r_mem(mmu, addr1);
 }
 
@@ -27,7 +26,7 @@ uint16_t pop(void) {
   uint16_t val1 = mmu_r_mem(mmu, SP);
   uint16_t val2 = mmu_r_mem(mmu, SP + 1);
   SP += 2;
-  return val1 | (val2 << 8);
+  return val1 | (uint16_t)(val2 << 8);
 }
 
 uint16_t pk(void) {
@@ -46,8 +45,8 @@ int exec_instr(void) {
   uint8_t instr = mmu_r_mem(mmu, PC);
   if (instr == 0xCB) {
     uint8_t prfx = rd8();
-    if (disassemble && print_instr(instr, prfx))
-      ;  // return -1 when completing disassembler
+    if (disassemble && print_instr(instr, prfx)) {
+    }  // return -1 when completing disassembler
     switch (prfx) {
       case 0x00:
         return c_rlc(&B);
@@ -581,8 +580,8 @@ int exec_instr(void) {
         return -1;
     }
   } else {
-    if (disassemble && print_instr(instr, 0))
-      ;  // return -1 when completing disassembler
+    if (disassemble && print_instr(instr, 0)) {
+    }  // return -1 when completing disassembler
     switch (instr) {
       case 0x00:
         return 4;
@@ -658,7 +657,7 @@ int exec_instr(void) {
         cl_flg(FLG_Z);
         return 4;
       case 0x18:
-        PC += (signed char)rd8();
+        PC = (uint16_t)(PC + (int8_t)rd8());
         return 12;
       case 0x19:
         st_h_add16(gt_HL(), gt_DE());
@@ -1217,7 +1216,7 @@ int exec_instr(void) {
         uint8_t add = rd8();
         st_h_add((uint8_t)SP, add);
         st_c_add((uint8_t)SP, add);
-        SP += (signed char)add;
+        SP = (uint16_t)(SP + (int8_t)add);
         cl_flg(FLG_Z);
         cl_flg(FLG_N);
         return 16;
@@ -1256,7 +1255,7 @@ int exec_instr(void) {
         return c_rst(0x0030);
       case 0xF8: {
         uint8_t nxt = rd8();
-        uint16_t add = SP + (signed char)nxt;
+        uint16_t add = (uint16_t)(SP + (int8_t)nxt);
         st_HL(add);
         cl_flg(FLG_Z);
         cl_flg(FLG_N);

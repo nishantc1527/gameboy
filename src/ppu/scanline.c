@@ -10,8 +10,8 @@ uint8_t dsp[SCRN_HEIGHT][SCRN_WIDTH];
 const uint16_t SCANLINE_LEN = 456;
 const uint16_t SCANLINES = 154;
 
-int gt_clr(uint8_t pal, int val) { return (pal >> (val << 1)) & 0b11; }
-void w_pxl(int y, int x, int clr) { dsp[y][x] = clr; }
+uint8_t gt_clr(uint8_t pal, int val) { return (pal >> (val << 1)) & 0b11; }
+void w_pxl(int y, int x, uint8_t clr) { dsp[y][x] = clr; }
 
 void do_scanline(void) {
   if (get_bit(LCDC, 7)) {
@@ -23,26 +23,27 @@ void do_scanline(void) {
         uint8_t pal = BGP;
         for (int x = 0; x < SCRN_WIDTH; x++) {
           uint8_t by = (ly + SCY) % 256;
-          int tiley = by / 8;
+          uint8_t tiley = by / (uint8_t)8;
           int offy = by % 8;
-          int uint8_ty = offy << 1;
-          int bx = (x + SCX) % 256;
-          int tilex = bx / 8;
-          int offx = bx % 8;
-          int idx = (tiley * 32) + tilex;
+          int ty = offy << 1;
+          uint8_t bx = (uint8_t)((x + SCX) % 256);
+          uint8_t tilex = bx / 8;
+          uint8_t offx = bx % 8;
+          uint16_t idx =
+              (uint16_t)((uint16_t)tiley * (uint16_t)32) + (uint16_t)tilex;
           if (mp_area == 0)
             idx += 0x9800;
           else
             idx += 0x9C00;
           idx = mmu_r_mem(mmu, idx);
-          if (dat_area == 0) idx = (signed char)idx + 128;
+          if (dat_area == 0) idx = (uint16_t)((int8_t)idx + (uint16_t)128);
           idx *= 16;
           if (dat_area == 0)
             idx += 0x8800;
           else
             idx += 0x8000;
-          uint8_t ls = mmu_r_mem(mmu, idx + uint8_ty);
-          uint8_t ms = mmu_r_mem(mmu, idx + uint8_ty + 1);
+          uint8_t ls = mmu_r_mem(mmu, (uint16_t)(idx + (uint16_t)ty));
+          uint8_t ms = mmu_r_mem(mmu, (uint16_t)(idx + (uint16_t)ty + 1));
           offx = 7 - offx;
           int clr = (get_bit(ms, offx) << 1) | get_bit(ls, offx);
           w_pxl(ly, x, gt_clr(pal, clr));
@@ -54,27 +55,29 @@ void do_scanline(void) {
           if (wx < SCRN_WIDTH + 7 && wy < SCRN_HEIGHT && LY >= wy) {
             wx = wx - 7;
             wy = WIN_CNT;
-            int tiley = wy / 8;
+            uint8_t tiley = wy / 8;
             int offy = wy % 8;
-            int uint8_ty = offy << 1;
+            int ty = offy << 1;
             for (uint8_t x = wx; x < SCRN_WIDTH; x++) {
               uint8_t _wx = x - wx;
-              int tilex = _wx / 8;
-              int offx = _wx % 8;
-              int idx = (tiley * 32) + tilex;
+              uint8_t tilex = _wx / 8;
+              uint8_t offx = _wx % 8;
+              uint16_t idx =
+                  (uint16_t)((uint16_t)tiley * (uint16_t)32) + (uint16_t)tilex;
               if (mp_area == 0)
                 idx += 0x9800;
               else
                 idx += 0x9C00;
               idx = mmu_r_mem(mmu, idx);
-              if (dat_area == 0) idx = (signed char)idx + 128;
+              if (dat_area == 0) idx = (uint16_t)((int8_t)idx + (uint16_t)128);
               idx *= 16;
               if (dat_area == 0)
                 idx += 0x8800;
               else
                 idx += 0x8000;
-              uint8_t ls = mmu_r_mem(mmu, idx + uint8_ty);
-              uint8_t ms = mmu_r_mem(mmu, idx + uint8_ty + 1);
+              uint8_t ls = mmu_r_mem(mmu, idx + (uint16_t)ty);
+              uint8_t ms =
+                  mmu_r_mem(mmu, (uint16_t)(idx + (uint16_t)ty + (uint16_t)1));
               offx = 7 - offx;
               int clr = (get_bit(ms, offx) << 1) | get_bit(ls, offx);
               w_pxl(ly, x, gt_clr(pal, clr));
@@ -127,7 +130,7 @@ void do_scanline(void) {
           obj[midx] = 0;
           maxx = mmu_r_mem(mmu, mem_loc + 1);
           maxm = mem_loc;
-          int y = mmu_r_mem(mmu, mem_loc + 0);
+          uint8_t y = mmu_r_mem(mmu, mem_loc + 0);
           int x = mmu_r_mem(mmu, mem_loc + 1);
           uint16_t idx = mmu_r_mem(mmu, mem_loc + 2);
           uint8_t flg = mmu_r_mem(mmu, mem_loc + 3);
@@ -144,9 +147,9 @@ void do_scanline(void) {
           } else {
             if (flipy) line = 7 - line;
           }
-          line <<= 1;
+          line = (uint8_t)(line << 1);
           uint8_t ls = mmu_r_mem(mmu, idx + line + 0);
-          uint8_t ms = mmu_r_mem(mmu, idx + line + 1);
+          uint8_t ms = mmu_r_mem(mmu, (uint16_t)(idx + (uint16_t)line + 1));
           uint8_t pal;
           if (get_bit(flg, 4))
             pal = OBP1;
@@ -154,9 +157,9 @@ void do_scanline(void) {
             pal = OBP0;
           for (int x0 = x; x0 < x + 8; x0++) {
             if (x0 < 0) continue;
-            uint8_t posx = 7 - (x0 - x);
+            uint8_t posx = (uint8_t)7 - (uint8_t)(x0 - x);
             if (flipx) posx = 7 - posx;
-            uint8_t clr = (get_bit(ms, posx) << 1) | get_bit(ls, posx);
+            uint8_t clr = (uint8_t)(get_bit(ms, posx) << 1) | get_bit(ls, posx);
             if (get_bit(flg, 7)) {
               if (dsp[ly][x0] == gt_clr(BGP, 0))
                 w_pxl(ly, x0, gt_clr(pal, clr));
@@ -166,7 +169,7 @@ void do_scanline(void) {
         }
       }
     }
-    int ly = LY;
+    uint8_t ly = LY;
     ly++;
     if (ly >= SCANLINES) {
       ly = 0;
