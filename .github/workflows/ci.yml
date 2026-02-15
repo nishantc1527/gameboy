@@ -24,4 +24,4 @@ jobs:
         install-linux-dependencies: true
         cmake-arguments: -DSDL_UNIX_CONSOLE_BUILD=ON
     - run: which cbindgen || cargo install cbindgen
-    - run: make test
+    - run: make verify
