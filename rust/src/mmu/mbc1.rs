@@ -24,10 +24,7 @@ impl Mmu {
         match loc {
             ..0x2000 => self.ram_enable = (val & 0xF) == 0xA,
             0x2000..0x4000 => {
-                self.rom_bank = val & 0b11111;
-                if self.rom_bank == 0 {
-                    self.rom_bank = 1;
-                }
+                self.rom_bank = (val & 0b11111).max(1);
                 self.rom_bank &= (1 << (self.rom_size + 1)) - 1;
             }
             0x4000..0x6000 => {
