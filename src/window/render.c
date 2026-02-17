@@ -11,7 +11,8 @@
 uint32_t buf[SCRN_HEIGHT][SCRN_WIDTH];
 
 static const uint32_t pal_lut[] = {
-    [0] = ((uint32_t)(HEX_WHT >> 16) << 24) | ((uint32_t)((HEX_WHT >> 8) & 0xFF) << 16) |
+    [0] = ((uint32_t)(HEX_WHT >> 16) << 24) |
+          ((uint32_t)((HEX_WHT >> 8) & 0xFF) << 16) |
           ((uint32_t)(HEX_WHT & 0xFF) << 8) | (uint32_t)SDL_ALPHA_OPAQUE,
     [1] = ((uint32_t)(HEX_L_GREY >> 16) << 24) |
           ((uint32_t)((HEX_L_GREY >> 8) & 0xFF) << 16) |
@@ -19,9 +20,11 @@ static const uint32_t pal_lut[] = {
     [2] = ((uint32_t)(HEX_R_GREY >> 16) << 24) |
           ((uint32_t)((HEX_R_GREY >> 8) & 0xFF) << 16) |
           ((uint32_t)(HEX_R_GREY & 0xFF) << 8) | (uint32_t)SDL_ALPHA_OPAQUE,
-    [3] = ((uint32_t)(HEX_BLK >> 16) << 24) | ((uint32_t)((HEX_BLK >> 8) & 0xFF) << 16) |
+    [3] = ((uint32_t)(HEX_BLK >> 16) << 24) |
+          ((uint32_t)((HEX_BLK >> 8) & 0xFF) << 16) |
           ((uint32_t)(HEX_BLK & 0xFF) << 8) | (uint32_t)SDL_ALPHA_OPAQUE,
-    [4] = ((uint32_t)(HEX_BLK >> 16) << 24) | ((uint32_t)((HEX_BLK >> 8) & 0xFF) << 16) |
+    [4] = ((uint32_t)(HEX_BLK >> 16) << 24) |
+          ((uint32_t)((HEX_BLK >> 8) & 0xFF) << 16) |
           ((uint32_t)(HEX_BLK & 0xFF) << 8) | (uint32_t)SDL_ALPHA_OPAQUE,
 };
 

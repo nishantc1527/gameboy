@@ -126,5 +126,4 @@ void SDL_AppQuit(void* appstate __attribute__((unused)), SDL_AppResult result) {
     mmu_free(mmu);
   }
   // SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "DONE\n");
-
 }
