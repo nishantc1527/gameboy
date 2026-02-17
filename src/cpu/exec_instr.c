@@ -804,8 +804,10 @@ int exec_instr(void) {
       case 0x40:
         B = B;  // NOLINT
         if (test_category == TEST_MOONEYE) {
-          if (B == 3 && C == 5 && D == 8 && E == 13 && H == 21 && L == 34) printf("PASSED\n");
-          else printf("FAILED\n");
+          if (B == 3 && C == 5 && D == 8 && E == 13 && H == 21 && L == 34)
+            printf("PASSED\n");
+          else
+            printf("FAILED\n");
           done = 1;
         }
         return 4;
