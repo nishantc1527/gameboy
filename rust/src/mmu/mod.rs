@@ -27,6 +27,7 @@ pub struct Mmu {
     test_category: i8,
 }
 
+#[allow(clippy::manual_range_patterns)]
 impl Mmu {
     pub fn new(rom_file_name: &str, boot_rom_file_name: &str, test_category: i8) -> Option<Mmu> {
         let mut rom_title = String::new();
@@ -82,7 +83,7 @@ impl Mmu {
         let ram_enable = false;
 
         match cart_type {
-            0x01 | 0x03 => {
+            0x01 | 0x02 | 0x03 => {
                 mbc1_1mb_mode = false;
                 if rom_size > 0x06 {
                     log_err!("ROM SIZE NOT AVAILABLE\n");
@@ -93,13 +94,13 @@ impl Mmu {
                     return None;
                 }
             }
-            0x13 => {
-                if rom_size > 0x06 {
+            0x11 | 0x12 | 0x13 => {
+                if rom_size > 0x07 {
                     log_err!("ROM SIZE NOT AVAILABLE\n");
                     return None;
                 }
                 if ram_size > 0x03 {
-                    log_err!("RAM SIZE NOT AVAILABE\n");
+                    log_err!("RAM SIZE NOT AVAILABLE\n");
                     return None;
                 }
             }
@@ -129,14 +130,14 @@ impl Mmu {
         match loc {
             ..0x8000 => match self.cart_type {
                 0x00 => self.no_mbc_read_rom(loc),
-                0x01 | 0x03 => self.mbc1_read_rom(loc),
-                0x13 => self.mbc3_read_rom(loc),
+                0x01 | 0x02 | 0x03 => self.mbc1_read_rom(loc),
+                0x11 | 0x12 | 0x13 => self.mbc3_read_rom(loc),
                 _ => 0xFF,
             },
             0xA000..0xC000 => match self.cart_type {
                 0x00 => self.no_mbc_read_ram(loc),
-                0x01 | 0x03 => self.mbc1_read_ram(loc),
-                0x13 => self.mbc3_read_ram(loc),
+                0x01 | 0x02 | 0x03 => self.mbc1_read_ram(loc),
+                0x11 | 0x12 | 0x13 => self.mbc3_read_ram(loc),
                 _ => 0xFF,
             },
             mut loc => {
@@ -160,14 +161,14 @@ impl Mmu {
         match loc {
             ..0x8000 => match self.cart_type {
                 0x00 => self.no_mbc_write_rom(loc, val),
-                0x01 | 0x03 => self.mbc1_write_rom(loc, val),
-                0x13 => self.mbc3_write_rom(loc, val),
+                0x01 | 0x02 | 0x03 => self.mbc1_write_rom(loc, val),
+                0x11 | 0x12 | 0x13 => self.mbc3_write_rom(loc, val),
                 _ => (),
             },
             0xA000..0xC000 => match self.cart_type {
                 0x00 => self.no_mbc_write_ram(loc, val),
-                0x01 | 0x03 => self.mbc1_write_ram(loc, val),
-                0x13 => self.mbc3_write_ram(loc, val),
+                0x01 | 0x02 | 0x03 => self.mbc1_write_ram(loc, val),
+                0x11 | 0x12 | 0x13 => self.mbc3_write_ram(loc, val),
                 _ => (),
             },
             mut loc => {

@@ -4,7 +4,8 @@ impl Mmu {
     pub(super) fn mbc3_read_rom(&self, loc: u16) -> u8 {
         match loc {
             ..0x4000 => self.rom[loc as usize],
-            loc => self.rom[loc as usize + 0x4000 * (self.rom_bank as usize - 1)],
+            0x4000..0x8000 => self.rom[loc as usize + 0x4000 * (self.rom_bank as usize - 1)],
+            _ => 0xFF,
         }
     }
 
@@ -30,10 +31,8 @@ impl Mmu {
         match loc {
             ..0x2000 => self.ram_enable = (val & 0xF) == 0xA,
             0x2000..0x4000 => {
-                self.rom_bank = val & 0b1111111;
-                if self.rom_bank == 0 {
-                    self.rom_bank = 1;
-                }
+                let mask = if self.rom_size >= 0x07 { 0xFF } else { 0x7F };
+                self.rom_bank = (val & mask).max(1);
             }
             0x4000..0x6000 => {
                 self.ram_bank = val;

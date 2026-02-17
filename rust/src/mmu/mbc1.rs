@@ -42,7 +42,14 @@ impl Mmu {
 
     pub(super) fn mbc1_write_ram(&mut self, loc: u16, val: u8) {
         if self.ram_enable {
-            self.extern_ram[loc as usize - 0xA000] = val;
+            match self.ram_size {
+                0x00 => (),
+                0x02 => self.extern_ram[(loc - 0xA000) as usize] = val,
+                0x03 => {
+                    self.extern_ram[(loc - 0xA000 + 0x2000 * self.ram_bank as u16) as usize] = val
+                }
+                _ => (),
+            }
         }
     }
 }
