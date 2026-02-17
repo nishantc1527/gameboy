@@ -1,5 +1,6 @@
 #include <SDL3/SDL_log.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include "gbemu/cpu.h"
 #include "gbemu/mmu.h"
@@ -802,6 +803,11 @@ int exec_instr(void) {
         return 4;
       case 0x40:
         B = B;  // NOLINT
+        if (test_category == TEST_MOONEYE) {
+          if (B == 3 && C == 5 && D == 8 && E == 13 && H == 21 && L == 34) printf("PASSED\n");
+          else printf("FAILED\n");
+          done = 1;
+        }
         return 4;
       case 0x41:
         B = C;

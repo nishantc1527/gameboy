@@ -26,6 +26,7 @@ extern uint8_t HALT, IME;
 extern uint8_t A, B, C, D, E, F, H, L;
 extern uint16_t PC, SP;
 extern uint32_t tim_thresh;
+extern uint8_t done;
 
 extern char* rom_name;
 extern int test_category;

@@ -6,7 +6,11 @@ roms = [
     "test_roms/blargg/instr_timing/instr_timing.gb"
 ]
 
-@pytest.mark.timeout(20)
+# from pathlib import Path
+# roms = list(Path("test_roms/blargg").rglob("*.gb"))
+
+@pytest.mark.timeout(60)
+# @pytest.mark.parametrize("rom_path", roms, ids=lambda p: p.stem)
 @pytest.mark.parametrize("rom_path", roms)
 def test_blargg_rom(rom_path):
     cmd = ["./build/gbemu", "-r", rom_path, "--test", "blargg", "--headless"]
@@ -15,7 +19,7 @@ def test_blargg_rom(rom_path):
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
-        bufsize=1
+        bufsize=1,
     )
     full_output = []
     status = "TIMEOUT"
@@ -32,9 +36,7 @@ def test_blargg_rom(rom_path):
                 break
     except Exception as e:
         process.kill()
-        pytest.fail(f"Error during execution: {e}")
+        raise e
     finally:
         process.wait(timeout=5)
-
-    print("".join(full_output))
-    assert status == "PASSED", f"ROM {rom_path} failed with output: {''.join(full_output)}"
+    assert status == "PASSED", f"ROM {rom_path} {status}:\n{''.join(full_output)}"

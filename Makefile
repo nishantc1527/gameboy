@@ -63,9 +63,9 @@ $(PYTHON):
 	python3 -m venv $(VENV)
 	$(VENV)/bin/python3 -m ensurepip --default-pip
 	$(PIP) install --upgrade pip
+	$(PYTHON) -m pip install -r $(REQS)
 
 test: $(PYTHON) $(BUILD_DIR)/$(BIN)
-	$(PYTHON) -m pip install -r $(REQS)
 	$(PYTHON) -m pytest -v -n auto
 
 verify: clean $(RUST_HDR)

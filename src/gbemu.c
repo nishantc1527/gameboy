@@ -16,6 +16,7 @@ char* rom_name = NULL;
 int test_category = -1;
 uint8_t headless = 0;
 uint8_t disassemble = 0;
+uint8_t done = 0;
 
 SDL_AppResult usage() {
   SDL_LogError(SDL_LOG_CATEGORY_ERROR,
@@ -67,6 +68,7 @@ SDL_AppResult SDL_AppInit(void** appstate __attribute__((unused)),
 }
 
 SDL_AppResult SDL_AppIterate(void* appstate __attribute__((unused))) {
+  if (done) return SDL_APP_SUCCESS;
   Uint64 curr = SDL_GetPerformanceCounter();
   Uint64 elapsed = curr - prev_time;
   prev_time = curr;
