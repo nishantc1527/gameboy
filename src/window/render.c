@@ -10,20 +10,26 @@
 
 uint32_t buf[SCRN_HEIGHT][SCRN_WIDTH];
 
+static const uint32_t pal_lut[] = {
+    [0] = ((uint32_t)(HEX_WHT >> 16) << 24) | ((uint32_t)((HEX_WHT >> 8) & 0xFF) << 16) |
+          ((uint32_t)(HEX_WHT & 0xFF) << 8) | (uint32_t)SDL_ALPHA_OPAQUE,
+    [1] = ((uint32_t)(HEX_L_GREY >> 16) << 24) |
+          ((uint32_t)((HEX_L_GREY >> 8) & 0xFF) << 16) |
+          ((uint32_t)(HEX_L_GREY & 0xFF) << 8) | (uint32_t)SDL_ALPHA_OPAQUE,
+    [2] = ((uint32_t)(HEX_R_GREY >> 16) << 24) |
+          ((uint32_t)((HEX_R_GREY >> 8) & 0xFF) << 16) |
+          ((uint32_t)(HEX_R_GREY & 0xFF) << 8) | (uint32_t)SDL_ALPHA_OPAQUE,
+    [3] = ((uint32_t)(HEX_BLK >> 16) << 24) | ((uint32_t)((HEX_BLK >> 8) & 0xFF) << 16) |
+          ((uint32_t)(HEX_BLK & 0xFF) << 8) | (uint32_t)SDL_ALPHA_OPAQUE,
+    [4] = ((uint32_t)(HEX_BLK >> 16) << 24) | ((uint32_t)((HEX_BLK >> 8) & 0xFF) << 16) |
+          ((uint32_t)(HEX_BLK & 0xFF) << 8) | (uint32_t)SDL_ALPHA_OPAQUE,
+};
+
 void render(void) {
   for (int i = 0; i < SCRN_HEIGHT; i++) {
     for (int j = 0; j < SCRN_WIDTH; j++) {
-      int clr = dsp[i][j];
-      if (clr == CLR_WHT) clr = HEX_WHT;
-      if (clr == CLR_L_GRY) clr = HEX_L_GREY;
-      if (clr == CLR_D_GRY) clr = HEX_R_GREY;
-      if (clr == CLR_BLK) clr = HEX_BLK;
-      uint8_t r = (uint8_t)(clr >> 8 * 2);
-      uint8_t g = (uint8_t)(clr >> 8 * 1);
-      uint8_t b = (uint8_t)(clr >> 8 * 0);
-      uint32_t col = ((uint32_t)r << 24) | ((uint32_t)g << 16) |
-                     ((uint32_t)b << 8) | ((uint32_t)SDL_ALPHA_OPAQUE << 0);
-      buf[i][j] = col;
+      uint8_t clr = dsp[i][j];
+      buf[i][j] = pal_lut[clr];
     }
   }
   SDL_UpdateTexture(txt, NULL, buf, SCRN_WIDTH * sizeof(uint32_t));

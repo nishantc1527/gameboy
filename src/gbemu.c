@@ -27,7 +27,7 @@ SDL_AppResult usage() {
 SDL_AppResult SDL_AppInit(void** appstate __attribute__((unused)),
                           int argc __attribute__((unused)),
                           char* argv[] __attribute__((unused))) {
-  if (argc < 2) return usage();
+  if (argc < 1) return usage();
   for (int i = 1; i < argc; i++) {
     if ((!strcmp(argv[i], "-r") || !strcmp(argv[i], "--rom")) && i + 1 < argc)
       rom_name = argv[++i];
@@ -93,10 +93,10 @@ SDL_AppResult SDL_AppIterate(void* appstate __attribute__((unused))) {
       update_timer((uint8_t)cyc);
       check_dma();
       check_interrupt();
-      update_input();
     }
     tot_ticks -= frame_ticks;
   }
+  update_input();
   if (!headless) {
     render();
     // draw_ui();
@@ -121,7 +121,10 @@ void SDL_AppQuit(void* appstate __attribute__((unused)), SDL_AppResult result) {
       // SDL_LogError(SDL_LOG_CATEGORY_ERROR, "FAILURE\n");
       break;
   }
-  mmu_save(mmu);
-  if (mmu) mmu_free(mmu);
+  if (mmu) {
+    mmu_save(mmu);
+    mmu_free(mmu);
+  }
   // SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "DONE\n");
+
 }
