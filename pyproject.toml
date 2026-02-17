@@ -1,0 +1,8 @@
+[project]
+name = "gbemu"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v -n auto"
+timeout = 20
