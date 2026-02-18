@@ -96,8 +96,8 @@ SDL_AppResult SDL_AppIterate(void* appstate __attribute__((unused))) {
       update_lcd();
       update_timer((uint8_t)cyc);
       check_dma();
-      check_interrupt();
       upd_apu();
+      check_interrupt();
     }
     tot_ticks -= frame_ticks;
   }

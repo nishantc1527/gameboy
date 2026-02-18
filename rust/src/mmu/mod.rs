@@ -124,6 +124,7 @@ impl Mmu {
         })
     }
 
+    #[allow(clippy::identity_op)]
     pub fn r_mem(&self, loc: u16) -> u8 {
         if self.mem[0xFF50] == 0 && loc < 0x100 {
             return self.brom[loc as usize];
@@ -145,7 +146,7 @@ impl Mmu {
                 if (0xE000..=0xFDFF).contains(&loc) {
                     loc -= 0x2000;
                 }
-                return match loc {
+                match loc {
                     apu_reg::NR10 => self.mem[loc as usize] | 0x80,
                     apu_reg::NR11 => self.mem[loc as usize] | 0x3F,
                     apu_reg::NR12 => self.mem[loc as usize] | 0x00,
@@ -171,7 +172,7 @@ impl Mmu {
                     apu_reg::NR52 => self.mem[loc as usize] | 0x70,
                     0xFF27..0xFF30 => 0xFF,
                     loc => self.mem[loc as usize],
-                };
+                }
             }
         }
     }

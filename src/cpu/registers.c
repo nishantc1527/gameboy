@@ -1,5 +1,6 @@
 #include <stdint.h>
 
+#include "gbemu/apu.h"
 #include "gbemu/cpu.h"
 #include "gbemu/mmu.h"
 #include "gbemu/ppu.h"
@@ -75,6 +76,7 @@ void update_timer(uint8_t cycles) {
   while (div_cnt >= CPU_FREQ / DIV_FREQ) {
     uint8_t div = DIV;
     div++;
+    if (get_bit(DIV, 4) && !get_bit(div, 4)) div_apu++;
     mmu_w_mem_raw(mmu, 0xFF04, div);
     div_cnt -= CPU_FREQ / DIV_FREQ;
   }
