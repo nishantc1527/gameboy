@@ -62,6 +62,7 @@ SDL_AppResult SDL_AppInit(void** appstate __attribute__((unused)),
   mmu = mmu_init(rom_name, BOOT_ROM_FILE, (int8_t)test_category);
   if (init_window()) return SDL_APP_FAILURE;
   init_ppu();
+  init_apu();
   mmu_load(mmu);
   if (pokemon_enabled) p_init_data();
   return SDL_APP_CONTINUE;
@@ -95,6 +96,7 @@ SDL_AppResult SDL_AppIterate(void* appstate __attribute__((unused))) {
       update_timer((uint8_t)cyc);
       check_dma();
       check_interrupt();
+      upd_apu();
     }
     tot_ticks -= frame_ticks;
   }

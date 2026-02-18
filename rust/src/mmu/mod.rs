@@ -144,7 +144,11 @@ impl Mmu {
                 if (0xE000..=0xFDFF).contains(&loc) {
                     loc -= 0x2000;
                 }
-                self.mem[loc as usize]
+                return if loc == 0xFF26 {
+                    self.mem[loc as usize] | 0x70
+                } else {
+                    self.mem[loc as usize]
+                }
             }
         }
     }
