@@ -1,3 +1,4 @@
+mod apu_reg;
 mod io;
 mod mbc1;
 mod mbc3;
@@ -144,11 +145,33 @@ impl Mmu {
                 if (0xE000..=0xFDFF).contains(&loc) {
                     loc -= 0x2000;
                 }
-                return if loc == 0xFF26 {
-                    self.mem[loc as usize] | 0x70
-                } else {
-                    self.mem[loc as usize]
-                }
+                return match loc {
+                    apu_reg::NR10 => self.mem[loc as usize] | 0x80,
+                    apu_reg::NR11 => self.mem[loc as usize] | 0x3F,
+                    apu_reg::NR12 => self.mem[loc as usize] | 0x00,
+                    apu_reg::NR13 => self.mem[loc as usize] | 0xFF,
+                    apu_reg::NR14 => self.mem[loc as usize] | 0xBF,
+                    0xFF15 => 0xFF,
+                    apu_reg::NR21 => self.mem[loc as usize] | 0x3F,
+                    apu_reg::NR22 => self.mem[loc as usize] | 0x00,
+                    apu_reg::NR23 => self.mem[loc as usize] | 0xFF,
+                    apu_reg::NR24 => self.mem[loc as usize] | 0xBF,
+                    apu_reg::NR30 => self.mem[loc as usize] | 0x7F,
+                    apu_reg::NR31 => self.mem[loc as usize] | 0xFF,
+                    apu_reg::NR32 => self.mem[loc as usize] | 0x9F,
+                    apu_reg::NR33 => self.mem[loc as usize] | 0xFF,
+                    apu_reg::NR34 => self.mem[loc as usize] | 0xBF,
+                    0xFF1F => 0xFF,
+                    apu_reg::NR41 => self.mem[loc as usize] | 0xFF,
+                    apu_reg::NR42 => self.mem[loc as usize] | 0x00,
+                    apu_reg::NR43 => self.mem[loc as usize] | 0x00,
+                    apu_reg::NR44 => self.mem[loc as usize] | 0xBF,
+                    apu_reg::NR50 => self.mem[loc as usize] | 0x00,
+                    apu_reg::NR51 => self.mem[loc as usize] | 0x00,
+                    apu_reg::NR52 => self.mem[loc as usize] | 0x70,
+                    0xFF27..0xFF30 => 0xFF,
+                    loc => self.mem[loc as usize],
+                };
             }
         }
     }
