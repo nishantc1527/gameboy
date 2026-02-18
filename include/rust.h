@@ -3,6 +3,24 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#define JOYP 65280
+
+#define SB 65281
+
+#define SC 65282
+
+#define DIV 65284
+
+#define TIMA 65285
+
+#define TMA 65286
+
+#define TAC 65287
+
+#define IF 65295
+
+#define IE 65535
+
 typedef struct Mmu Mmu;
 
 struct Mmu *mmu_init(const char *rom_file_name,

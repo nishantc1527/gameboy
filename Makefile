@@ -23,7 +23,7 @@ SRC_DIR       := src
 INC_DIRS      := config include
 LIB_DIR       := vendor
 
-CFLAGS        := -O3 -march=native -std=c2x
+CFLAGS        := -O2 -std=c2x
 CPPFLAGS      := $(foreach d, $(INC_DIRS), -I$(d)) $(foreach d, $(LIB_DIR), -isystem $(d)) $(shell pkg-config --cflags sdl3)
 LDLIBS        := $(shell pkg-config --libs sdl3)
 VERIFY_FLAGS  := -Wall -Wextra -Wpedantic -Werror

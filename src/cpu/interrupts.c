@@ -26,7 +26,7 @@ void do_intr(uint8_t intr) {
 
 void check_interrupt(void) {
   for (uint8_t intr = 0; intr < 5; intr++) {
-    if (get_bit(IF, intr) && get_bit(IE, intr)) {
+    if (get_bit(mmu_r_mem(mmu, IF), intr) && get_bit(mmu_r_mem(mmu, IE), intr)) {
       do_intr(intr);
     }
   }

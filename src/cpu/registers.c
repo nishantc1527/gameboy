@@ -55,7 +55,7 @@ void st_HL(uint16_t HL) {
 }
 
 void update_timer(uint8_t cycles) {
-  uint8_t val = TAC;
+  uint8_t val = mmu_r_mem(mmu, TAC);
   switch (val & 0b11) {
     case 0b00:
       tim_thresh = TIM_FREQ_1;
@@ -73,18 +73,18 @@ void update_timer(uint8_t cycles) {
   tim_thresh = CPU_FREQ / tim_thresh;
   div_cnt = (uint32_t)(div_cnt + cycles);
   while (div_cnt >= CPU_FREQ / DIV_FREQ) {
-    uint8_t div = DIV;
+    uint8_t div = mmu_r_mem(mmu, DIV);
     div++;
     mmu_w_mem_raw(mmu, 0xFF04, div);
     div_cnt -= CPU_FREQ / DIV_FREQ;
   }
-  if (get_bit(TAC, 2)) {
+  if (get_bit(mmu_r_mem(mmu, TAC), 2)) {
     tim_cnt = (uint32_t)(tim_cnt + cycles);
     while (tim_cnt >= tim_thresh) {
-      uint8_t tima = TIMA;
+      uint8_t tima = mmu_r_mem(mmu, TIMA);
       intr_timer(tima);
       if (tima == 0xFF)
-        tima = TMA;
+        tima = mmu_r_mem(mmu, TMA);
       else
         tima++;
       mmu_w_mem(mmu, 0xFF05, tima);

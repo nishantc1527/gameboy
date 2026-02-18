@@ -3,8 +3,6 @@
 #include <SDL3/SDL_audio.h>
 #include <stdint.h>
 
-#include "mmu.h"
-
 #define NR10 r_mem(0xFF10)
 #define NR11 r_mem(0xFF11)
 #define NR12 r_mem(0xFF12)

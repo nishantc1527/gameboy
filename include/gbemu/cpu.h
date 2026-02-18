@@ -2,16 +2,6 @@
 
 #include <stdint.h>
 
-#define JOYP mmu_r_mem(mmu, 0xFF00)
-#define SB mmu_r_mem(mmu, 0xFF01)
-#define SC mmu_r_mem(mmu, 0xFF02)
-#define DIV mmu_r_mem(mmu, 0xFF04)
-#define TIMA mmu_r_mem(mmu, 0xFF05)
-#define TMA mmu_r_mem(mmu, 0xFF06)
-#define TAC mmu_r_mem(mmu, 0xFF07)
-#define IF mmu_r_mem(mmu, 0xFF0F)
-#define IE mmu_r_mem(mmu, 0xFFFF)
-
 #define TEST_BLARGG 0
 #define TEST_MOONEYE 1
 

@@ -1,3 +1,4 @@
+mod cpu_reg;
 mod io;
 mod mbc1;
 mod mbc3;
