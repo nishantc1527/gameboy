@@ -94,8 +94,8 @@ void update_timer(uint8_t cycles) {
 }
 
 void check_dma(void) {
-  if (DMA <= 0xDF) {
-    uint16_t src = DMA * 0x100;
+  if (mmu_r_mem(mmu, DMA) <= 0xDF) {
+    uint16_t src = mmu_r_mem(mmu, DMA) * 0x100;
     for (uint16_t t = 0; t < 0xA0; t++) {
       mmu_w_mem(mmu, 0xFE00 + t, mmu_r_mem(mmu, src + t));
     }

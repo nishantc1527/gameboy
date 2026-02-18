@@ -26,7 +26,8 @@ void do_intr(uint8_t intr) {
 
 void check_interrupt(void) {
   for (uint8_t intr = 0; intr < 5; intr++) {
-    if (get_bit(mmu_r_mem(mmu, IF), intr) && get_bit(mmu_r_mem(mmu, IE), intr)) {
+    if (get_bit(mmu_r_mem(mmu, IF), intr) &&
+        get_bit(mmu_r_mem(mmu, IE), intr)) {
       do_intr(intr);
     }
   }
@@ -42,7 +43,7 @@ void intr_vblank_lcd(uint8_t stat, int prev_mode, int curr_mode) {
     if (curr_mode == 2 && get_bit(stat, 5)) req_lcd = 1;
   }
   int prev_lyc = get_bit(stat, 2);
-  int curr_lyc = LY == LYC;
+  int curr_lyc = mmu_r_mem(mmu, LY) == mmu_r_mem(mmu, LYC);
   if (prev_lyc != curr_lyc && curr_lyc && get_bit(stat, 6)) req_lcd = 1;
   if (req_vblank) req_intr(INTR_VBLANK);
   if (req_lcd) req_intr(INTR_LCD);

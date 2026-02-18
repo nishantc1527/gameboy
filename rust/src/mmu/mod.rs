@@ -3,6 +3,7 @@ mod io;
 mod mbc1;
 mod mbc3;
 mod no_mbc;
+mod ppu_reg;
 
 use crate::log_err;
 use std::{fs::File, io::Read, path::Path};

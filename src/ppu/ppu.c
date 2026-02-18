@@ -8,7 +8,7 @@
 void init_ppu(void) { WIN_CNT = 0; }
 
 void update_lcd(void) {
-  uint8_t stat = LCD_STAT;
+  uint8_t stat = mmu_r_mem(mmu, LCD_STAT);
   int prev_mode = stat & 0b11;
   uint8_t curr_mode;
   if (scn <= 80)
@@ -17,11 +17,11 @@ void update_lcd(void) {
     curr_mode = 3;  // TODO length of mode 3 can change
   else
     curr_mode = 0;
-  if (LY >= SCRN_HEIGHT) curr_mode = 1;
+  if (mmu_r_mem(mmu, LY) >= SCRN_HEIGHT) curr_mode = 1;
   intr_vblank_lcd(stat, prev_mode, curr_mode);
   stat &= (uint8_t)~(0b11);
   stat |= curr_mode;
-  if (LY == LYC)
+  if (mmu_r_mem(mmu, LY) == mmu_r_mem(mmu, LYC))
     set_bit(&stat, 2);
   else
     clear_bit(&stat, 2);

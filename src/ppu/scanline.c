@@ -14,19 +14,19 @@ uint8_t gt_clr(uint8_t pal, int val) { return (pal >> (val << 1)) & 0b11; }
 void w_pxl(int y, int x, uint8_t clr) { dsp[y][x] = clr; }
 
 void do_scanline(void) {
-  if (get_bit(LCDC, 7)) {
-    if (LY < SCRN_HEIGHT) {
-      if (get_bit(LCDC, 0)) {
-        uint8_t ly = LY;
-        int dat_area = get_bit(LCDC, 4);
-        int mp_area = get_bit(LCDC, 3);
-        uint8_t pal = BGP;
+  if (get_bit(mmu_r_mem(mmu, LCDC), 7)) {
+    if (mmu_r_mem(mmu, LY) < SCRN_HEIGHT) {
+      if (get_bit(mmu_r_mem(mmu, LCDC), 0)) {
+        uint8_t ly = mmu_r_mem(mmu, LY);
+        int dat_area = get_bit(mmu_r_mem(mmu, LCDC), 4);
+        int mp_area = get_bit(mmu_r_mem(mmu, LCDC), 3);
+        uint8_t pal = mmu_r_mem(mmu, BGP);
         for (int x = 0; x < SCRN_WIDTH; x++) {
-          uint8_t by = (ly + SCY) % 256;
+          uint8_t by = (ly + mmu_r_mem(mmu, SCY)) % 256;
           uint8_t tiley = by / (uint8_t)8;
           int offy = by % 8;
           int ty = offy << 1;
-          uint8_t bx = (uint8_t)((x + SCX) % 256);
+          uint8_t bx = (uint8_t)((x + mmu_r_mem(mmu, SCX)) % 256);
           uint8_t tilex = bx / 8;
           uint8_t offx = bx % 8;
           uint16_t idx =
@@ -48,11 +48,12 @@ void do_scanline(void) {
           int clr = (get_bit(ms, offx) << 1) | get_bit(ls, offx);
           w_pxl(ly, x, gt_clr(pal, clr));
         }
-        if (get_bit(LCDC, 5)) {
-          mp_area = get_bit(LCDC, 6);
-          uint8_t wx = WX;
-          uint8_t wy = WY;
-          if (wx < SCRN_WIDTH + 7 && wy < SCRN_HEIGHT && LY >= wy) {
+        if (get_bit(mmu_r_mem(mmu, LCDC), 5)) {
+          mp_area = get_bit(mmu_r_mem(mmu, LCDC), 6);
+          uint8_t wx = mmu_r_mem(mmu, WX);
+          uint8_t wy = mmu_r_mem(mmu, WY);
+          if (wx < SCRN_WIDTH + 7 && wy < SCRN_HEIGHT &&
+              mmu_r_mem(mmu, LY) >= wy) {
             wx = wx - 7;
             wy = WIN_CNT;
             uint8_t tiley = wy / 8;
@@ -87,12 +88,12 @@ void do_scanline(void) {
         }
       } else {
         for (int x = 0; x < SCRN_WIDTH; x++) {
-          w_pxl(LY, x, CLR_WHT);
+          w_pxl(mmu_r_mem(mmu, LY), x, CLR_WHT);
         }
       }
-      if (get_bit(LCDC, 1)) {
-        uint8_t ly = LY;
-        uint8_t sz = get_bit(LCDC, 2);
+      if (get_bit(mmu_r_mem(mmu, LCDC), 1)) {
+        uint8_t ly = mmu_r_mem(mmu, LY);
+        uint8_t sz = get_bit(mmu_r_mem(mmu, LCDC), 2);
         int cnt = 0;
         uint16_t obj[10] = {0};
         for (uint16_t mem_loc = 0xFE00; mem_loc <= 0xFE9F && cnt < 10;
@@ -152,16 +153,16 @@ void do_scanline(void) {
           uint8_t ms = mmu_r_mem(mmu, (uint16_t)(idx + (uint16_t)line + 1));
           uint8_t pal;
           if (get_bit(flg, 4))
-            pal = OBP1;
+            pal = mmu_r_mem(mmu, OBP1);
           else
-            pal = OBP0;
+            pal = mmu_r_mem(mmu, OBP0);
           for (int x0 = x; x0 < x + 8; x0++) {
             if (x0 < 0) continue;
             uint8_t posx = (uint8_t)7 - (uint8_t)(x0 - x);
             if (flipx) posx = 7 - posx;
             uint8_t clr = (uint8_t)(get_bit(ms, posx) << 1) | get_bit(ls, posx);
             if (get_bit(flg, 7)) {
-              if (dsp[ly][x0] == gt_clr(BGP, 0))
+              if (dsp[ly][x0] == gt_clr(mmu_r_mem(mmu, BGP), 0))
                 w_pxl(ly, x0, gt_clr(pal, clr));
             } else if (clr != 0)
               w_pxl(ly, x0, gt_clr(pal, clr));
@@ -169,7 +170,7 @@ void do_scanline(void) {
         }
       }
     }
-    uint8_t ly = LY;
+    uint8_t ly = mmu_r_mem(mmu, LY);
     ly++;
     if (ly >= SCANLINES) {
       ly = 0;

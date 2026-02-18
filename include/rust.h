@@ -21,6 +21,30 @@
 
 #define IE 65535
 
+#define LCDC 65344
+
+#define LCD_STAT 65345
+
+#define SCY 65346
+
+#define SCX 65347
+
+#define LY 65348
+
+#define LYC 65349
+
+#define DMA 65350
+
+#define BGP 65351
+
+#define OBP0 65352
+
+#define OBP1 65353
+
+#define WY 65354
+
+#define WX 65355
+
 typedef struct Mmu Mmu;
 
 struct Mmu *mmu_init(const char *rom_file_name,
