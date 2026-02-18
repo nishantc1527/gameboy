@@ -2,7 +2,10 @@ import subprocess
 import pytest
 
 roms = [
+    "test_roms/mooneye-test-suite/acceptance/halt_ime0_ei.gb",
+
     "test_roms/mooneye-test-suite/emulator-only/mbc1/bits_bank1.gb",
+    "test_roms/mooneye-test-suite/emulator-only/mbc1/bits_bank2.gb",
 ]
 
 # from pathlib import Path
