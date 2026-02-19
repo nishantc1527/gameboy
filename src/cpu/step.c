@@ -2,17 +2,14 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "gbemu/core.h"
 #include "gbemu/cpu.h"
 #include "gbemu/mmu.h"
 #include "internal.h"
-#include "gbemu/core.h"
 
 int step(void) {
-  if (bHALT) {
-    kp();
-    return 4;
-  }
-  uint8_t instr = mmu_r_mem(mmu, PC);
+  if (bHALT) return 4;
+  uint8_t instr = rd8();
   if (instr == 0xCB) {
     uint8_t prfx = rd8();
     if (disassemble_enable && disassemble(instr, prfx)) {
@@ -1200,7 +1197,6 @@ int step(void) {
       }
       case 0xE9:
         PC = gt_HL();
-        kp();
         return 4;
       case 0xEA:
         mmu_w_mem(mmu, rd16(), A);

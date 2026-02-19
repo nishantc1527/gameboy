@@ -1,13 +1,12 @@
 #pragma once
 
 #include <stdint.h>
-#include "gbemu/cpu.h"
 #include "gbemu/util.h"
 #include "gbemu/mmu.h"
 
 extern uint8_t bHALT, bIME;
 extern uint8_t A, B, C, D, E, F, H, L;
-extern uint16_t SP;
+extern uint16_t PC, SP;
 extern uint32_t tim_thresh;
 
 #define FLG_Z 7
@@ -28,11 +27,11 @@ static inline uint8_t gt_flg(uint8_t flg) { return gt(F, flg); }
 static inline void st_flg(uint8_t flg) { st(&F, flg); }
 static inline void cl_flg(uint8_t flg) { cl(&F, flg); }
 
-static inline uint8_t rd8(void) { return mmu_r_mem(mmu, ++PC); }
+static inline uint8_t rd8(void) { return mmu_r_mem(mmu, PC++); }
 
 static inline uint16_t rd16(void) {
-  uint16_t addr1 = ++PC;
-  uint16_t addr2 = ++PC;
+  uint16_t addr1 = PC++;
+  uint16_t addr2 = PC++;
   return (uint16_t)((uint16_t)mmu_r_mem(mmu, addr2) << 8) |
          (uint16_t)mmu_r_mem(mmu, addr1);
 }
@@ -57,8 +56,6 @@ static inline uint16_t pk(void) {
   push(val);
   return val;
 }
-
-static inline void kp(void) { PC--; }
 
 static inline void st_z(uint8_t var) {
   if (var == 0)
@@ -168,9 +165,8 @@ static inline int c_bit(uint8_t reg, uint8_t bit) {
 
 static inline int c_call(int flg) {
   if (flg) {
-    push(PC + 3);
+    push(PC + 2);
     PC = rd16();
-    kp();
     return 24;
   }
   rd16();
@@ -240,7 +236,6 @@ static inline int c_jp8(int flg) {
 static inline int c_jp16(int flg) {
   if (flg) {
     PC = rd16();
-    kp();
     return 16;
   } else
     rd16();
@@ -271,7 +266,6 @@ static inline int c_res_mem(uint16_t loc, int bit) {
 static inline int c_ret(int flg) {
   if (flg) {
     PC = pop();
-    kp();
     return 20;
   }
   return 8;
@@ -366,9 +360,8 @@ static inline int c_rlc_mem(uint16_t loc) {
 }
 
 static inline int c_rst(uint8_t loc) {
-  push(PC + 1);
+  push(PC);
   PC = loc;
-  kp();
   return 16;
 }
 
@@ -477,8 +470,6 @@ static inline int c_sra_mem(uint16_t loc) {
   return 16;
 }
 
-
-
 static inline int c_swp(uint8_t* reg) {
   *reg = (uint8_t)(*reg >> 4) | (uint8_t)(*reg << 4);
   st_z(*reg);
@@ -507,8 +498,6 @@ static inline int c_xor(uint8_t reg) {
   cl_flg(FLG_C);
   return 4;
 }
-
-
 
 static inline uint16_t gt_AF(void) { return (uint16_t)(((uint16_t)A) << 8) | (uint16_t)F; }
 

@@ -12,8 +12,6 @@ extern const uint32_t TIM_FREQ_2;
 extern const uint32_t TIM_FREQ_3;
 extern const uint32_t TIM_FREQ_4;
 
-extern uint16_t PC;
-
 // Check interrupts
 void check_interrupt(void);
 void intr_vblank_lcd(uint8_t stat, int prev_mode, int curr_mode);

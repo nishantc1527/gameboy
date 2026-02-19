@@ -2,12 +2,12 @@
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL_timer.h>
 
+#include "gbemu/core.h"
 #include "gbemu/cpu.h"
 #include "gbemu/mmu.h"
 #include "gbemu/pokemon.h"
 #include "gbemu/ppu.h"
 #include "gbemu/window.h"
-#include "gbemu/core.h"
 #include "rom_locs.h"
 #include "rust.h"
 
@@ -86,7 +86,6 @@ SDL_AppResult SDL_AppIterate(void* appstate __attribute__((unused))) {
     while (!frame) {
       const int cyc = step();
       if (cyc == -1) return SDL_APP_FAILURE;
-      PC++;
       scn = (uint16_t)(scn + cyc);
       if (scn >= SCANLINE_LEN) {
         do_scanline();
