@@ -5,48 +5,17 @@
 #include "gbemu/cpu.h"
 #include "gbemu/mmu.h"
 #include "internal.h"
+#include "gbemu/core.h"
 
-uint8_t rd8(void) { return mmu_r_mem(mmu, ++PC); }
-
-uint16_t rd16(void) {
-  uint16_t addr1 = ++PC;
-  uint16_t addr2 = ++PC;
-  return (uint16_t)((uint16_t)mmu_r_mem(mmu, addr2) << 8) |
-         (uint16_t)mmu_r_mem(mmu, addr1);
-}
-
-void push(uint16_t val) {
-  uint8_t val1 = (uint8_t)(val >> 8);
-  uint8_t val2 = (uint8_t)val;
-  mmu_w_mem(mmu, SP - 1, val1);
-  mmu_w_mem(mmu, SP - 2, val2);
-  SP -= 2;
-}
-
-uint16_t pop(void) {
-  uint16_t val1 = mmu_r_mem(mmu, SP);
-  uint16_t val2 = mmu_r_mem(mmu, SP + 1);
-  SP += 2;
-  return val1 | (uint16_t)(val2 << 8);
-}
-
-uint16_t pk(void) {
-  uint16_t val = pop();
-  push(val);
-  return val;
-}
-
-void kp(void) { PC--; }
-
-int exec_instr(void) {
-  if (HALT) {
+int step(void) {
+  if (bHALT) {
     kp();
     return 4;
   }
   uint8_t instr = mmu_r_mem(mmu, PC);
   if (instr == 0xCB) {
     uint8_t prfx = rd8();
-    if (disassemble && print_instr(instr, prfx)) {
+    if (disassemble_enable && disassemble(instr, prfx)) {
     }  // return -1 when completing disassembler
     switch (prfx) {
       case 0x00:
@@ -577,11 +546,11 @@ int exec_instr(void) {
       default:
         SDL_LogError(SDL_LOG_CATEGORY_ERROR,
                      "UNIMPLEMENTED PREFIX INSTRUCTION\n");
-        print_instr(instr, prfx);
+        disassemble(instr, prfx);
         return -1;
     }
   } else {
-    if (disassemble && print_instr(instr, 0)) {
+    if (disassemble_enable && disassemble(instr, 0)) {
     }  // return -1 when completing disassembler
     switch (instr) {
       case 0x00:
@@ -808,7 +777,7 @@ int exec_instr(void) {
             printf("PASSED\n");
           else
             printf("FAILED\n");
-          done = 1;
+          b_done = 1;
         }
         return 4;
       case 0x41:
@@ -971,7 +940,7 @@ int exec_instr(void) {
         mmu_w_mem(mmu, gt_HL(), L);
         return 8;
       case 0x76:
-        HALT = 1;
+        bHALT = 1;
         return 4;
       case 0x77:
         mmu_w_mem(mmu, gt_HL(), A);
@@ -1191,7 +1160,7 @@ int exec_instr(void) {
       case 0xD8:
         return c_ret(gt_flg(FLG_C));
       case 0xD9:
-        IME = 1;
+        bIME = 1;
         c_ret(1);
         return 16;
       case 0xDA:
@@ -1251,7 +1220,7 @@ int exec_instr(void) {
         A = mmu_r_mem(mmu, 0xFF00 + C);
         return 8;
       case 0xF3:
-        IME = 0;
+        bIME = 0;
         return 4;
       case 0xF5:
         push(gt_AF());
@@ -1278,7 +1247,7 @@ int exec_instr(void) {
         A = mmu_r_mem(mmu, rd16());
         return 16;
       case 0xFB:
-        IME = 1;
+        bIME = 1;
         return 4;
       case 0xFE:
         c_cp(rd8());
@@ -1287,7 +1256,7 @@ int exec_instr(void) {
         return c_rst(0x0038);
       default:
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "UNIMPLEMENTED INSTRUCTION\n");
-        print_instr(instr, 0);
+        disassemble(instr, 0);
         return -1;
     }
   }

@@ -4,6 +4,7 @@
 
 #include "gbemu/cpu.h"
 #include "gbemu/mmu.h"
+#include "gbemu/util.h"
 
 void init_ppu(void) { WIN_CNT = 0; }
 
@@ -22,26 +23,26 @@ void update_lcd(void) {
   stat &= (uint8_t)~(0b11);
   stat |= curr_mode;
   if (mmu_r_mem(mmu, LY) == mmu_r_mem(mmu, LYC))
-    set_bit(&stat, 2);
+    st(&stat, 2);
   else
-    clear_bit(&stat, 2);
+    cl(&stat, 2);
   mmu_w_mem(mmu, 0xFF41, stat);
 }
 
 int update_input(void) {
   uint8_t curr_joyp = mmu_r_mem(mmu, JOYP);
   curr_joyp |= 0xF;
-  if (!get_bit(curr_joyp, 4)) {
-    if (in[BTN_RIGHT]) clear_bit(&curr_joyp, 0);
-    if (in[BTN_LEFT]) clear_bit(&curr_joyp, 1);
-    if (in[BTN_UP]) clear_bit(&curr_joyp, 2);
-    if (in[BTN_DOWN]) clear_bit(&curr_joyp, 3);
+  if (!gt(curr_joyp, 4)) {
+    if (in[BTN_RIGHT]) cl(&curr_joyp, 0);
+    if (in[BTN_LEFT]) cl(&curr_joyp, 1);
+    if (in[BTN_UP]) cl(&curr_joyp, 2);
+    if (in[BTN_DOWN]) cl(&curr_joyp, 3);
   }
-  if (!get_bit(curr_joyp, 5)) {
-    if (in[BTN_A]) clear_bit(&curr_joyp, 0);
-    if (in[BTN_B]) clear_bit(&curr_joyp, 1);
-    if (in[BTN_SELECT]) clear_bit(&curr_joyp, 2);
-    if (in[BTN_START]) clear_bit(&curr_joyp, 3);
+  if (!gt(curr_joyp, 5)) {
+    if (in[BTN_A]) cl(&curr_joyp, 0);
+    if (in[BTN_B]) cl(&curr_joyp, 1);
+    if (in[BTN_SELECT]) cl(&curr_joyp, 2);
+    if (in[BTN_START]) cl(&curr_joyp, 3);
   }
   intr_joypad(mmu_r_mem(mmu, JOYP), curr_joyp);
   mmu_w_mem(mmu, 0xFF00, curr_joyp);

@@ -5,7 +5,7 @@
 #include "gbemu/mmu.h"
 #include "internal.h"
 
-int print_instr(uint8_t instr, uint8_t prfx) {
+int disassemble(uint8_t instr, uint8_t prfx) {
   if (!mmu_r_mem(mmu, 0xFF50)) return 0;
   printf("$%04X %02X ", PC, instr);
   if (instr == 0xCB) {

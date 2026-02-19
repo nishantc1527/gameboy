@@ -7,6 +7,7 @@
 #include "gbemu/pokemon.h"
 #include "gbemu/ppu.h"
 #include "gbemu/window.h"
+#include "gbemu/core.h"
 #include "rom_locs.h"
 #include "rust.h"
 
@@ -15,8 +16,8 @@ Mmu* mmu = NULL;
 char* rom_name = NULL;
 int test_category = -1;
 uint8_t headless = 0;
-uint8_t disassemble = 0;
-uint8_t done = 0;
+uint8_t disassemble_enable = 0;
+uint8_t b_done = 0;
 
 SDL_AppResult usage() {
   SDL_LogError(SDL_LOG_CATEGORY_ERROR,
@@ -46,7 +47,7 @@ SDL_AppResult SDL_AppInit(void** appstate __attribute__((unused)),
     } else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--headless"))
       headless = 1;
     else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--disassembly"))
-      disassemble = 1;
+      disassemble_enable = 1;
     else {
       SDL_LogError(SDL_LOG_CATEGORY_ERROR, "UNKNOWN COMMAND LINE OPTION %s\n",
                    argv[i]);
@@ -58,7 +59,7 @@ SDL_AppResult SDL_AppInit(void** appstate __attribute__((unused)),
     return SDL_APP_FAILURE;
   }
   // SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "INITIALIZING\n");
-  init_reg();
+  init_cpu();
   mmu = mmu_init(rom_name, BOOT_ROM_FILE, (int8_t)test_category);
   if (init_window()) return SDL_APP_FAILURE;
   init_ppu();
@@ -68,7 +69,7 @@ SDL_AppResult SDL_AppInit(void** appstate __attribute__((unused)),
 }
 
 SDL_AppResult SDL_AppIterate(void* appstate __attribute__((unused))) {
-  if (done) return SDL_APP_SUCCESS;
+  if (b_done) return SDL_APP_SUCCESS;
   Uint64 curr = SDL_GetPerformanceCounter();
   Uint64 elapsed = curr - prev_time;
   prev_time = curr;
@@ -83,7 +84,7 @@ SDL_AppResult SDL_AppIterate(void* appstate __attribute__((unused))) {
   } else if (headless || tot_ticks >= frame_ticks) {
     frame = 0;
     while (!frame) {
-      const int cyc = exec_instr();
+      const int cyc = step();
       if (cyc == -1) return SDL_APP_FAILURE;
       PC++;
       scn = (uint16_t)(scn + cyc);
