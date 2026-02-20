@@ -1,7 +1,6 @@
 #include "gbemu/apu.h"
 
 #include <SDL3/SDL_audio.h>
-#include <stdio.h>
 
 #include "gbemu/cpu.h"
 #include "gbemu/mmu.h"

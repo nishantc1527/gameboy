@@ -1,7 +1,7 @@
 import subprocess
 
 import pytest
-from core import check_stream
+from core import check_out
 
 from tests.core import check_stream
 
@@ -14,4 +14,4 @@ roms = [
 @pytest.mark.timeout(60)
 @pytest.mark.parametrize("rom_path", roms)
 def test_blargg_rom(rom_path):
-    check_stream(rom_path, "blargg_audio")
+    check_out(rom_path, "blargg_audio")

@@ -16,11 +16,11 @@ def check_stream(rom_path, test_category):
         for line in iter(process.stdout.readline, ""):
             full_output.append(line)
             if "Passed" in line:
-                status = "PASSED"
+                status = "Passed"
                 process.terminate()
                 break
             if "Failed" in line:
-                status = "FAILED"
+                status = "Failed"
                 process.terminate()
                 break
     except Exception as e:
@@ -28,10 +28,10 @@ def check_stream(rom_path, test_category):
         raise e
     finally:
         process.wait(timeout=5)
-    assert status == "PASSED", f"ROM {rom_path} {status}:\n{''.join(full_output)}"
+    assert status == "Passed", f"ROM {rom_path} {status}:\n{''.join(full_output)}"
 
 
 def check_out(rom_path, test_category):
     cmd = ["./build/gbemu", "-r", rom_path, "--test", test_category, "--headless"]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
-    assert "PASSED" in result.stdout, f"ROM {rom_path} FAILED:\n{result.stdout}"
+    assert "Passed" in result.stdout, f"ROM {rom_path} FAILED:\n{result.stdout}"

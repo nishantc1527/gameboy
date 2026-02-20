@@ -805,9 +805,9 @@ int exec_instr(void) {
         B = B;  // NOLINT
         if (test_category == TEST_MOONEYE) {
           if (B == 3 && C == 5 && D == 8 && E == 13 && H == 21 && L == 34)
-            printf("PASSED\n");
+            printf("Passed\n");
           else
-            printf("FAILED\n");
+            printf("Failed\n");
           done = 1;
         }
         return 4;
