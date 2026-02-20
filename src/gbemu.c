@@ -107,7 +107,9 @@ SDL_AppResult SDL_AppIterate(void* appstate __attribute__((unused))) {
         uint8_t sig3 = mmu_r_mem(mmu, 0xA003);
         if (sig1 == 0xDE && sig2 == 0xB0 && sig3 == 0x61) {
           uint8_t status = mmu_r_mem(mmu, 0xA000);
-          if (status != 0x80) {
+          if (status != 0x80 &&
+              status != 0x00) {  // FIX error codes can be 0 for a brief moment
+            printf("%d\n", status);
             if (status == 0)
               printf("Passed\n");
             else
