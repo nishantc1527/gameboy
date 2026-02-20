@@ -1,6 +1,7 @@
 #define SDL_MAIN_USE_CALLBACKS
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL_timer.h>
+#include <stdio.h>
 
 #include "gbemu/apu.h"
 #include "gbemu/cpu.h"
@@ -40,6 +41,8 @@ SDL_AppResult SDL_AppInit(void** appstate __attribute__((unused)),
         test_category = TEST_BLARGG;
       else if (!strcmp(s, "mooneye"))
         test_category = TEST_MOONEYE;
+      else if (!strcmp(s, "blargg_audio"))
+        test_category = TEST_BLARGG_AUDIO;
       else {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "UNKNOWN TEST: %s\n", s);
         return SDL_APP_FAILURE;
@@ -98,6 +101,22 @@ SDL_AppResult SDL_AppIterate(void* appstate __attribute__((unused))) {
       check_dma();
       upd_apu();
       check_interrupt();
+      if (test_category == TEST_BLARGG_AUDIO) {
+        uint8_t sig1 = mmu_r_mem(mmu, 0xA001);
+        uint8_t sig2 = mmu_r_mem(mmu, 0xA002);
+        uint8_t sig3 = mmu_r_mem(mmu, 0xA003);
+        if (sig1 == 0xDE && sig2 == 0xB0 && sig3 == 0x61) {
+          uint8_t status = mmu_r_mem(mmu, 0xA000);
+          if (status != 0x80) {
+            if (status == 0)
+              printf("Passed\n");
+            else
+              printf("Failed\n");
+            done = 1;
+            break;
+          }
+        }
+      }
     }
     tot_ticks -= frame_ticks;
   }

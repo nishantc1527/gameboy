@@ -14,6 +14,7 @@
 
 #define TEST_BLARGG 0
 #define TEST_MOONEYE 1
+#define TEST_BLARGG_AUDIO 2
 
 extern const uint32_t CPU_FREQ;
 extern const uint32_t DIV_FREQ;
