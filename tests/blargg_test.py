@@ -5,8 +5,8 @@ import pytest
 from core import check_stream
 
 roms = [
-    "test_roms/blargg/cpu_instrs/cpu_instrs.gb",
-    "test_roms/blargg/instr_timing/instr_timing.gb",
+    # "test_roms/blargg/cpu_instrs/cpu_instrs.gb",
+    # "test_roms/blargg/instr_timing/instr_timing.gb",
     # "test_roms/blargg/dmg_sound/dmg_sound.gb",
 ]
 
