@@ -23,6 +23,8 @@ int main(int argc, char* argv[]) {
       if (!strcmp(s, "blargg")) test_category = TEST_BLARGG;
       else if (!strcmp(s, "mooneye"))
         test_category = TEST_MOONEYE;
+      else if (!strcmp(s, "blargg_audio"))
+        test_category = TEST_BLARGG_AUDIO;
       else {
         fprintf(stderr, "UNKNOWN TEST CATEGORY: %s\n", s);
         usage();
@@ -44,7 +46,7 @@ int main(int argc, char* argv[]) {
   gbemu* gb = gbemu_init(rom_name, test_category, (uint8_t)disassemble_enable);
   if (!gb) return 1;
 
-  while (!gb->b_done) {
+  while (!gb->bdone) {
     if (gbemu_step_frame(gb) == -1) {
       gbemu_free(gb);
       return 1;

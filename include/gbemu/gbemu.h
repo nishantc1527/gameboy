@@ -19,7 +19,7 @@ typedef struct {
   char* rom_name;
   int test_category;
   uint8_t disassemble_enable;
-  uint8_t b_done;
+  uint8_t bdone;
 } gbemu;
 
 gbemu* gbemu_init(char* rom_name, int test_category,

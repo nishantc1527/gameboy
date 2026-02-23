@@ -9,34 +9,20 @@
 #include "gbemu/pokemon.h"
 
 static SDL_AppResult usage() {
-  SDL_LogError(
-      SDL_LOG_CATEGORY_ERROR,
-      "Usage: gbemu [-r/--rom <rom file>] [-t/--test <blargg|mooneye>] "
-      "[-d/--disassembly]\n");
+  SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+               "Usage: gbemu [-r/--rom <rom file>] [-d/--disassembly]\n");
   return SDL_APP_FAILURE;
 }
 
 SDL_AppResult SDL_AppInit(void** appstate, int argc,
                           char* argv[] __attribute__((unused))) {
-  char* rom_name = NULL;
-  int test_category = -1;
-  uint8_t disassemble_enable = 0;
-
   if (argc < 1) return usage();
+  char* rom_name = NULL;
+  uint8_t disassemble_enable = 0;
   for (int i = 1; i < argc; i++) {
     if ((!strcmp(argv[i], "-r") || !strcmp(argv[i], "--rom")) && i + 1 < argc)
       rom_name = argv[++i];
-    else if ((!strcmp(argv[i], "-t") || !strcmp(argv[i], "--test")) &&
-             i + 1 < argc) {
-      char* s = argv[++i];
-      if (!strcmp(s, "blargg")) test_category = TEST_BLARGG;
-      else if (!strcmp(s, "mooneye"))
-        test_category = TEST_MOONEYE;
-      else {
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "UNKNOWN TEST: %s\n", s);
-        return SDL_APP_FAILURE;
-      }
-    } else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--disassembly"))
+    else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--disassembly"))
       disassemble_enable = 1;
     else {
       SDL_LogError(SDL_LOG_CATEGORY_ERROR, "UNKNOWN COMMAND LINE OPTION %s\n",
@@ -49,7 +35,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc,
     return SDL_APP_FAILURE;
   }
   // SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "INITIALIZING\n");
-  gbemu* gb = gbemu_init(rom_name, test_category, disassemble_enable);
+  gbemu* gb = gbemu_init(rom_name, -1, disassemble_enable);
   if (init_window(mmu_get_rom_title(gb->mmu))) {
     gbemu_free(gb);
     return SDL_APP_FAILURE;
@@ -61,7 +47,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc,
 
 SDL_AppResult SDL_AppIterate(void* appstate) {
   gbemu* gb = appstate;
-  if (gb->b_done) return SDL_APP_SUCCESS;
+  if (gb->bdone) return SDL_APP_SUCCESS;
   Uint64 curr = SDL_GetPerformanceCounter();
   Uint64 elapsed = curr - prev_time;
   prev_time = curr;

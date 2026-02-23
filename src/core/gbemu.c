@@ -1,5 +1,6 @@
 #include "gbemu/gbemu.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "gbemu/apu.h"
@@ -14,7 +15,7 @@ gbemu* gbemu_init(char* rom_name, int test_category,
   gb->rom_name = rom_name;
   gb->test_category = test_category;
   gb->disassemble_enable = disassemble_enable;
-  gb->b_done = 0;
+  gb->bdone = 0;
   gb->cpu = init_cpu();
   gb->mmu = mmu_init(rom_name, BOOT_ROM_FILE, (int8_t)test_category);
   gb->apu = init_apu();
@@ -27,7 +28,7 @@ int gbemu_step_frame(gbemu* gb) {
   gb->ppu->frame = 0;
   while (!gb->ppu->frame) {
     const int cyc = step(gb->cpu, gb->mmu, gb->disassemble_enable,
-                         gb->test_category, &gb->b_done);
+                         gb->test_category, &gb->bdone);
     if (cyc == -1) return -1;
     gb->ppu->scn = (uint16_t)(gb->ppu->scn + cyc);
     if (gb->ppu->scn >= SCANLINE_LEN) {
@@ -39,6 +40,17 @@ int gbemu_step_frame(gbemu* gb) {
     check_dma(gb->mmu);
     upd_apu(gb->apu, gb->mmu);
     check_interrupt(gb->cpu, gb->mmu);
+  }
+  if (mmu_r_mem(gb->mmu, 0xA001) == 0xDE &&
+      mmu_r_mem(gb->mmu, 0xA002) == 0xB0 &&
+      mmu_r_mem(gb->mmu, 0xA003) == 0x61) {
+    uint8_t status = mmu_r_mem(gb->mmu, 0xA000);
+    if (status != 0x80) {
+      if (status == 0x00) printf("PASSED\n");
+      else
+        printf("FAILED\n");
+      gb->bdone = 1;
+    }
   }
   return 0;
 }
