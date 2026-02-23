@@ -1,6 +1,7 @@
 #define SDL_MAIN_USE_CALLBACKS
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL_timer.h>
+#include <stdlib.h>
 
 #include "gbemu/core.h"
 #include "gbemu/cpu.h"
@@ -12,6 +13,7 @@
 #include "rust.h"
 
 Mmu* mmu = NULL;
+struct CPU* cpu = NULL;
 
 char* rom_name = NULL;
 int test_category = -1;
@@ -36,8 +38,7 @@ SDL_AppResult SDL_AppInit(void** appstate __attribute__((unused)),
     else if ((!strcmp(argv[i], "-t") || !strcmp(argv[i], "--test")) &&
              i + 1 < argc) {
       char* s = argv[++i];
-      if (!strcmp(s, "blargg"))
-        test_category = TEST_BLARGG;
+      if (!strcmp(s, "blargg")) test_category = TEST_BLARGG;
       else if (!strcmp(s, "mooneye"))
         test_category = TEST_MOONEYE;
       else {
@@ -59,7 +60,7 @@ SDL_AppResult SDL_AppInit(void** appstate __attribute__((unused)),
     return SDL_APP_FAILURE;
   }
   // SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "INITIALIZING\n");
-  init_cpu();
+  cpu = init_cpu();
   mmu = mmu_init(rom_name, BOOT_ROM_FILE, (int8_t)test_category);
   if (init_window()) return SDL_APP_FAILURE;
   init_ppu();
@@ -84,21 +85,21 @@ SDL_AppResult SDL_AppIterate(void* appstate __attribute__((unused))) {
   } else if (headless || tot_ticks >= frame_ticks) {
     frame = 0;
     while (!frame) {
-      const int cyc = step();
+      const int cyc = step(cpu);
       if (cyc == -1) return SDL_APP_FAILURE;
       scn = (uint16_t)(scn + cyc);
       if (scn >= SCANLINE_LEN) {
         do_scanline();
         scn -= SCANLINE_LEN;
       }
-      update_lcd();
-      update_timer((uint8_t)cyc);
+      update_lcd(cpu);
+      update_timer(cpu, (uint8_t)cyc);
       check_dma();
-      check_interrupt();
+      check_interrupt(cpu);
     }
     tot_ticks -= frame_ticks;
   }
-  update_input();
+  update_input(cpu);
   if (!headless) {
     render();
     // draw_ui();
@@ -123,6 +124,7 @@ void SDL_AppQuit(void* appstate __attribute__((unused)), SDL_AppResult result) {
       // SDL_LogError(SDL_LOG_CATEGORY_ERROR, "FAILURE\n");
       break;
   }
+  if (cpu) free(cpu);
   if (mmu) {
     mmu_save(mmu);
     mmu_free(mmu);

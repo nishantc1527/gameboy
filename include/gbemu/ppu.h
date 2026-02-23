@@ -3,6 +3,8 @@
 #include <SDL3/SDL.h>
 #include <stdint.h>
 
+#include "gbemu/cpu.h"
+
 #define BTN_A 0
 #define BTN_B 1
 #define BTN_START 2
@@ -35,10 +37,10 @@ extern uint8_t headless;
 void init_ppu(void);
 
 // Handle input
-int update_input(void);
+int update_input(struct CPU* cpu);
 
 // Update registers
-void update_lcd(void);
+void update_lcd(struct CPU* cpu);
 
 // Perform scanline
 void do_scanline(void);

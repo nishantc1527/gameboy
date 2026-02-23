@@ -7,1252 +7,650 @@
 #include "gbemu/mmu.h"
 #include "internal.h"
 
-int step(void) {
-  if (bHALT) return 4;
-  uint8_t instr = rd8();
+int step(struct CPU* cpu) {
+  if (cpu->bHALT) return 4;
+  uint8_t instr = rd8(cpu, mmu);
   if (instr == 0xCB) {
-    uint8_t prfx = rd8();
-    if (disassemble_enable && disassemble(instr, prfx)) {
+    uint8_t prfx = rd8(cpu, mmu);
+    if (disassemble_enable && disassemble(cpu, instr, prfx)) {
     }  // return -1 when completing disassembler
     switch (prfx) {
-      case 0x00:
-        return c_rlc(&B);
-      case 0x01:
-        return c_rlc(&C);
-      case 0x02:
-        return c_rlc(&D);
-      case 0x03:
-        return c_rlc(&E);
-      case 0x04:
-        return c_rlc(&H);
-      case 0x05:
-        return c_rlc(&L);
-      case 0x06:
-        return c_rlc_mem(gt_HL());
-      case 0x07:
-        return c_rlc(&A);
-      case 0x08:
-        return c_rrc(&B);
-      case 0x09:
-        return c_rrc(&C);
-      case 0x0A:
-        return c_rrc(&D);
-      case 0x0B:
-        return c_rrc(&E);
-      case 0x0C:
-        return c_rrc(&H);
-      case 0x0D:
-        return c_rrc(&L);
-      case 0x0E:
-        return c_rrc_mem(gt_HL());
-      case 0x0F:
-        return c_rrc(&A);
-      case 0x10:
-        return c_rl(&B);
-      case 0x11:
-        return c_rl(&C);
-      case 0x12:
-        return c_rl(&D);
-      case 0x13:
-        return c_rl(&E);
-      case 0x14:
-        return c_rl(&H);
-      case 0x15:
-        return c_rl(&L);
-      case 0x16:
-        return c_rl_mem(gt_HL());
-      case 0x17:
-        return c_rl(&A);
-      case 0x18:
-        return c_rr(&B);
-      case 0x19:
-        return c_rr(&C);
-      case 0x1A:
-        return c_rr(&D);
-      case 0x1B:
-        return c_rr(&E);
-      case 0x1C:
-        return c_rr(&H);
-      case 0x1D:
-        return c_rr(&L);
-      case 0x1E:
-        return c_rr_mem(gt_HL());
-      case 0x1F:
-        return c_rr(&A);
-      case 0x20:
-        return c_sla(&B);
-      case 0x21:
-        return c_sla(&C);
-      case 0x22:
-        return c_sla(&D);
-      case 0x23:
-        return c_sla(&E);
-      case 0x24:
-        return c_sla(&H);
-      case 0x25:
-        return c_sla(&L);
-      case 0x26:
-        return c_sla_mem(gt_HL());
-      case 0x27:
-        return c_sla(&A);
-      case 0x28:
-        return c_sra(&B);
-      case 0x29:
-        return c_sra(&C);
-      case 0x2A:
-        return c_sra(&D);
-      case 0x2B:
-        return c_sra(&E);
-      case 0x2C:
-        return c_sra(&H);
-      case 0x2D:
-        return c_sra(&L);
-      case 0x2E:
-        return c_sra_mem(gt_HL());
-      case 0x2F:
-        return c_sra(&A);
-      case 0x30:
-        return c_swp(&B);
-      case 0x31:
-        return c_swp(&C);
-      case 0x32:
-        return c_swp(&D);
-      case 0x33:
-        return c_swp(&E);
-      case 0x34:
-        return c_swp(&H);
-      case 0x35:
-        return c_swp(&L);
-      case 0x36:
-        return c_swp_mem(gt_HL());
-      case 0x37:
-        return c_swp(&A);
-      case 0x38:
-        return c_srl(&B);
-      case 0x39:
-        return c_srl(&C);
-      case 0x3A:
-        return c_srl(&D);
-      case 0x3B:
-        return c_srl(&E);
-      case 0x3C:
-        return c_srl(&H);
-      case 0x3D:
-        return c_srl(&L);
-      case 0x3E:
-        return c_srl_mem(gt_HL());
-      case 0x3F:
-        return c_srl(&A);
-      case 0x40:
-        return c_bit(B, 0);
-      case 0x41:
-        return c_bit(C, 0);
-      case 0x42:
-        return c_bit(D, 0);
-      case 0x43:
-        return c_bit(E, 0);
-      case 0x44:
-        return c_bit(H, 0);
-      case 0x45:
-        return c_bit(L, 0);
-      case 0x46:
-        c_bit(mmu_r_mem(mmu, gt_HL()), 0);
-        return 12;
-      case 0x47:
-        return c_bit(A, 0);
-      case 0x48:
-        return c_bit(B, 1);
-      case 0x49:
-        return c_bit(C, 1);
-      case 0x4A:
-        return c_bit(D, 1);
-      case 0x4B:
-        return c_bit(E, 1);
-      case 0x4C:
-        return c_bit(H, 1);
-      case 0x4D:
-        return c_bit(L, 1);
-      case 0x4E:
-        c_bit(mmu_r_mem(mmu, gt_HL()), 1);
-        return 12;
-      case 0x4F:
-        return c_bit(A, 1);
-      case 0x50:
-        return c_bit(B, 2);
-      case 0x51:
-        return c_bit(C, 2);
-      case 0x52:
-        return c_bit(D, 2);
-      case 0x53:
-        return c_bit(E, 2);
-      case 0x54:
-        return c_bit(H, 2);
-      case 0x55:
-        return c_bit(L, 2);
-      case 0x56:
-        c_bit(mmu_r_mem(mmu, gt_HL()), 2);
-        return 12;
-      case 0x57:
-        return c_bit(A, 2);
-      case 0x58:
-        return c_bit(B, 3);
-      case 0x59:
-        return c_bit(C, 3);
-      case 0x5A:
-        return c_bit(D, 3);
-      case 0x5B:
-        return c_bit(E, 3);
-      case 0x5C:
-        return c_bit(H, 3);
-      case 0x5D:
-        return c_bit(L, 3);
-      case 0x5E:
-        c_bit(mmu_r_mem(mmu, gt_HL()), 3);
-        return 12;
-      case 0x5F:
-        return c_bit(A, 3);
-      case 0x60:
-        return c_bit(B, 4);
-      case 0x61:
-        return c_bit(C, 4);
-      case 0x62:
-        return c_bit(D, 4);
-      case 0x63:
-        return c_bit(E, 4);
-      case 0x64:
-        return c_bit(H, 4);
-      case 0x65:
-        return c_bit(L, 4);
-      case 0x66:
-        c_bit(mmu_r_mem(mmu, gt_HL()), 4);
-        return 12;
-      case 0x67:
-        return c_bit(A, 4);
-      case 0x68:
-        return c_bit(B, 5);
-      case 0x69:
-        return c_bit(C, 5);
-      case 0x6A:
-        return c_bit(D, 5);
-      case 0x6B:
-        return c_bit(E, 5);
-      case 0x6C:
-        return c_bit(H, 5);
-      case 0x6D:
-        return c_bit(L, 5);
-      case 0x6E:
-        c_bit(mmu_r_mem(mmu, gt_HL()), 5);
-        return 12;
-      case 0x6F:
-        return c_bit(A, 5);
-      case 0x70:
-        return c_bit(B, 6);
-      case 0x71:
-        return c_bit(C, 6);
-      case 0x72:
-        return c_bit(D, 6);
-      case 0x73:
-        return c_bit(E, 6);
-      case 0x74:
-        return c_bit(H, 6);
-      case 0x75:
-        return c_bit(L, 6);
-      case 0x76:
-        c_bit(mmu_r_mem(mmu, gt_HL()), 6);
-        return 12;
-      case 0x77:
-        return c_bit(A, 6);
-      case 0x78:
-        return c_bit(B, 7);
-      case 0x79:
-        return c_bit(C, 7);
-      case 0x7A:
-        return c_bit(D, 7);
-      case 0x7B:
-        return c_bit(E, 7);
-      case 0x7C:
-        return c_bit(H, 7);
-      case 0x7D:
-        return c_bit(L, 7);
-      case 0x7E:
-        c_bit(mmu_r_mem(mmu, gt_HL()), 7);
-        return 12;
-      case 0x7F:
-        return c_bit(A, 7);
-      case 0x80:
-        return c_res(&B, 0);
-      case 0x81:
-        return c_res(&C, 0);
-      case 0x82:
-        return c_res(&D, 0);
-      case 0x83:
-        return c_res(&E, 0);
-      case 0x84:
-        return c_res(&H, 0);
-      case 0x85:
-        return c_res(&L, 0);
-      case 0x86:
-        return c_res_mem(gt_HL(), 0);
-      case 0x87:
-        return c_res(&A, 0);
-      case 0x88:
-        return c_res(&B, 1);
-      case 0x89:
-        return c_res(&C, 1);
-      case 0x8A:
-        return c_res(&D, 1);
-      case 0x8B:
-        return c_res(&E, 1);
-      case 0x8C:
-        return c_res(&H, 1);
-      case 0x8D:
-        return c_res(&L, 1);
-      case 0x8E:
-        return c_res_mem(gt_HL(), 1);
-      case 0x8F:
-        return c_res(&A, 1);
-      case 0x90:
-        return c_res(&B, 2);
-      case 0x91:
-        return c_res(&C, 2);
-      case 0x92:
-        return c_res(&D, 2);
-      case 0x93:
-        return c_res(&E, 2);
-      case 0x94:
-        return c_res(&H, 2);
-      case 0x95:
-        return c_res(&L, 2);
-      case 0x96:
-        return c_res_mem(gt_HL(), 2);
-      case 0x97:
-        return c_res(&A, 2);
-      case 0x98:
-        return c_res(&B, 3);
-      case 0x99:
-        return c_res(&C, 3);
-      case 0x9A:
-        return c_res(&D, 3);
-      case 0x9B:
-        return c_res(&E, 3);
-      case 0x9C:
-        return c_res(&H, 3);
-      case 0x9D:
-        return c_res(&L, 3);
-      case 0x9E:
-        return c_res_mem(gt_HL(), 3);
-      case 0x9F:
-        return c_res(&A, 3);
-      case 0xA0:
-        return c_res(&B, 4);
-      case 0xA1:
-        return c_res(&C, 4);
-      case 0xA2:
-        return c_res(&D, 4);
-      case 0xA3:
-        return c_res(&E, 4);
-      case 0xA4:
-        return c_res(&H, 4);
-      case 0xA5:
-        return c_res(&L, 4);
-      case 0xA6:
-        return c_res_mem(gt_HL(), 4);
-      case 0xA7:
-        return c_res(&A, 4);
-      case 0xA8:
-        return c_res(&B, 5);
-      case 0xA9:
-        return c_res(&C, 5);
-      case 0xAA:
-        return c_res(&D, 5);
-      case 0xAB:
-        return c_res(&E, 5);
-      case 0xAC:
-        return c_res(&H, 5);
-      case 0xAD:
-        return c_res(&L, 5);
-      case 0xAE:
-        return c_res_mem(gt_HL(), 5);
-      case 0xAF:
-        return c_res(&A, 5);
-      case 0xB0:
-        return c_res(&B, 6);
-      case 0xB1:
-        return c_res(&C, 6);
-      case 0xB2:
-        return c_res(&D, 6);
-      case 0xB3:
-        return c_res(&E, 6);
-      case 0xB4:
-        return c_res(&H, 6);
-      case 0xB5:
-        return c_res(&L, 6);
-      case 0xB6:
-        return c_res_mem(gt_HL(), 6);
-      case 0xB7:
-        return c_res(&A, 6);
-      case 0xB8:
-        return c_res(&B, 7);
-      case 0xB9:
-        return c_res(&C, 7);
-      case 0xBA:
-        return c_res(&D, 7);
-      case 0xBB:
-        return c_res(&E, 7);
-      case 0xBC:
-        return c_res(&H, 7);
-      case 0xBD:
-        return c_res(&L, 7);
-      case 0xBE:
-        return c_res_mem(gt_HL(), 7);
-      case 0xBF:
-        return c_res(&A, 7);
-      case 0xC0:
-        return c_set(&B, 0);
-      case 0xC1:
-        return c_set(&C, 0);
-      case 0xC2:
-        return c_set(&D, 0);
-      case 0xC3:
-        return c_set(&E, 0);
-      case 0xC4:
-        return c_set(&H, 0);
-      case 0xC5:
-        return c_set(&L, 0);
-      case 0xC6:
-        return c_set_mem(gt_HL(), 0);
-      case 0xC7:
-        return c_set(&A, 0);
-      case 0xC8:
-        return c_set(&B, 1);
-      case 0xC9:
-        return c_set(&C, 1);
-      case 0xCA:
-        return c_set(&D, 1);
-      case 0xCB:
-        return c_set(&E, 1);
-      case 0xCC:
-        return c_set(&H, 1);
-      case 0xCD:
-        return c_set(&L, 1);
-      case 0xCE:
-        return c_set_mem(gt_HL(), 1);
-      case 0xCF:
-        return c_set(&A, 1);
-      case 0xD0:
-        return c_set(&B, 2);
-      case 0xD1:
-        return c_set(&C, 2);
-      case 0xD2:
-        return c_set(&D, 2);
-      case 0xD3:
-        return c_set(&E, 2);
-      case 0xD4:
-        return c_set(&H, 2);
-      case 0xD5:
-        return c_set(&L, 2);
-      case 0xD6:
-        return c_set_mem(gt_HL(), 2);
-      case 0xD7:
-        return c_set(&A, 2);
-      case 0xD8:
-        return c_set(&B, 3);
-      case 0xD9:
-        return c_set(&C, 3);
-      case 0xDA:
-        return c_set(&D, 3);
-      case 0xDB:
-        return c_set(&E, 3);
-      case 0xDC:
-        return c_set(&H, 3);
-      case 0xDD:
-        return c_set(&L, 3);
-      case 0xDE:
-        c_set_mem(gt_HL(), 3);
-        return 16;
-      case 0xDF:
-        return c_set(&A, 3);
-      case 0xE0:
-        return c_set(&B, 4);
-      case 0xE1:
-        return c_set(&C, 4);
-      case 0xE2:
-        return c_set(&D, 4);
-      case 0xE3:
-        return c_set(&E, 4);
-      case 0xE4:
-        return c_set(&H, 4);
-      case 0xE5:
-        return c_set(&L, 4);
-      case 0xE6:
-        c_set_mem(gt_HL(), 4);
-        return 16;
-      case 0xE7:
-        return c_set(&A, 4);
-      case 0xE8:
-        return c_set(&B, 5);
-      case 0xE9:
-        return c_set(&C, 5);
-      case 0xEA:
-        return c_set(&D, 5);
-      case 0xEB:
-        return c_set(&E, 5);
-      case 0xEC:
-        return c_set(&H, 5);
-      case 0xED:
-        return c_set(&L, 5);
-      case 0xEE:
-        c_set_mem(gt_HL(), 5);
-        return 16;
-      case 0xEF:
-        return c_set(&A, 5);
-      case 0xF0:
-        return c_set(&B, 6);
-      case 0xF1:
-        return c_set(&C, 6);
-      case 0xF2:
-        return c_set(&D, 6);
-      case 0xF3:
-        return c_set(&E, 6);
-      case 0xF4:
-        return c_set(&H, 6);
-      case 0xF5:
-        return c_set(&L, 6);
-      case 0xF6:
-        c_set_mem(gt_HL(), 6);
-        return 16;
-      case 0xF7:
-        return c_set(&A, 6);
-      case 0xF8:
-        return c_set(&B, 7);
-      case 0xF9:
-        return c_set(&C, 7);
-      case 0xFA:
-        return c_set(&D, 7);
-      case 0xFB:
-        return c_set(&E, 7);
-      case 0xFC:
-        return c_set(&H, 7);
-      case 0xFD:
-        return c_set(&L, 7);
-      case 0xFE:
-        c_set_mem(gt_HL(), 7);
-        return 16;
-      case 0xFF:
-        return c_set(&A, 7);
+      case 0x00: return c_rlc(cpu, mmu, &cpu->B);
+      case 0x01: return c_rlc(cpu, mmu, &cpu->C);
+      case 0x02: return c_rlc(cpu, mmu, &cpu->D);
+      case 0x03: return c_rlc(cpu, mmu, &cpu->E);
+      case 0x04: return c_rlc(cpu, mmu, &cpu->H);
+      case 0x05: return c_rlc(cpu, mmu, &cpu->L);
+      case 0x06: return c_rlc_mem(cpu, mmu, gt_HL(cpu));
+      case 0x07: return c_rlc(cpu, mmu, &cpu->A);
+      case 0x08: return c_rrc(cpu, mmu, &cpu->B);
+      case 0x09: return c_rrc(cpu, mmu, &cpu->C);
+      case 0x0A: return c_rrc(cpu, mmu, &cpu->D);
+      case 0x0B: return c_rrc(cpu, mmu, &cpu->E);
+      case 0x0C: return c_rrc(cpu, mmu, &cpu->H);
+      case 0x0D: return c_rrc(cpu, mmu, &cpu->L);
+      case 0x0E: return c_rrc_mem(cpu, mmu, gt_HL(cpu));
+      case 0x0F: return c_rrc(cpu, mmu, &cpu->A);
+      case 0x10: return c_rl(cpu, mmu, &cpu->B);
+      case 0x11: return c_rl(cpu, mmu, &cpu->C);
+      case 0x12: return c_rl(cpu, mmu, &cpu->D);
+      case 0x13: return c_rl(cpu, mmu, &cpu->E);
+      case 0x14: return c_rl(cpu, mmu, &cpu->H);
+      case 0x15: return c_rl(cpu, mmu, &cpu->L);
+      case 0x16: return c_rl_mem(cpu, mmu, gt_HL(cpu));
+      case 0x17: return c_rl(cpu, mmu, &cpu->A);
+      case 0x18: return c_rr(cpu, mmu, &cpu->B);
+      case 0x19: return c_rr(cpu, mmu, &cpu->C);
+      case 0x1A: return c_rr(cpu, mmu, &cpu->D);
+      case 0x1B: return c_rr(cpu, mmu, &cpu->E);
+      case 0x1C: return c_rr(cpu, mmu, &cpu->H);
+      case 0x1D: return c_rr(cpu, mmu, &cpu->L);
+      case 0x1E: return c_rr_mem(cpu, mmu, gt_HL(cpu));
+      case 0x1F: return c_rr(cpu, mmu, &cpu->A);
+      case 0x20: return c_sla(cpu, mmu, &cpu->B);
+      case 0x21: return c_sla(cpu, mmu, &cpu->C);
+      case 0x22: return c_sla(cpu, mmu, &cpu->D);
+      case 0x23: return c_sla(cpu, mmu, &cpu->E);
+      case 0x24: return c_sla(cpu, mmu, &cpu->H);
+      case 0x25: return c_sla(cpu, mmu, &cpu->L);
+      case 0x26: return c_sla_mem(cpu, mmu, gt_HL(cpu));
+      case 0x27: return c_sla(cpu, mmu, &cpu->A);
+      case 0x28: return c_sra(cpu, mmu, &cpu->B);
+      case 0x29: return c_sra(cpu, mmu, &cpu->C);
+      case 0x2A: return c_sra(cpu, mmu, &cpu->D);
+      case 0x2B: return c_sra(cpu, mmu, &cpu->E);
+      case 0x2C: return c_sra(cpu, mmu, &cpu->H);
+      case 0x2D: return c_sra(cpu, mmu, &cpu->L);
+      case 0x2E: return c_sra_mem(cpu, mmu, gt_HL(cpu));
+      case 0x2F: return c_sra(cpu, mmu, &cpu->A);
+      case 0x30: return c_swp(cpu, mmu, &cpu->B);
+      case 0x31: return c_swp(cpu, mmu, &cpu->C);
+      case 0x32: return c_swp(cpu, mmu, &cpu->D);
+      case 0x33: return c_swp(cpu, mmu, &cpu->E);
+      case 0x34: return c_swp(cpu, mmu, &cpu->H);
+      case 0x35: return c_swp(cpu, mmu, &cpu->L);
+      case 0x36: return c_swp_mem(cpu, mmu, gt_HL(cpu));
+      case 0x37: return c_swp(cpu, mmu, &cpu->A);
+      case 0x38: return c_srl(cpu, mmu, &cpu->B);
+      case 0x39: return c_srl(cpu, mmu, &cpu->C);
+      case 0x3A: return c_srl(cpu, mmu, &cpu->D);
+      case 0x3B: return c_srl(cpu, mmu, &cpu->E);
+      case 0x3C: return c_srl(cpu, mmu, &cpu->H);
+      case 0x3D: return c_srl(cpu, mmu, &cpu->L);
+      case 0x3E: return c_srl_mem(cpu, mmu, gt_HL(cpu));
+      case 0x3F: return c_srl(cpu, mmu, &cpu->A);
+      case 0x40: return c_bit(cpu, mmu, cpu->B, 0);
+      case 0x41: return c_bit(cpu, mmu, cpu->C, 0);
+      case 0x42: return c_bit(cpu, mmu, cpu->D, 0);
+      case 0x43: return c_bit(cpu, mmu, cpu->E, 0);
+      case 0x44: return c_bit(cpu, mmu, cpu->H, 0);
+      case 0x45: return c_bit(cpu, mmu, cpu->L, 0);
+      case 0x46: c_bit(cpu, mmu, mmu_r_mem(mmu, gt_HL(cpu)), 0); return 12;
+      case 0x47: return c_bit(cpu, mmu, cpu->A, 0);
+      case 0x48: return c_bit(cpu, mmu, cpu->B, 1);
+      case 0x49: return c_bit(cpu, mmu, cpu->C, 1);
+      case 0x4A: return c_bit(cpu, mmu, cpu->D, 1);
+      case 0x4B: return c_bit(cpu, mmu, cpu->E, 1);
+      case 0x4C: return c_bit(cpu, mmu, cpu->H, 1);
+      case 0x4D: return c_bit(cpu, mmu, cpu->L, 1);
+      case 0x4E: c_bit(cpu, mmu, mmu_r_mem(mmu, gt_HL(cpu)), 1); return 12;
+      case 0x4F: return c_bit(cpu, mmu, cpu->A, 1);
+      case 0x50: return c_bit(cpu, mmu, cpu->B, 2);
+      case 0x51: return c_bit(cpu, mmu, cpu->C, 2);
+      case 0x52: return c_bit(cpu, mmu, cpu->D, 2);
+      case 0x53: return c_bit(cpu, mmu, cpu->E, 2);
+      case 0x54: return c_bit(cpu, mmu, cpu->H, 2);
+      case 0x55: return c_bit(cpu, mmu, cpu->L, 2);
+      case 0x56: c_bit(cpu, mmu, mmu_r_mem(mmu, gt_HL(cpu)), 2); return 12;
+      case 0x57: return c_bit(cpu, mmu, cpu->A, 2);
+      case 0x58: return c_bit(cpu, mmu, cpu->B, 3);
+      case 0x59: return c_bit(cpu, mmu, cpu->C, 3);
+      case 0x5A: return c_bit(cpu, mmu, cpu->D, 3);
+      case 0x5B: return c_bit(cpu, mmu, cpu->E, 3);
+      case 0x5C: return c_bit(cpu, mmu, cpu->H, 3);
+      case 0x5D: return c_bit(cpu, mmu, cpu->L, 3);
+      case 0x5E: c_bit(cpu, mmu, mmu_r_mem(mmu, gt_HL(cpu)), 3); return 12;
+      case 0x5F: return c_bit(cpu, mmu, cpu->A, 3);
+      case 0x60: return c_bit(cpu, mmu, cpu->B, 4);
+      case 0x61: return c_bit(cpu, mmu, cpu->C, 4);
+      case 0x62: return c_bit(cpu, mmu, cpu->D, 4);
+      case 0x63: return c_bit(cpu, mmu, cpu->E, 4);
+      case 0x64: return c_bit(cpu, mmu, cpu->H, 4);
+      case 0x65: return c_bit(cpu, mmu, cpu->L, 4);
+      case 0x66: c_bit(cpu, mmu, mmu_r_mem(mmu, gt_HL(cpu)), 4); return 12;
+      case 0x67: return c_bit(cpu, mmu, cpu->A, 4);
+      case 0x68: return c_bit(cpu, mmu, cpu->B, 5);
+      case 0x69: return c_bit(cpu, mmu, cpu->C, 5);
+      case 0x6A: return c_bit(cpu, mmu, cpu->D, 5);
+      case 0x6B: return c_bit(cpu, mmu, cpu->E, 5);
+      case 0x6C: return c_bit(cpu, mmu, cpu->H, 5);
+      case 0x6D: return c_bit(cpu, mmu, cpu->L, 5);
+      case 0x6E: c_bit(cpu, mmu, mmu_r_mem(mmu, gt_HL(cpu)), 5); return 12;
+      case 0x6F: return c_bit(cpu, mmu, cpu->A, 5);
+      case 0x70: return c_bit(cpu, mmu, cpu->B, 6);
+      case 0x71: return c_bit(cpu, mmu, cpu->C, 6);
+      case 0x72: return c_bit(cpu, mmu, cpu->D, 6);
+      case 0x73: return c_bit(cpu, mmu, cpu->E, 6);
+      case 0x74: return c_bit(cpu, mmu, cpu->H, 6);
+      case 0x75: return c_bit(cpu, mmu, cpu->L, 6);
+      case 0x76: c_bit(cpu, mmu, mmu_r_mem(mmu, gt_HL(cpu)), 6); return 12;
+      case 0x77: return c_bit(cpu, mmu, cpu->A, 6);
+      case 0x78: return c_bit(cpu, mmu, cpu->B, 7);
+      case 0x79: return c_bit(cpu, mmu, cpu->C, 7);
+      case 0x7A: return c_bit(cpu, mmu, cpu->D, 7);
+      case 0x7B: return c_bit(cpu, mmu, cpu->E, 7);
+      case 0x7C: return c_bit(cpu, mmu, cpu->H, 7);
+      case 0x7D: return c_bit(cpu, mmu, cpu->L, 7);
+      case 0x7E: c_bit(cpu, mmu, mmu_r_mem(mmu, gt_HL(cpu)), 7); return 12;
+      case 0x7F: return c_bit(cpu, mmu, cpu->A, 7);
+      case 0x80: return c_res(cpu, mmu, &cpu->B, 0);
+      case 0x81: return c_res(cpu, mmu, &cpu->C, 0);
+      case 0x82: return c_res(cpu, mmu, &cpu->D, 0);
+      case 0x83: return c_res(cpu, mmu, &cpu->E, 0);
+      case 0x84: return c_res(cpu, mmu, &cpu->H, 0);
+      case 0x85: return c_res(cpu, mmu, &cpu->L, 0);
+      case 0x86: return c_res_mem(cpu, mmu, gt_HL(cpu), 0);
+      case 0x87: return c_res(cpu, mmu, &cpu->A, 0);
+      case 0x88: return c_res(cpu, mmu, &cpu->B, 1);
+      case 0x89: return c_res(cpu, mmu, &cpu->C, 1);
+      case 0x8A: return c_res(cpu, mmu, &cpu->D, 1);
+      case 0x8B: return c_res(cpu, mmu, &cpu->E, 1);
+      case 0x8C: return c_res(cpu, mmu, &cpu->H, 1);
+      case 0x8D: return c_res(cpu, mmu, &cpu->L, 1);
+      case 0x8E: return c_res_mem(cpu, mmu, gt_HL(cpu), 1);
+      case 0x8F: return c_res(cpu, mmu, &cpu->A, 1);
+      case 0x90: return c_res(cpu, mmu, &cpu->B, 2);
+      case 0x91: return c_res(cpu, mmu, &cpu->C, 2);
+      case 0x92: return c_res(cpu, mmu, &cpu->D, 2);
+      case 0x93: return c_res(cpu, mmu, &cpu->E, 2);
+      case 0x94: return c_res(cpu, mmu, &cpu->H, 2);
+      case 0x95: return c_res(cpu, mmu, &cpu->L, 2);
+      case 0x96: return c_res_mem(cpu, mmu, gt_HL(cpu), 2);
+      case 0x97: return c_res(cpu, mmu, &cpu->A, 2);
+      case 0x98: return c_res(cpu, mmu, &cpu->B, 3);
+      case 0x99: return c_res(cpu, mmu, &cpu->C, 3);
+      case 0x9A: return c_res(cpu, mmu, &cpu->D, 3);
+      case 0x9B: return c_res(cpu, mmu, &cpu->E, 3);
+      case 0x9C: return c_res(cpu, mmu, &cpu->H, 3);
+      case 0x9D: return c_res(cpu, mmu, &cpu->L, 3);
+      case 0x9E: return c_res_mem(cpu, mmu, gt_HL(cpu), 3);
+      case 0x9F: return c_res(cpu, mmu, &cpu->A, 3);
+      case 0xA0: return c_res(cpu, mmu, &cpu->B, 4);
+      case 0xA1: return c_res(cpu, mmu, &cpu->C, 4);
+      case 0xA2: return c_res(cpu, mmu, &cpu->D, 4);
+      case 0xA3: return c_res(cpu, mmu, &cpu->E, 4);
+      case 0xA4: return c_res(cpu, mmu, &cpu->H, 4);
+      case 0xA5: return c_res(cpu, mmu, &cpu->L, 4);
+      case 0xA6: return c_res_mem(cpu, mmu, gt_HL(cpu), 4);
+      case 0xA7: return c_res(cpu, mmu, &cpu->A, 4);
+      case 0xA8: return c_res(cpu, mmu, &cpu->B, 5);
+      case 0xA9: return c_res(cpu, mmu, &cpu->C, 5);
+      case 0xAA: return c_res(cpu, mmu, &cpu->D, 5);
+      case 0xAB: return c_res(cpu, mmu, &cpu->E, 5);
+      case 0xAC: return c_res(cpu, mmu, &cpu->H, 5);
+      case 0xAD: return c_res(cpu, mmu, &cpu->L, 5);
+      case 0xAE: return c_res_mem(cpu, mmu, gt_HL(cpu), 5);
+      case 0xAF: return c_res(cpu, mmu, &cpu->A, 5);
+      case 0xB0: return c_res(cpu, mmu, &cpu->B, 6);
+      case 0xB1: return c_res(cpu, mmu, &cpu->C, 6);
+      case 0xB2: return c_res(cpu, mmu, &cpu->D, 6);
+      case 0xB3: return c_res(cpu, mmu, &cpu->E, 6);
+      case 0xB4: return c_res(cpu, mmu, &cpu->H, 6);
+      case 0xB5: return c_res(cpu, mmu, &cpu->L, 6);
+      case 0xB6: return c_res_mem(cpu, mmu, gt_HL(cpu), 6);
+      case 0xB7: return c_res(cpu, mmu, &cpu->A, 6);
+      case 0xB8: return c_res(cpu, mmu, &cpu->B, 7);
+      case 0xB9: return c_res(cpu, mmu, &cpu->C, 7);
+      case 0xBA: return c_res(cpu, mmu, &cpu->D, 7);
+      case 0xBB: return c_res(cpu, mmu, &cpu->E, 7);
+      case 0xBC: return c_res(cpu, mmu, &cpu->H, 7);
+      case 0xBD: return c_res(cpu, mmu, &cpu->L, 7);
+      case 0xBE: return c_res_mem(cpu, mmu, gt_HL(cpu), 7);
+      case 0xBF: return c_res(cpu, mmu, &cpu->A, 7);
+      case 0xC0: return c_set(cpu, mmu, &cpu->B, 0);
+      case 0xC1: return c_set(cpu, mmu, &cpu->C, 0);
+      case 0xC2: return c_set(cpu, mmu, &cpu->D, 0);
+      case 0xC3: return c_set(cpu, mmu, &cpu->E, 0);
+      case 0xC4: return c_set(cpu, mmu, &cpu->H, 0);
+      case 0xC5: return c_set(cpu, mmu, &cpu->L, 0);
+      case 0xC6: return c_set_mem(cpu, mmu, gt_HL(cpu), 0);
+      case 0xC7: return c_set(cpu, mmu, &cpu->A, 0);
+      case 0xC8: return c_set(cpu, mmu, &cpu->B, 1);
+      case 0xC9: return c_set(cpu, mmu, &cpu->C, 1);
+      case 0xCA: return c_set(cpu, mmu, &cpu->D, 1);
+      case 0xCB: return c_set(cpu, mmu, &cpu->E, 1);
+      case 0xCC: return c_set(cpu, mmu, &cpu->H, 1);
+      case 0xCD: return c_set(cpu, mmu, &cpu->L, 1);
+      case 0xCE: return c_set_mem(cpu, mmu, gt_HL(cpu), 1);
+      case 0xCF: return c_set(cpu, mmu, &cpu->A, 1);
+      case 0xD0: return c_set(cpu, mmu, &cpu->B, 2);
+      case 0xD1: return c_set(cpu, mmu, &cpu->C, 2);
+      case 0xD2: return c_set(cpu, mmu, &cpu->D, 2);
+      case 0xD3: return c_set(cpu, mmu, &cpu->E, 2);
+      case 0xD4: return c_set(cpu, mmu, &cpu->H, 2);
+      case 0xD5: return c_set(cpu, mmu, &cpu->L, 2);
+      case 0xD6: return c_set_mem(cpu, mmu, gt_HL(cpu), 2);
+      case 0xD7: return c_set(cpu, mmu, &cpu->A, 2);
+      case 0xD8: return c_set(cpu, mmu, &cpu->B, 3);
+      case 0xD9: return c_set(cpu, mmu, &cpu->C, 3);
+      case 0xDA: return c_set(cpu, mmu, &cpu->D, 3);
+      case 0xDB: return c_set(cpu, mmu, &cpu->E, 3);
+      case 0xDC: return c_set(cpu, mmu, &cpu->H, 3);
+      case 0xDD: return c_set(cpu, mmu, &cpu->L, 3);
+      case 0xDE: c_set_mem(cpu, mmu, gt_HL(cpu), 3); return 16;
+      case 0xDF: return c_set(cpu, mmu, &cpu->A, 3);
+      case 0xE0: return c_set(cpu, mmu, &cpu->B, 4);
+      case 0xE1: return c_set(cpu, mmu, &cpu->C, 4);
+      case 0xE2: return c_set(cpu, mmu, &cpu->D, 4);
+      case 0xE3: return c_set(cpu, mmu, &cpu->E, 4);
+      case 0xE4: return c_set(cpu, mmu, &cpu->H, 4);
+      case 0xE5: return c_set(cpu, mmu, &cpu->L, 4);
+      case 0xE6: c_set_mem(cpu, mmu, gt_HL(cpu), 4); return 16;
+      case 0xE7: return c_set(cpu, mmu, &cpu->A, 4);
+      case 0xE8: return c_set(cpu, mmu, &cpu->B, 5);
+      case 0xE9: return c_set(cpu, mmu, &cpu->C, 5);
+      case 0xEA: return c_set(cpu, mmu, &cpu->D, 5);
+      case 0xEB: return c_set(cpu, mmu, &cpu->E, 5);
+      case 0xEC: return c_set(cpu, mmu, &cpu->H, 5);
+      case 0xED: return c_set(cpu, mmu, &cpu->L, 5);
+      case 0xEE: c_set_mem(cpu, mmu, gt_HL(cpu), 5); return 16;
+      case 0xEF: return c_set(cpu, mmu, &cpu->A, 5);
+      case 0xF0: return c_set(cpu, mmu, &cpu->B, 6);
+      case 0xF1: return c_set(cpu, mmu, &cpu->C, 6);
+      case 0xF2: return c_set(cpu, mmu, &cpu->D, 6);
+      case 0xF3: return c_set(cpu, mmu, &cpu->E, 6);
+      case 0xF4: return c_set(cpu, mmu, &cpu->H, 6);
+      case 0xF5: return c_set(cpu, mmu, &cpu->L, 6);
+      case 0xF6: c_set_mem(cpu, mmu, gt_HL(cpu), 6); return 16;
+      case 0xF7: return c_set(cpu, mmu, &cpu->A, 6);
+      case 0xF8: return c_set(cpu, mmu, &cpu->B, 7);
+      case 0xF9: return c_set(cpu, mmu, &cpu->C, 7);
+      case 0xFA: return c_set(cpu, mmu, &cpu->D, 7);
+      case 0xFB: return c_set(cpu, mmu, &cpu->E, 7);
+      case 0xFC: return c_set(cpu, mmu, &cpu->H, 7);
+      case 0xFD: return c_set(cpu, mmu, &cpu->L, 7);
+      case 0xFE: c_set_mem(cpu, mmu, gt_HL(cpu), 7); return 16;
+      case 0xFF: return c_set(cpu, mmu, &cpu->A, 7);
       default:
         SDL_LogError(SDL_LOG_CATEGORY_ERROR,
                      "UNIMPLEMENTED PREFIX INSTRUCTION\n");
-        disassemble(instr, prfx);
+        disassemble(cpu, instr, prfx);
         return -1;
     }
   } else {
-    if (disassemble_enable && disassemble(instr, 0)) {
+    if (disassemble_enable && disassemble(cpu, instr, 0)) {
     }  // return -1 when completing disassembler
     switch (instr) {
-      case 0x00:
-        return 4;
-      case 0x01:
-        st_BC(rd16());
-        return 12;
-      case 0x02:
-        mmu_w_mem(mmu, gt_BC(), A);
-        return 8;
-      case 0x03:
-        st_BC(gt_BC() + 1);
-        return 8;
-      case 0x04:
-        return c_inc(&B);
-      case 0x05:
-        return c_dec(&B);
-      case 0x06:
-        B = rd8();
-        return 8;
+      case 0x00: return 4;
+      case 0x01: st_BC(cpu, rd16(cpu, mmu)); return 12;
+      case 0x02: mmu_w_mem(mmu, gt_BC(cpu), cpu->A); return 8;
+      case 0x03: st_BC(cpu, gt_BC(cpu) + 1); return 8;
+      case 0x04: return c_inc(cpu, mmu, &cpu->B);
+      case 0x05: return c_dec(cpu, mmu, &cpu->B);
+      case 0x06: cpu->B = rd8(cpu, mmu); return 8;
       case 0x07:
-        c_rlc(&A);
-        cl_flg(FLG_Z);
+        c_rlc(cpu, mmu, &cpu->A);
+        cl_flg(cpu, FLG_Z);
         return 4;
       case 0x08: {
-        uint16_t addr = rd16();
-        mmu_w_mem(mmu, addr, (uint8_t)(SP & 0xFF));
-        mmu_w_mem(mmu, addr + 1, (uint8_t)((SP >> 8) & 0xFF));
+        uint16_t addr = rd16(cpu, mmu);
+        mmu_w_mem(mmu, addr, (uint8_t)(cpu->SP & 0xFF));
+        mmu_w_mem(mmu, addr + 1, (uint8_t)((cpu->SP >> 8) & 0xFF));
         return 20;
       }
       case 0x09:
-        st_h_add16(gt_HL(), gt_BC());
-        st_c_add16(gt_HL(), gt_BC());
-        st_HL(gt_HL() + gt_BC());
-        cl_flg(FLG_N);
+        st_h_add16(cpu, gt_HL(cpu), gt_BC(cpu));
+        st_c_add16(cpu, gt_HL(cpu), gt_BC(cpu));
+        st_HL(cpu, gt_HL(cpu) + gt_BC(cpu));
+        cl_flg(cpu, FLG_N);
         return 8;
-      case 0x0A:
-        A = mmu_r_mem(mmu, gt_BC());
-        return 8;
-      case 0x0B:
-        st_BC(gt_BC() - 1);
-        return 8;
-      case 0x0C:
-        return c_inc(&C);
-      case 0x0D:
-        return c_dec(&C);
-      case 0x0E:
-        C = rd8();
-        return 8;
+      case 0x0A: cpu->A = mmu_r_mem(mmu, gt_BC(cpu)); return 8;
+      case 0x0B: st_BC(cpu, gt_BC(cpu) - 1); return 8;
+      case 0x0C: return c_inc(cpu, mmu, &cpu->C);
+      case 0x0D: return c_dec(cpu, mmu, &cpu->C);
+      case 0x0E: cpu->C = rd8(cpu, mmu); return 8;
       case 0x0F:
-        c_rrc(&A);
-        cl_flg(FLG_Z);
+        c_rrc(cpu, mmu, &cpu->A);
+        cl_flg(cpu, FLG_Z);
         return 4;
-      case 0x10:
-        return 4;
-      case 0x11:
-        st_DE(rd16());
-        return 12;
-      case 0x12:
-        mmu_w_mem(mmu, gt_DE(), A);
-        return 8;
-      case 0x13:
-        st_DE(gt_DE() + 1);
-        return 8;
-      case 0x14:
-        return c_inc(&D);
-      case 0x15:
-        return c_dec(&D);
-      case 0x16:
-        D = rd8();
-        return 8;
+      case 0x10: return 4;
+      case 0x11: st_DE(cpu, rd16(cpu, mmu)); return 12;
+      case 0x12: mmu_w_mem(mmu, gt_DE(cpu), cpu->A); return 8;
+      case 0x13: st_DE(cpu, gt_DE(cpu) + 1); return 8;
+      case 0x14: return c_inc(cpu, mmu, &cpu->D);
+      case 0x15: return c_dec(cpu, mmu, &cpu->D);
+      case 0x16: cpu->D = rd8(cpu, mmu); return 8;
       case 0x17:
-        c_rl(&A);
-        cl_flg(FLG_Z);
+        c_rl(cpu, mmu, &cpu->A);
+        cl_flg(cpu, FLG_Z);
         return 4;
-      case 0x18:
-        PC = (uint16_t)(PC + (int8_t)rd8());
+      case 0x18: {
+        int8_t offset = (int8_t)rd8(cpu, mmu);
+        cpu->PC = (uint16_t)(cpu->PC + offset);
         return 12;
+      }
       case 0x19:
-        st_h_add16(gt_HL(), gt_DE());
-        st_c_add16(gt_HL(), gt_DE());
-        st_HL(gt_HL() + gt_DE());
-        cl_flg(FLG_N);
+        st_h_add16(cpu, gt_HL(cpu), gt_DE(cpu));
+        st_c_add16(cpu, gt_HL(cpu), gt_DE(cpu));
+        st_HL(cpu, gt_HL(cpu) + gt_DE(cpu));
+        cl_flg(cpu, FLG_N);
         return 8;
-      case 0x1A:
-        A = mmu_r_mem(mmu, gt_DE());
-        return 8;
-      case 0x1B:
-        st_DE(gt_DE() - 1);
-        return 8;
-      case 0x1C:
-        return c_inc(&E);
-      case 0x1D:
-        return c_dec(&E);
-      case 0x1E:
-        E = rd8();
-        return 8;
+      case 0x1A: cpu->A = mmu_r_mem(mmu, gt_DE(cpu)); return 8;
+      case 0x1B: st_DE(cpu, gt_DE(cpu) - 1); return 8;
+      case 0x1C: return c_inc(cpu, mmu, &cpu->E);
+      case 0x1D: return c_dec(cpu, mmu, &cpu->E);
+      case 0x1E: cpu->E = rd8(cpu, mmu); return 8;
       case 0x1F:
-        c_rr(&A);
-        cl_flg(FLG_Z);
+        c_rr(cpu, mmu, &cpu->A);
+        cl_flg(cpu, FLG_Z);
         return 4;
-      case 0x20:
-        return c_jp8(1 - gt_flg(FLG_Z));
-      case 0x21:
-        st_HL(rd16());
-        return 12;
+      case 0x20: return c_jp8(cpu, mmu, 1 - gt_flg(cpu, FLG_Z));
+      case 0x21: st_HL(cpu, rd16(cpu, mmu)); return 12;
       case 0x22:
-        mmu_w_mem(mmu, gt_HL(), A);
-        st_HL(gt_HL() + 1);
+        mmu_w_mem(mmu, gt_HL(cpu), cpu->A);
+        st_HL(cpu, gt_HL(cpu) + 1);
         return 8;
-      case 0x23:
-        st_HL(gt_HL() + 1);
-        return 8;
-      case 0x24:
-        return c_inc(&H);
-      case 0x25:
-        return c_dec(&H);
-      case 0x26:
-        H = rd8();
-        return 8;
+      case 0x23: st_HL(cpu, gt_HL(cpu) + 1); return 8;
+      case 0x24: return c_inc(cpu, mmu, &cpu->H);
+      case 0x25: return c_dec(cpu, mmu, &cpu->H);
+      case 0x26: cpu->H = rd8(cpu, mmu); return 8;
       case 0x27:  // Taken from here:
                   // https://forums.nesdev.org/viewtopic.php?p=196282#p196282
-        if (!gt_flg(FLG_N)) {
-          if (gt_flg(FLG_C) || A > 0x99) {
-            A += 0x60;
-            st_flg(FLG_C);
+        if (!gt_flg(cpu, FLG_N)) {
+          if (gt_flg(cpu, FLG_C) || cpu->A > 0x99) {
+            cpu->A += 0x60;
+            st_flg(cpu, FLG_C);
           }
-          if (gt_flg(FLG_H) || (A & 0x0f) > 0x09) {
-            A += 0x06;
-          }
+          if (gt_flg(cpu, FLG_H) || (cpu->A & 0x0f) > 0x09) { cpu->A += 0x06; }
         } else {
-          if (gt_flg(FLG_C)) {
-            A -= 0x60;
-          }
-          if (gt_flg(FLG_H)) {
-            A -= 0x06;
-          }
+          if (gt_flg(cpu, FLG_C)) cpu->A -= 0x60;
+          if (gt_flg(cpu, FLG_H)) cpu->A -= 0x06;
         }
-        st_z(A);
-        cl_flg(FLG_H);
+        st_z(cpu, cpu->A);
+        cl_flg(cpu, FLG_H);
         return 4;
-      case 0x28:
-        return c_jp8(gt_flg(FLG_Z));
+      case 0x28: return c_jp8(cpu, mmu, gt_flg(cpu, FLG_Z));
       case 0x29:
-        st_h_add16(gt_HL(), gt_HL());
-        st_c_add16(gt_HL(), gt_HL());
-        st_HL(gt_HL() + gt_HL());
-        cl_flg(FLG_N);
+        st_h_add16(cpu, gt_HL(cpu), gt_HL(cpu));
+        st_c_add16(cpu, gt_HL(cpu), gt_HL(cpu));
+        st_HL(cpu, gt_HL(cpu) + gt_HL(cpu));
+        cl_flg(cpu, FLG_N);
         return 8;
       case 0x2A:
-        A = mmu_r_mem(mmu, gt_HL());
-        st_HL(gt_HL() + 1);
+        cpu->A = mmu_r_mem(mmu, gt_HL(cpu));
+        st_HL(cpu, gt_HL(cpu) + 1);
         return 8;
-      case 0x2B:
-        st_HL(gt_HL() - 1);
-        return 8;
-      case 0x2C:
-        return c_inc(&L);
-      case 0x2D:
-        return c_dec(&L);
-      case 0x2E:
-        L = rd8();
-        return 8;
-      case 0x2F:
-        return c_cpl(&A);
-      case 0x30:
-        return c_jp8(1 - gt_flg(FLG_C));
-      case 0x31:
-        SP = rd16();
-        return 12;
+      case 0x2B: st_HL(cpu, gt_HL(cpu) - 1); return 8;
+      case 0x2C: return c_inc(cpu, mmu, &cpu->L);
+      case 0x2D: return c_dec(cpu, mmu, &cpu->L);
+      case 0x2E: cpu->L = rd8(cpu, mmu); return 8;
+      case 0x2F: return c_cpl(cpu, mmu, &cpu->A);
+      case 0x30: return c_jp8(cpu, mmu, 1 - gt_flg(cpu, FLG_C));
+      case 0x31: cpu->SP = rd16(cpu, mmu); return 12;
       case 0x32:
-        mmu_w_mem(mmu, gt_HL(), A);
-        st_HL(gt_HL() - 1);
+        mmu_w_mem(mmu, gt_HL(cpu), cpu->A);
+        st_HL(cpu, gt_HL(cpu) - 1);
         return 8;
-      case 0x33:
-        ++SP;
-        return 8;
-      case 0x34:
-        return c_inc_mem(gt_HL());
-      case 0x35:
-        return c_dec_mem(gt_HL());
-      case 0x36:
-        mmu_w_mem(mmu, gt_HL(), rd8());
-        return 12;
+      case 0x33: ++cpu->SP; return 8;
+      case 0x34: return c_inc_mem(cpu, mmu, gt_HL(cpu));
+      case 0x35: return c_dec_mem(cpu, mmu, gt_HL(cpu));
+      case 0x36: mmu_w_mem(mmu, gt_HL(cpu), rd8(cpu, mmu)); return 12;
       case 0x37:
-        cl_flg(FLG_N);
-        cl_flg(FLG_H);
-        st_flg(FLG_C);
+        cl_flg(cpu, FLG_N);
+        cl_flg(cpu, FLG_H);
+        st_flg(cpu, FLG_C);
         return 4;
-      case 0x38:
-        return c_jp8(gt_flg(FLG_C));
+      case 0x38: return c_jp8(cpu, mmu, gt_flg(cpu, FLG_C));
       case 0x39:
-        st_h_add16(gt_HL(), SP);
-        st_c_add16(gt_HL(), SP);
-        st_HL(gt_HL() + SP);
-        cl_flg(FLG_N);
+        st_h_add16(cpu, gt_HL(cpu), cpu->SP);
+        st_c_add16(cpu, gt_HL(cpu), cpu->SP);
+        st_HL(cpu, gt_HL(cpu) + cpu->SP);
+        cl_flg(cpu, FLG_N);
         return 8;
       case 0x3A:
-        A = mmu_r_mem(mmu, gt_HL());
-        st_HL(gt_HL() - 1);
+        cpu->A = mmu_r_mem(mmu, gt_HL(cpu));
+        st_HL(cpu, gt_HL(cpu) - 1);
         return 8;
-      case 0x3B:
-        --SP;
-        return 8;
-      case 0x3C:
-        return c_inc(&A);
-      case 0x3D:
-        return c_dec(&A);
-      case 0x3E:
-        A = rd8();
-        return 8;
+      case 0x3B: --cpu->SP; return 8;
+      case 0x3C: return c_inc(cpu, mmu, &cpu->A);
+      case 0x3D: return c_dec(cpu, mmu, &cpu->A);
+      case 0x3E: cpu->A = rd8(cpu, mmu); return 8;
       case 0x3F:
-        cl_flg(FLG_N);
-        cl_flg(FLG_H);
-        if (gt_flg(FLG_C))
-          cl_flg(FLG_C);
+        cl_flg(cpu, FLG_N);
+        cl_flg(cpu, FLG_H);
+        if (gt_flg(cpu, FLG_C)) cl_flg(cpu, FLG_C);
         else
-          st_flg(FLG_C);
+          st_flg(cpu, FLG_C);
         return 4;
       case 0x40:
-        B = B;  // NOLINT
+        cpu->B = cpu->B;  // NOLINT
         if (test_category == TEST_MOONEYE) {
-          if (B == 3 && C == 5 && D == 8 && E == 13 && H == 21 && L == 34)
+          if (cpu->B == 3 && cpu->C == 5 && cpu->D == 8 && cpu->E == 13 &&
+              cpu->H == 21 && cpu->L == 34)
             printf("PASSED\n");
           else
             printf("FAILED\n");
           b_done = 1;
         }
         return 4;
-      case 0x41:
-        B = C;
-        return 4;
-      case 0x42:
-        B = D;
-        return 4;
-      case 0x43:
-        B = E;
-        return 4;
-      case 0x44:
-        B = H;
-        return 4;
-      case 0x45:
-        B = L;
-        return 4;
-      case 0x46:
-        B = mmu_r_mem(mmu, gt_HL());
-        return 8;
-      case 0x47:
-        B = A;
-        return 4;
-      case 0x48:
-        C = B;
-        return 4;
+      case 0x41: cpu->B = cpu->C; return 4;
+      case 0x42: cpu->B = cpu->D; return 4;
+      case 0x43: cpu->B = cpu->E; return 4;
+      case 0x44: cpu->B = cpu->H; return 4;
+      case 0x45: cpu->B = cpu->L; return 4;
+      case 0x46: cpu->B = mmu_r_mem(mmu, gt_HL(cpu)); return 8;
+      case 0x47: cpu->B = cpu->A; return 4;
+      case 0x48: cpu->C = cpu->B; return 4;
       case 0x49:
-        C = C;  // NOLINT
+        cpu->C = cpu->C;  // NOLINT
         return 4;
-      case 0x4A:
-        C = D;
-        return 4;
-      case 0x4B:
-        C = E;
-        return 4;
-      case 0x4C:
-        C = H;
-        return 4;
-      case 0x4D:
-        C = L;
-        return 4;
-      case 0x4E:
-        C = mmu_r_mem(mmu, gt_HL());
-        return 8;
-      case 0x4F:
-        C = A;
-        return 4;
-      case 0x50:
-        D = B;
-        return 4;
-      case 0x51:
-        D = C;
-        return 4;
+      case 0x4A: cpu->C = cpu->D; return 4;
+      case 0x4B: cpu->C = cpu->E; return 4;
+      case 0x4C: cpu->C = cpu->H; return 4;
+      case 0x4D: cpu->C = cpu->L; return 4;
+      case 0x4E: cpu->C = mmu_r_mem(mmu, gt_HL(cpu)); return 8;
+      case 0x4F: cpu->C = cpu->A; return 4;
+      case 0x50: cpu->D = cpu->B; return 4;
+      case 0x51: cpu->D = cpu->C; return 4;
       case 0x52:
-        D = D;  // NOLINT
+        cpu->D = cpu->D;  // NOLINT
         return 4;
-      case 0x53:
-        D = E;
-        return 4;
-      case 0x54:
-        D = H;
-        return 4;
-      case 0x55:
-        D = L;
-        return 4;
-      case 0x56:
-        D = mmu_r_mem(mmu, gt_HL());
-        return 8;
-      case 0x57:
-        D = A;
-        return 4;
-      case 0x58:
-        E = B;
-        return 4;
-      case 0x59:
-        E = C;
-        return 4;
-      case 0x5A:
-        E = D;
-        return 4;
+      case 0x53: cpu->D = cpu->E; return 4;
+      case 0x54: cpu->D = cpu->H; return 4;
+      case 0x55: cpu->D = cpu->L; return 4;
+      case 0x56: cpu->D = mmu_r_mem(mmu, gt_HL(cpu)); return 8;
+      case 0x57: cpu->D = cpu->A; return 4;
+      case 0x58: cpu->E = cpu->B; return 4;
+      case 0x59: cpu->E = cpu->C; return 4;
+      case 0x5A: cpu->E = cpu->D; return 4;
       case 0x5B:
-        E = E;  // NOLINT
+        cpu->E = cpu->E;  // NOLINT
         return 4;
-      case 0x5C:
-        E = H;
-        return 4;
-      case 0x5D:
-        E = L;
-        return 4;
-      case 0x5E:
-        E = mmu_r_mem(mmu, gt_HL());
-        return 8;
-      case 0x5F:
-        E = A;
-        return 4;
-      case 0x60:
-        H = B;
-        return 4;
-      case 0x61:
-        H = C;
-        return 4;
-      case 0x62:
-        H = D;
-        return 4;
-      case 0x63:
-        H = E;
-        return 4;
+      case 0x5C: cpu->E = cpu->H; return 4;
+      case 0x5D: cpu->E = cpu->L; return 4;
+      case 0x5E: cpu->E = mmu_r_mem(mmu, gt_HL(cpu)); return 8;
+      case 0x5F: cpu->E = cpu->A; return 4;
+      case 0x60: cpu->H = cpu->B; return 4;
+      case 0x61: cpu->H = cpu->C; return 4;
+      case 0x62: cpu->H = cpu->D; return 4;
+      case 0x63: cpu->H = cpu->E; return 4;
       case 0x64:
-        H = H;  // NOLINT
+        cpu->H = cpu->H;  // NOLINT
         return 4;
-      case 0x65:
-        H = L;
-        return 4;
-      case 0x66:
-        H = mmu_r_mem(mmu, gt_HL());
-        return 8;
-      case 0x67:
-        H = A;
-        return 4;
-      case 0x68:
-        L = B;
-        return 4;
-      case 0x69:
-        L = C;
-        return 4;
-      case 0x6A:
-        L = D;
-        return 4;
-      case 0x6B:
-        L = E;
-        return 4;
-      case 0x6C:
-        L = H;
-        return 4;
+      case 0x65: cpu->H = cpu->L; return 4;
+      case 0x66: cpu->H = mmu_r_mem(mmu, gt_HL(cpu)); return 8;
+      case 0x67: cpu->H = cpu->A; return 4;
+      case 0x68: cpu->L = cpu->B; return 4;
+      case 0x69: cpu->L = cpu->C; return 4;
+      case 0x6A: cpu->L = cpu->D; return 4;
+      case 0x6B: cpu->L = cpu->E; return 4;
+      case 0x6C: cpu->L = cpu->H; return 4;
       case 0x6D:
-        L = L;  // NOLINT
+        cpu->L = cpu->L;  // NOLINT
         return 4;
-      case 0x6E:
-        L = mmu_r_mem(mmu, gt_HL());
-        return 8;
-      case 0x6F:
-        L = A;
-        return 4;
-      case 0x70:
-        mmu_w_mem(mmu, gt_HL(), B);
-        return 8;
-      case 0x71:
-        mmu_w_mem(mmu, gt_HL(), C);
-        return 8;
-      case 0x72:
-        mmu_w_mem(mmu, gt_HL(), D);
-        return 8;
-      case 0x73:
-        mmu_w_mem(mmu, gt_HL(), E);
-        return 8;
-      case 0x74:
-        mmu_w_mem(mmu, gt_HL(), H);
-        return 8;
-      case 0x75:
-        mmu_w_mem(mmu, gt_HL(), L);
-        return 8;
-      case 0x76:
-        bHALT = 1;
-        return 4;
-      case 0x77:
-        mmu_w_mem(mmu, gt_HL(), A);
-        return 8;
-      case 0x78:
-        A = B;
-        return 4;
-      case 0x79:
-        A = C;
-        return 4;
-      case 0x7A:
-        A = D;
-        return 4;
-      case 0x7B:
-        A = E;
-        return 4;
-      case 0x7C:
-        A = H;
-        return 4;
-      case 0x7D:
-        A = L;
-        return 4;
-      case 0x7E:
-        A = mmu_r_mem(mmu, gt_HL());
-        return 8;
+      case 0x6E: cpu->L = mmu_r_mem(mmu, gt_HL(cpu)); return 8;
+      case 0x6F: cpu->L = cpu->A; return 4;
+      case 0x70: mmu_w_mem(mmu, gt_HL(cpu), cpu->B); return 8;
+      case 0x71: mmu_w_mem(mmu, gt_HL(cpu), cpu->C); return 8;
+      case 0x72: mmu_w_mem(mmu, gt_HL(cpu), cpu->D); return 8;
+      case 0x73: mmu_w_mem(mmu, gt_HL(cpu), cpu->E); return 8;
+      case 0x74: mmu_w_mem(mmu, gt_HL(cpu), cpu->H); return 8;
+      case 0x75: mmu_w_mem(mmu, gt_HL(cpu), cpu->L); return 8;
+      case 0x76: cpu->bHALT = 1; return 4;
+      case 0x77: mmu_w_mem(mmu, gt_HL(cpu), cpu->A); return 8;
+      case 0x78: cpu->A = cpu->B; return 4;
+      case 0x79: cpu->A = cpu->C; return 4;
+      case 0x7A: cpu->A = cpu->D; return 4;
+      case 0x7B: cpu->A = cpu->E; return 4;
+      case 0x7C: cpu->A = cpu->H; return 4;
+      case 0x7D: cpu->A = cpu->L; return 4;
+      case 0x7E: cpu->A = mmu_r_mem(mmu, gt_HL(cpu)); return 8;
       case 0x7F:
-        A = A;  // NOLINT
+        cpu->A = cpu->A;  // NOLINT
         return 4;
-      case 0x80:
-        return c_add(B);
-      case 0x81:
-        return c_add(C);
-      case 0x82:
-        return c_add(D);
-      case 0x83:
-        return c_add(E);
-      case 0x84:
-        return c_add(H);
-      case 0x85:
-        return c_add(L);
-      case 0x86:
-        c_add(mmu_r_mem(mmu, gt_HL()));
-        return 8;
-      case 0x87:
-        return c_add(A);
-      case 0x88:
-        return c_adc(B);
-      case 0x89:
-        return c_adc(C);
-      case 0x8A:
-        return c_adc(D);
-      case 0x8B:
-        return c_adc(E);
-      case 0x8C:
-        return c_adc(H);
-      case 0x8D:
-        return c_adc(L);
-      case 0x8E:
-        c_adc(mmu_r_mem(mmu, gt_HL()));
-        return 8;
-      case 0x8F:
-        return c_adc(A);
-      case 0x90:
-        return c_sub(B);
-      case 0x91:
-        return c_sub(C);
-      case 0x92:
-        return c_sub(D);
-      case 0x93:
-        return c_sub(E);
-      case 0x94:
-        return c_sub(H);
-      case 0x95:
-        return c_sub(L);
-      case 0x96:
-        c_sub(mmu_r_mem(mmu, gt_HL()));
-        return 8;
-      case 0x97:
-        return c_sub(A);
-      case 0x98:
-        return c_sbc(B);
-      case 0x99:
-        return c_sbc(C);
-      case 0x9A:
-        return c_sbc(D);
-      case 0x9B:
-        return c_sbc(E);
-      case 0x9C:
-        return c_sbc(H);
-      case 0x9D:
-        return c_sbc(L);
-      case 0x9E:
-        c_sbc(mmu_r_mem(mmu, gt_HL()));
-        return 8;
-      case 0x9F:
-        return c_sbc(A);
-      case 0xA0:
-        return c_and(B);
-      case 0xA1:
-        return c_and(C);
-      case 0xA2:
-        return c_and(D);
-      case 0xA3:
-        return c_and(E);
-      case 0xA4:
-        return c_and(H);
-      case 0xA5:
-        return c_and(L);
-      case 0xA6:
-        c_and(mmu_r_mem(mmu, gt_HL()));
-        return 8;
-      case 0xA7:
-        return c_and(A);
-      case 0xA8:
-        return c_xor(B);
-      case 0xA9:
-        return c_xor(C);
-      case 0xAA:
-        return c_xor(D);
-      case 0xAB:
-        return c_xor(E);
-      case 0xAC:
-        return c_xor(H);
-      case 0xAD:
-        return c_xor(L);
-      case 0xAE:
-        c_xor(mmu_r_mem(mmu, gt_HL()));
-        return 8;
-      case 0xAF:
-        return c_xor(A);
-      case 0xB0:
-        return c_or(B);
-      case 0xB1:
-        return c_or(C);
-      case 0xB2:
-        return c_or(D);
-      case 0xB3:
-        return c_or(E);
-      case 0xB4:
-        return c_or(H);
-      case 0xB5:
-        return c_or(L);
-      case 0xB6:
-        c_or(mmu_r_mem(mmu, gt_HL()));
-        return 8;
-      case 0xB7:
-        return c_or(A);
-      case 0xB8:
-        return c_cp(B);
-      case 0xB9:
-        return c_cp(C);
-      case 0xBA:
-        return c_cp(D);
-      case 0xBB:
-        return c_cp(E);
-      case 0xBC:
-        return c_cp(H);
-      case 0xBD:
-        return c_cp(L);
-      case 0xBE:
-        c_cp(mmu_r_mem(mmu, gt_HL()));
-        return 8;
-      case 0xBF:
-        return c_cp(A);
-      case 0xC0:
-        return c_ret(1 - gt_flg(FLG_Z));
-      case 0xC1:
-        st_BC(pop());
-        return 12;
-      case 0xC2:
-        return c_jp16(1 - gt_flg(FLG_Z));
-      case 0xC3:
-        return c_jp16(1);
-      case 0xC4:
-        return c_call(1 - gt_flg(FLG_Z));
-      case 0xC5:
-        push(gt_BC());
-        return 16;
-      case 0xC6:
-        c_add(rd8());
-        return 8;
-      case 0xC7:
-        return c_rst(0x0000);
-      case 0xC8:
-        return c_ret(gt_flg(FLG_Z));
-      case 0xC9:
-        c_ret(1);
-        return 16;
-      case 0xCA:
-        return c_jp16(gt_flg(FLG_Z));
-      case 0xCC:
-        return c_call(gt_flg(FLG_Z));
-      case 0xCD:
-        return c_call(1);
-      case 0xCE:
-        c_adc(rd8());
-        return 8;
-      case 0xCF:
-        return c_rst(0x0008);
-      case 0xD0:
-        return c_ret(1 - gt_flg(FLG_C));
-      case 0xD1:
-        st_DE(pop());
-        return 12;
-      case 0xD2:
-        return c_jp16(1 - gt_flg(FLG_C));
-      case 0xD4:
-        return c_call(1 - gt_flg(FLG_C));
-      case 0xD5:
-        push(gt_DE());
-        return 16;
-      case 0xD6:
-        c_sub(rd8());
-        return 8;
-      case 0xD7:
-        return c_rst(0x0010);
-      case 0xD8:
-        return c_ret(gt_flg(FLG_C));
+      case 0x80: return c_add(cpu, mmu, cpu->B);
+      case 0x81: return c_add(cpu, mmu, cpu->C);
+      case 0x82: return c_add(cpu, mmu, cpu->D);
+      case 0x83: return c_add(cpu, mmu, cpu->E);
+      case 0x84: return c_add(cpu, mmu, cpu->H);
+      case 0x85: return c_add(cpu, mmu, cpu->L);
+      case 0x86: c_add(cpu, mmu, mmu_r_mem(mmu, gt_HL(cpu))); return 8;
+      case 0x87: return c_add(cpu, mmu, cpu->A);
+      case 0x88: return c_adc(cpu, mmu, cpu->B);
+      case 0x89: return c_adc(cpu, mmu, cpu->C);
+      case 0x8A: return c_adc(cpu, mmu, cpu->D);
+      case 0x8B: return c_adc(cpu, mmu, cpu->E);
+      case 0x8C: return c_adc(cpu, mmu, cpu->H);
+      case 0x8D: return c_adc(cpu, mmu, cpu->L);
+      case 0x8E: c_adc(cpu, mmu, mmu_r_mem(mmu, gt_HL(cpu))); return 8;
+      case 0x8F: return c_adc(cpu, mmu, cpu->A);
+      case 0x90: return c_sub(cpu, mmu, cpu->B);
+      case 0x91: return c_sub(cpu, mmu, cpu->C);
+      case 0x92: return c_sub(cpu, mmu, cpu->D);
+      case 0x93: return c_sub(cpu, mmu, cpu->E);
+      case 0x94: return c_sub(cpu, mmu, cpu->H);
+      case 0x95: return c_sub(cpu, mmu, cpu->L);
+      case 0x96: c_sub(cpu, mmu, mmu_r_mem(mmu, gt_HL(cpu))); return 8;
+      case 0x97: return c_sub(cpu, mmu, cpu->A);
+      case 0x98: return c_sbc(cpu, mmu, cpu->B);
+      case 0x99: return c_sbc(cpu, mmu, cpu->C);
+      case 0x9A: return c_sbc(cpu, mmu, cpu->D);
+      case 0x9B: return c_sbc(cpu, mmu, cpu->E);
+      case 0x9C: return c_sbc(cpu, mmu, cpu->H);
+      case 0x9D: return c_sbc(cpu, mmu, cpu->L);
+      case 0x9E: c_sbc(cpu, mmu, mmu_r_mem(mmu, gt_HL(cpu))); return 8;
+      case 0x9F: return c_sbc(cpu, mmu, cpu->A);
+      case 0xA0: return c_and(cpu, mmu, cpu->B);
+      case 0xA1: return c_and(cpu, mmu, cpu->C);
+      case 0xA2: return c_and(cpu, mmu, cpu->D);
+      case 0xA3: return c_and(cpu, mmu, cpu->E);
+      case 0xA4: return c_and(cpu, mmu, cpu->H);
+      case 0xA5: return c_and(cpu, mmu, cpu->L);
+      case 0xA6: c_and(cpu, mmu, mmu_r_mem(mmu, gt_HL(cpu))); return 8;
+      case 0xA7: return c_and(cpu, mmu, cpu->A);
+      case 0xA8: return c_xor(cpu, mmu, cpu->B);
+      case 0xA9: return c_xor(cpu, mmu, cpu->C);
+      case 0xAA: return c_xor(cpu, mmu, cpu->D);
+      case 0xAB: return c_xor(cpu, mmu, cpu->E);
+      case 0xAC: return c_xor(cpu, mmu, cpu->H);
+      case 0xAD: return c_xor(cpu, mmu, cpu->L);
+      case 0xAE: c_xor(cpu, mmu, mmu_r_mem(mmu, gt_HL(cpu))); return 8;
+      case 0xAF: return c_xor(cpu, mmu, cpu->A);
+      case 0xB0: return c_or(cpu, mmu, cpu->B);
+      case 0xB1: return c_or(cpu, mmu, cpu->C);
+      case 0xB2: return c_or(cpu, mmu, cpu->D);
+      case 0xB3: return c_or(cpu, mmu, cpu->E);
+      case 0xB4: return c_or(cpu, mmu, cpu->H);
+      case 0xB5: return c_or(cpu, mmu, cpu->L);
+      case 0xB6: c_or(cpu, mmu, mmu_r_mem(mmu, gt_HL(cpu))); return 8;
+      case 0xB7: return c_or(cpu, mmu, cpu->A);
+      case 0xB8: return c_cp(cpu, mmu, cpu->B);
+      case 0xB9: return c_cp(cpu, mmu, cpu->C);
+      case 0xBA: return c_cp(cpu, mmu, cpu->D);
+      case 0xBB: return c_cp(cpu, mmu, cpu->E);
+      case 0xBC: return c_cp(cpu, mmu, cpu->H);
+      case 0xBD: return c_cp(cpu, mmu, cpu->L);
+      case 0xBE: c_cp(cpu, mmu, mmu_r_mem(mmu, gt_HL(cpu))); return 8;
+      case 0xBF: return c_cp(cpu, mmu, cpu->A);
+      case 0xC0: return c_ret(cpu, mmu, 1 - gt_flg(cpu, FLG_Z));
+      case 0xC1: st_BC(cpu, pop(cpu, mmu)); return 12;
+      case 0xC2: return c_jp16(cpu, mmu, 1 - gt_flg(cpu, FLG_Z));
+      case 0xC3: return c_jp16(cpu, mmu, 1);
+      case 0xC4: return c_call(cpu, mmu, 1 - gt_flg(cpu, FLG_Z));
+      case 0xC5: push(cpu, mmu, gt_BC(cpu)); return 16;
+      case 0xC6: c_add(cpu, mmu, rd8(cpu, mmu)); return 8;
+      case 0xC7: return c_rst(cpu, mmu, 0x0000);
+      case 0xC8: return c_ret(cpu, mmu, gt_flg(cpu, FLG_Z));
+      case 0xC9: c_ret(cpu, mmu, 1); return 16;
+      case 0xCA: return c_jp16(cpu, mmu, gt_flg(cpu, FLG_Z));
+      case 0xCC: return c_call(cpu, mmu, gt_flg(cpu, FLG_Z));
+      case 0xCD: return c_call(cpu, mmu, 1);
+      case 0xCE: c_adc(cpu, mmu, rd8(cpu, mmu)); return 8;
+      case 0xCF: return c_rst(cpu, mmu, 0x0008);
+      case 0xD0: return c_ret(cpu, mmu, 1 - gt_flg(cpu, FLG_C));
+      case 0xD1: st_DE(cpu, pop(cpu, mmu)); return 12;
+      case 0xD2: return c_jp16(cpu, mmu, 1 - gt_flg(cpu, FLG_C));
+      case 0xD4: return c_call(cpu, mmu, 1 - gt_flg(cpu, FLG_C));
+      case 0xD5: push(cpu, mmu, gt_DE(cpu)); return 16;
+      case 0xD6: c_sub(cpu, mmu, rd8(cpu, mmu)); return 8;
+      case 0xD7: return c_rst(cpu, mmu, 0x0010);
+      case 0xD8: return c_ret(cpu, mmu, gt_flg(cpu, FLG_C));
       case 0xD9:
-        bIME = 1;
-        c_ret(1);
+        cpu->bIME = 1;
+        c_ret(cpu, mmu, 1);
         return 16;
-      case 0xDA:
-        return c_jp16(gt_flg(FLG_C));
-      case 0xDC:
-        return c_call(gt_flg(FLG_C));
-      case 0xDE:
-        c_sbc(rd8());
-        return 8;
-      case 0xDF:
-        return c_rst(0x0018);
+      case 0xDA: return c_jp16(cpu, mmu, gt_flg(cpu, FLG_C));
+      case 0xDC: return c_call(cpu, mmu, gt_flg(cpu, FLG_C));
+      case 0xDE: c_sbc(cpu, mmu, rd8(cpu, mmu)); return 8;
+      case 0xDF: return c_rst(cpu, mmu, 0x0018);
       case 0xE0:
-        mmu_w_mem(mmu, 0xFF00 + (uint16_t)rd8(), A);
+        mmu_w_mem(mmu, 0xFF00 + (uint16_t)rd8(cpu, mmu), cpu->A);
         return 12;
-      case 0xE1:
-        st_HL(pop());
-        return 12;
-      case 0xE2:
-        mmu_w_mem(mmu, 0xFF00 + C, A);
-        return 8;
-      case 0xE5:
-        push(gt_HL());
-        return 16;
-      case 0xE6:
-        c_and(rd8());
-        return 8;
-      case 0xE7:
-        return c_rst(0x0020);
+      case 0xE1: st_HL(cpu, pop(cpu, mmu)); return 12;
+      case 0xE2: mmu_w_mem(mmu, 0xFF00 + cpu->C, cpu->A); return 8;
+      case 0xE5: push(cpu, mmu, gt_HL(cpu)); return 16;
+      case 0xE6: c_and(cpu, mmu, rd8(cpu, mmu)); return 8;
+      case 0xE7: return c_rst(cpu, mmu, 0x0020);
       case 0xE8: {
-        uint8_t add = rd8();
-        st_h_add((uint8_t)SP, add);
-        st_c_add((uint8_t)SP, add);
-        SP = (uint16_t)(SP + (int8_t)add);
-        cl_flg(FLG_Z);
-        cl_flg(FLG_N);
+        uint8_t add = rd8(cpu, mmu);
+        st_h_add(cpu, (uint8_t)cpu->SP, add);
+        st_c_add(cpu, (uint8_t)cpu->SP, add);
+        cpu->SP = (uint16_t)(cpu->SP + (int8_t)add);
+        cl_flg(cpu, FLG_Z);
+        cl_flg(cpu, FLG_N);
         return 16;
       }
-      case 0xE9:
-        PC = gt_HL();
-        return 4;
-      case 0xEA:
-        mmu_w_mem(mmu, rd16(), A);
-        return 16;
-      case 0xEE:
-        c_xor(rd8());
-        return 8;
-      case 0xEF:
-        return c_rst(0x0028);
+      case 0xE9: cpu->PC = gt_HL(cpu); return 4;
+      case 0xEA: mmu_w_mem(mmu, rd16(cpu, mmu), cpu->A); return 16;
+      case 0xEE: c_xor(cpu, mmu, rd8(cpu, mmu)); return 8;
+      case 0xEF: return c_rst(cpu, mmu, 0x0028);
       case 0xF0:
-        A = mmu_r_mem(mmu, 0xFF00 + (uint16_t)rd8());
+        cpu->A = mmu_r_mem(mmu, 0xFF00 + (uint16_t)rd8(cpu, mmu));
         return 12;
-      case 0xF1:
-        st_AF(pop() & 0xFFF0);
-        return 12;
-      case 0xF2:
-        A = mmu_r_mem(mmu, 0xFF00 + C);
-        return 8;
-      case 0xF3:
-        bIME = 0;
-        return 4;
-      case 0xF5:
-        push(gt_AF());
-        return 16;
-      case 0xF6:
-        c_or(rd8());
-        return 8;
-      case 0xF7:
-        return c_rst(0x0030);
+      case 0xF1: st_AF(cpu, pop(cpu, mmu) & 0xFFF0); return 12;
+      case 0xF2: cpu->A = mmu_r_mem(mmu, 0xFF00 + cpu->C); return 8;
+      case 0xF3: cpu->bIME = 0; return 4;
+      case 0xF5: push(cpu, mmu, gt_AF(cpu)); return 16;
+      case 0xF6: c_or(cpu, mmu, rd8(cpu, mmu)); return 8;
+      case 0xF7: return c_rst(cpu, mmu, 0x0030);
       case 0xF8: {
-        uint8_t nxt = rd8();
-        uint16_t add = (uint16_t)(SP + (int8_t)nxt);
-        st_HL(add);
-        cl_flg(FLG_Z);
-        cl_flg(FLG_N);
-        st_h_add((uint8_t)SP, nxt);
-        st_c_add((uint8_t)SP, nxt);
+        uint8_t nxt = rd8(cpu, mmu);
+        uint16_t add = (uint16_t)(cpu->SP + (int8_t)nxt);
+        st_HL(cpu, add);
+        cl_flg(cpu, FLG_Z);
+        cl_flg(cpu, FLG_N);
+        st_h_add(cpu, (uint8_t)cpu->SP, nxt);
+        st_c_add(cpu, (uint8_t)cpu->SP, nxt);
         return 12;
       }
-      case 0xF9:
-        SP = gt_HL();
-        return 8;
-      case 0xFA:
-        A = mmu_r_mem(mmu, rd16());
-        return 16;
-      case 0xFB:
-        bIME = 1;
-        return 4;
-      case 0xFE:
-        c_cp(rd8());
-        return 8;
-      case 0xFF:
-        return c_rst(0x0038);
+      case 0xF9: cpu->SP = gt_HL(cpu); return 8;
+      case 0xFA: cpu->A = mmu_r_mem(mmu, rd16(cpu, mmu)); return 16;
+      case 0xFB: cpu->bIME = 1; return 4;
+      case 0xFE: c_cp(cpu, mmu, rd8(cpu, mmu)); return 8;
+      case 0xFF: return c_rst(cpu, mmu, 0x0038);
       default:
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "UNIMPLEMENTED INSTRUCTION\n");
-        disassemble(instr, 0);
+        disassemble(cpu, instr, 0);
         return -1;
     }
   }
