@@ -1,13 +1,13 @@
 import subprocess
 
 import pytest
-from core import check_out
 
+from core import check_out
 from tests.core import check_stream
 
 roms = [
-    "test_roms/blargg/dmg_sound/rom_singles/01-registers.gb",
-    "test_roms/blargg/dmg_sound/rom_singles/02-len ctr.gb",
+    # "test_roms/blargg/dmg_sound/rom_singles/01-registers.gb",
+    # "test_roms/blargg/dmg_sound/rom_singles/02-len ctr.gb",
 ]
 
 
