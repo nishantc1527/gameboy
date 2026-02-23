@@ -2,7 +2,7 @@
 
 #include "controls.h"
 #include "gbemu/ppu.h"
-#include "gbemu/window.h"
+#include "gbemu/sdl.h"
 
 int handle_input(struct PPU* ppu, SDL_Event* event, uint8_t headless) {
   SDL_ConvertEventToRenderCoordinates(rnd, event);

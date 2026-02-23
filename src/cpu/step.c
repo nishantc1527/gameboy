@@ -1,4 +1,3 @@
-#include <SDL3/SDL_log.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -273,8 +272,7 @@ int step(struct CPU* cpu, Mmu* mmu, uint8_t disassemble_enable,
       case 0xFE: c_set_mem(cpu, mmu, gt_HL(cpu), 7); return 16;
       case 0xFF: return c_set(&cpu->A, 7);
       default:
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-                     "UNIMPLEMENTED PREFIX INSTRUCTION\n");
+        fprintf(stderr, "UNIMPLEMENTED PREFIX INSTRUCTION\n");
         disassemble(cpu, mmu, instr, prfx);
         return -1;
     }
@@ -650,7 +648,7 @@ int step(struct CPU* cpu, Mmu* mmu, uint8_t disassemble_enable,
       case 0xFE: c_cp(cpu, rd8(cpu, mmu)); return 8;
       case 0xFF: return c_rst(cpu, mmu, 0x0038);
       default:
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "UNIMPLEMENTED INSTRUCTION\n");
+        fprintf(stderr, "UNIMPLEMENTED INSTRUCTION\n");
         disassemble(cpu, mmu, instr, 0);
         return -1;
     }

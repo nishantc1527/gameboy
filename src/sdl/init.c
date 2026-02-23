@@ -1,10 +1,9 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_timer.h>
-#include <stdio.h>
 
 #include "display.h"
 #include "gbemu/ppu.h"
-#include "gbemu/window.h"
+#include "gbemu/sdl.h"
 
 int win_width, win_height;
 

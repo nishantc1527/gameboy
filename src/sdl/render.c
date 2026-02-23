@@ -5,7 +5,7 @@
 #include "colors.h"
 #include "display.h"
 #include "gbemu/ppu.h"
-#include "gbemu/window.h"
+#include "gbemu/sdl.h"
 #include "internal.h"
 
 uint32_t buf[SCRN_HEIGHT][SCRN_WIDTH];

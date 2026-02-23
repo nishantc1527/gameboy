@@ -22,4 +22,5 @@ typedef struct {
 
 GbEmu* gbemu_init(char* rom_name, int test_category, uint8_t headless,
                   uint8_t disassemble_enable);
+int gbemu_run_frame(GbEmu* gb);
 void gbemu_free(GbEmu* gb);

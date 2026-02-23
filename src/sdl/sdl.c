@@ -1,43 +1,14 @@
 #define SDL_MAIN_USE_CALLBACKS
-#include "gbemu/gbemu.h"
+#include "gbemu/sdl.h"
 
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL_timer.h>
-#include <stdlib.h>
 
-#include "gbemu/cpu.h"
+#include "gbemu/gbemu.h"
 #include "gbemu/mmu.h"
 #include "gbemu/pokemon.h"
-#include "gbemu/ppu.h"
-#include "gbemu/window.h"
-#include "rom_locs.h"
-#include "rust.h"
 
-GbEmu* gbemu_init(char* rom_name, int test_category, uint8_t headless,
-                  uint8_t disassemble_enable) {
-  GbEmu* gb = malloc(sizeof(GbEmu));
-  gb->rom_name = rom_name;
-  gb->test_category = test_category;
-  gb->headless = headless;
-  gb->disassemble_enable = disassemble_enable;
-  gb->b_done = 0;
-  gb->cpu = init_cpu();
-  gb->mmu = mmu_init(rom_name, BOOT_ROM_FILE, (int8_t)test_category);
-  gb->ppu = init_ppu();
-  mmu_load(gb->mmu);
-  return gb;
-}
-
-void gbemu_free(GbEmu* gb) {
-  if (!gb) return;
-  free(gb->cpu);
-  free(gb->ppu);
-  mmu_save(gb->mmu);
-  mmu_free(gb->mmu);
-  free(gb);
-}
-
-SDL_AppResult usage() {
+static SDL_AppResult usage() {
   SDL_LogError(SDL_LOG_CATEGORY_ERROR,
                "Usage: gbemu [-r/--rom rom file] [-t/--test test rom category] "
                "[-h/--headless] [-d/--disassembly]\n");
@@ -105,21 +76,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     // (int)(tot_ticks / frame_ticks));
     tot_ticks = 0;
   } else if (gb->headless || tot_ticks >= frame_ticks) {
-    gb->ppu->frame = 0;
-    while (!gb->ppu->frame) {
-      const int cyc = step(gb->cpu, gb->mmu, gb->disassemble_enable,
-                           gb->test_category, &gb->b_done);
-      if (cyc == -1) return SDL_APP_FAILURE;
-      gb->ppu->scn = (uint16_t)(gb->ppu->scn + cyc);
-      if (gb->ppu->scn >= SCANLINE_LEN) {
-        do_scanline(gb->ppu, gb->mmu);
-        gb->ppu->scn -= SCANLINE_LEN;
-      }
-      update_lcd(gb->ppu, gb->mmu);
-      update_timer(gb->cpu, gb->mmu, (uint8_t)cyc);
-      check_dma(gb->mmu);
-      check_interrupt(gb->cpu, gb->mmu);
-    }
+    if (gbemu_run_frame(gb) == -1) return SDL_APP_FAILURE;
     tot_ticks -= frame_ticks;
   }
   update_input(gb->ppu, gb->mmu);

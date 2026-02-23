@@ -2,9 +2,7 @@
 
 #include "gbemu/cpu.h"
 #include "gbemu/mmu.h"
-#include "gbemu/ppu.h"
 #include "gbemu/util.h"
-#include "internal.h"
 
 const uint32_t CPU_FREQ = 4194304;
 const uint32_t DIV_FREQ = 16384;
