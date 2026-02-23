@@ -5,12 +5,12 @@
 #include "colors.h"
 #include "display.h"
 #include "gbemu/ppu.h"
-#include "gbemu/window.h"
+#include "gbemu/sdl.h"
 #include "internal.h"
 
 uint32_t buf[SCRN_HEIGHT][SCRN_WIDTH];
 
-static const uint32_t pal_lut[] = {
+const uint32_t pal_lut[] = {
     [0] = ((uint32_t)(HEX_WHT >> 16) << 24) |
           ((uint32_t)((HEX_WHT >> 8) & 0xFF) << 16) |
           ((uint32_t)(HEX_WHT & 0xFF) << 8) | (uint32_t)SDL_ALPHA_OPAQUE,
@@ -28,10 +28,10 @@ static const uint32_t pal_lut[] = {
           ((uint32_t)(HEX_BLK & 0xFF) << 8) | (uint32_t)SDL_ALPHA_OPAQUE,
 };
 
-void render(void) {
+void render(struct Ppu* ppu) {
   for (int i = 0; i < SCRN_HEIGHT; i++) {
     for (int j = 0; j < SCRN_WIDTH; j++) {
-      uint8_t clr = dsp[i][j];
+      uint8_t clr = ppu->dsp[i][j];
       buf[i][j] = pal_lut[clr];
     }
   }
@@ -45,8 +45,7 @@ void draw_ui(void) {
   if (nk_begin(ctx, "Show", nk_rect(0, 0, SCRN_WIDTH * SCALE_X, 35),
                NK_WINDOW_BORDER | NK_WINDOW_NO_SCROLLBAR)) {
     nk_layout_row_dynamic(ctx, 35, 1);
-    if (nk_button_label(ctx, "File")) {
-    }
+    if (nk_button_label(ctx, "File")) {}
   }
   nk_end(ctx);
   nk_sdl_render(ctx, NK_ANTI_ALIASING_ON);

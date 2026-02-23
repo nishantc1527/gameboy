@@ -1,4 +1,3 @@
-mod logging;
 mod mmu;
 
 use mmu::Mmu;
@@ -71,7 +70,7 @@ extern "C" fn mmu_save(mmu: *const Mmu) {
     let save = unsafe { (*mmu).save() };
     match save {
         Ok(_) => (),
-        Err(_) => log_err!("COULD NOT SAVE GAME"),
+        Err(_) => eprintln!("COULD NOT SAVE GAME"),
     }
 }
 
@@ -80,7 +79,7 @@ extern "C" fn mmu_load(mmu: *mut Mmu) {
     let load = unsafe { (*mmu).load() };
     match load {
         Ok(_) => (),
-        Err(_) => log_err!("COULD NOT LOAD SAVE FILE"),
+        Err(_) => eprintln!("COULD NOT LOAD SAVE FILE"),
     }
 }
 

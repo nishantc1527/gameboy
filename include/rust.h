@@ -47,6 +47,48 @@
 
 typedef struct Mmu Mmu;
 
+extern const uint16_t JOYP;
+
+extern const uint16_t SB;
+
+extern const uint16_t SC;
+
+extern const uint16_t DIV;
+
+extern const uint16_t TIMA;
+
+extern const uint16_t TMA;
+
+extern const uint16_t TAC;
+
+extern const uint16_t IF;
+
+extern const uint16_t IE;
+
+extern const uint16_t LCDC;
+
+extern const uint16_t LCD_STAT;
+
+extern const uint16_t SCY;
+
+extern const uint16_t SCX;
+
+extern const uint16_t LY;
+
+extern const uint16_t LYC;
+
+extern const uint16_t DMA;
+
+extern const uint16_t BGP;
+
+extern const uint16_t OBP0;
+
+extern const uint16_t OBP1;
+
+extern const uint16_t WY;
+
+extern const uint16_t WX;
+
 struct Mmu *mmu_init(const char *rom_file_name,
                      const char *boot_rom_file_name,
                      int8_t test_category);

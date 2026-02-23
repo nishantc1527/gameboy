@@ -1,5 +1,6 @@
 #pragma once
 
+#include <SDL3/SDL_render.h>
 #include <stdint.h>
 
 #include "gbemu/ppu.h"

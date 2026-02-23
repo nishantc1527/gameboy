@@ -15,6 +15,6 @@ roms = [
 # @pytest.mark.parametrize("rom_path", roms, ids=lambda p: p.stem)
 @pytest.mark.parametrize("rom_path", roms)
 def test_mooneye_rom(rom_path):
-    cmd = ["./build/gbemu", "-r", rom_path, "--test", "mooneye", "--headless"]
+    cmd = ["./build/gbemu_headless", "-r", rom_path, "--test", "mooneye"]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
     assert "PASSED" in result.stdout, f"ROM {rom_path} FAILED:\n{result.stdout}"

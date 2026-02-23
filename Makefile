@@ -16,7 +16,6 @@ RUST_HDR      := include/rust.h
 RUST_MANIFEST := $(RUST_DIR)/Cargo.toml
 RUST_CRATE    := rust
 
-BIN           := gbemu
 BUILD_DIR     := build
 SRC_DIR       := src
 
@@ -24,29 +23,49 @@ INC_DIRS      := config include
 LIB_DIR       := vendor
 
 CFLAGS        := -O2 -std=c2x
-CPPFLAGS      := $(foreach d, $(INC_DIRS), -I$(d)) $(foreach d, $(LIB_DIR), -isystem $(d)) $(shell pkg-config --cflags sdl3)
-LDLIBS        := $(shell pkg-config --libs sdl3)
+CPPFLAGS      := $(foreach d, $(INC_DIRS), -I$(d)) $(foreach d, $(LIB_DIR), -isystem $(d))
+SDL_CFLAGS    := $(shell pkg-config --cflags sdl3)
+SDL_LDLIBS    := $(shell pkg-config --libs sdl3)
 VERIFY_FLAGS  := -Wall -Wextra -Wpedantic -Werror
 
-C_SRCS        := $(shell find $(SRC_DIR) -name "*.c")
+CORE_SRCS     := $(shell find $(SRC_DIR)/core $(SRC_DIR)/cpu $(SRC_DIR)/ppu $(SRC_DIR)/apu $(SRC_DIR)/pokemon -name "*.c")
+SDL_SRCS      := $(shell find $(SRC_DIR)/sdl -name "*.c")
+HEADLESS_SRC  := $(SRC_DIR)/headless/main.c
+
 C_HDRS        := $(shell find include/gbemu/ -name "*.h")
 RUST_SRCS     := $(shell find $(RUST_DIR)/src -name "*.rs")
-OBJS          := $(C_SRCS:%.c=$(BUILD_DIR)/%.o)
-DEPS          := $(OBJS:.o=.d)
 
-.PHONY: all clean format test verify
+CORE_OBJS     := $(CORE_SRCS:%.c=$(BUILD_DIR)/%.o)
+SDL_OBJS      := $(SDL_SRCS:%.c=$(BUILD_DIR)/%.o)
+HEADLESS_OBJ  := $(HEADLESS_SRC:%.c=$(BUILD_DIR)/%.o)
 
-all: $(BUILD_DIR)/$(BIN)
+ALL_OBJS      := $(CORE_OBJS) $(SDL_OBJS) $(HEADLESS_OBJ)
+DEPS          := $(ALL_OBJS:.o=.d)
 
-$(BUILD_DIR)/$(BIN): $(RUST_LIB) $(OBJS)
-	$(CC) $(OBJS) $(RUST_LIB) -o $@ $(LDLIBS)
+.PHONY: all gbemu gbemu_headless clean format test verify
 
-$(OBJS): $(RUST_HDR)
+all: gbemu gbemu_headless
+
+gbemu: $(BUILD_DIR)/gbemu
+gbemu_headless: $(BUILD_DIR)/gbemu_headless
+
+$(BUILD_DIR)/gbemu: $(RUST_LIB) $(CORE_OBJS) $(SDL_OBJS)
+	$(CC) $(CORE_OBJS) $(SDL_OBJS) $(RUST_LIB) -o $@ $(SDL_LDLIBS)
+
+$(BUILD_DIR)/gbemu_headless: $(RUST_LIB) $(CORE_OBJS) $(HEADLESS_OBJ)
+	$(CC) $(CORE_OBJS) $(HEADLESS_OBJ) $(RUST_LIB) -o $@
+
+$(CORE_OBJS) $(HEADLESS_OBJ): $(RUST_HDR)
+$(SDL_OBJS): $(RUST_HDR)
 $(RUST_HDR): $(RUST_LIB)
+
+$(BUILD_DIR)/$(SRC_DIR)/sdl/%.o: $(SRC_DIR)/sdl/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(SDL_CFLAGS) -MMD -MP -c $< -o $@
 
 $(BUILD_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -MMD -MP -c $< -o $@
+	$(CC) $(CFLAGS) $(CPPFLAGS) -MMD -MP -c $< -o $@
 
 $(RUST_LIB): $(RUST_MANIFEST) $(RUST_SRCS)
 	$(CARGO) build --manifest-path $(RUST_MANIFEST) --release
@@ -57,7 +76,7 @@ clean:
 	$(CARGO) clean --manifest-path $(RUST_MANIFEST)
 
 format:
-	$(FORMAT) -i $(C_SRCS) $(C_HDRS)
+	$(FORMAT) -i $(CORE_SRCS) $(SDL_SRCS) $(HEADLESS_SRC) $(C_HDRS)
 
 $(PYTHON):
 	python3 -m venv $(VENV)
@@ -65,16 +84,16 @@ $(PYTHON):
 	$(PIP) install --upgrade pip
 	$(PYTHON) -m pip install -r $(REQS)
 
-test: $(PYTHON) $(BUILD_DIR)/$(BIN)
+test: $(PYTHON) $(BUILD_DIR)/gbemu_headless
 	$(PYTHON) -m pytest -v -n auto
 
 verify: clean $(RUST_HDR)
-	$(FORMAT) --dry-run -Werror $(C_SRCS) $(C_HDRS)
+	$(FORMAT) --dry-run -Werror $(CORE_SRCS) $(SDL_SRCS) $(HEADLESS_SRC) $(C_HDRS)
 	$(CARGO) fmt --check --manifest-path $(RUST_MANIFEST)
 	$(CARGO) clippy --manifest-path $(RUST_MANIFEST) -- -D warnings # -D clippy::pedantic
-# $(TIDY) $(C_SRCS) -header-filter='.*' --checks='*' --warnings-as-errors='*' -- $(CFLAGS) $(CPPFLAGS)
+# $(TIDY) $(CORE_SRCS) -header-filter='.*' --checks='*' --warnings-as-errors='*' -- $(CFLAGS) $(BASE_CPPFLAGS)
 # $(CPPCHECK) --enable=all --inconclusive --error-exitcode=1 $(SRC_DIR) include/
-	$(MAKE) $(BUILD_DIR)/$(BIN) CFLAGS="$(CFLAGS) $(VERIFY_FLAGS)" LDLIBS="$(LDLIBS) $(VERIFY_FLAGS)"
+	$(MAKE) gbemu_headless CFLAGS="$(CFLAGS) $(VERIFY_FLAGS)"
 	$(MAKE) test
 
 -include $(DEPS)

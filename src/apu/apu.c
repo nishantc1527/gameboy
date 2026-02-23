@@ -1,64 +1,54 @@
 #include "gbemu/apu.h"
 
-#include <SDL3/SDL_audio.h>
-#include <stdio.h>
-
-#include "gbemu/cpu.h"
 #include "gbemu/mmu.h"
+#include "gbemu/util.h"
 
-SDL_AudioStream* stream;
-uint8_t ch1_enable, ch2_enable, ch3_enable, ch4_enable;
-uint8_t ch1_len_enable, ch1_len, ch1_len_apu_div, ch1_len_init, ch1_trigger;
-uint8_t div_apu;
-
-void init_apu(void) {
-  stream = SDL_OpenAudioDeviceStream(
-      SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
-      &(SDL_AudioSpec){SDL_AUDIO_S32LE, 2, 44100}, NULL, NULL);
-  ch1_enable = ch2_enable = ch3_enable = ch4_enable = 0;
-  ch1_len_enable = ch1_trigger = 0;
-  ch1_len = ch1_len_apu_div = ch1_len_init = 0x00;
-  div_apu = 0x00;
-  reset_apu();
+struct Apu* init_apu() {
+  struct Apu* apu = malloc(sizeof(struct Apu));
+  apu->ch1_enable = apu->ch2_enable = apu->ch3_enable = apu->ch4_enable = 0;
+  apu->ch1_len_enable = apu->ch1_trigger = 0;
+  apu->ch1_len = apu->ch1_len_apu_div = apu->ch1_len_init = 0x00;
+  apu->div_apu = 0x00;
+  return apu;
 }
 
-void upd_apu(void) {
+void upd_apu(struct Apu* apu, struct Mmu* mmu) {
   if (!get_bit(mmu_r_mem(mmu, NR52), 7)) {
-    reset_apu();
+    reset_apu(apu, mmu);
     return;
   }
   uint8_t nr14 = mmu_r_mem_raw(mmu, NR14);
   uint8_t curr_trigger = get_bit(nr14, 7);
-  if (curr_trigger && !ch1_trigger) {
-    ch1_trigger = 1;
-    ch1_enable = 1;
+  if (curr_trigger && !apu->ch1_trigger) {
+    apu->ch1_trigger = 1;
+    apu->ch1_enable = 1;
     if (get_bit(nr14, 6)) {
-      ch1_len_enable = 1;
+      apu->ch1_len_enable = 1;
       uint8_t nr11 = mmu_r_mem_raw(mmu, NR11);
-      if (nr11 != ch1_len_init) {
-        ch1_len = nr11 & 0b111111;
-        ch1_len_apu_div = div_apu;
+      if (nr11 != apu->ch1_len_init) {
+        apu->ch1_len = nr11 & 0b111111;
+        apu->ch1_len_apu_div = apu->div_apu;
       }
     }
-  } else if (!curr_trigger && ch1_trigger) {
-    ch1_trigger = 0;
-    ch1_enable = 0;
+  } else if (!curr_trigger && apu->ch1_trigger) {
+    apu->ch1_trigger = 0;
+    apu->ch1_enable = 0;
   }
-  if (ch1_enable && ch1_len_enable &&
-      (uint8_t)(div_apu - ch1_len_apu_div) >= 2) {
-    ch1_len++;
-    ch1_len_apu_div = div_apu;
-    if (ch1_len == 0x40) ch1_enable = 0;
+  if (apu->ch1_enable && apu->ch1_len_enable &&
+      (uint8_t)(apu->div_apu - apu->ch1_len_apu_div) >= 2) {
+    apu->ch1_len++;
+    apu->ch1_len_apu_div = apu->div_apu;
+    if (apu->ch1_len == 0x40) apu->ch1_enable = 0;
   }
   uint8_t ctrl = mmu_r_mem(mmu, NR52) & 0xF0;
-  if (ch1_enable) set_bit(&ctrl, 0);
-  if (ch2_enable) set_bit(&ctrl, 1);
-  if (ch3_enable) set_bit(&ctrl, 2);
-  if (ch4_enable) set_bit(&ctrl, 3);
+  if (apu->ch1_enable) set_bit(&ctrl, 0);
+  if (apu->ch2_enable) set_bit(&ctrl, 1);
+  if (apu->ch3_enable) set_bit(&ctrl, 2);
+  if (apu->ch4_enable) set_bit(&ctrl, 3);
   mmu_w_mem(mmu, NR52, ctrl);
 }
 
-void reset_apu(void) {
+void reset_apu(struct Apu* apu, struct Mmu* mmu) {
   mmu_w_mem(mmu, NR10, 0x00);
   mmu_w_mem(mmu, NR11, 0x00);
   mmu_w_mem(mmu, NR12, 0x00);

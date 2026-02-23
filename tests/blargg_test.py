@@ -16,7 +16,7 @@ roms = [
 # @pytest.mark.parametrize("rom_path", roms, ids=lambda p: p.stem)
 @pytest.mark.parametrize("rom_path", roms)
 def test_blargg_rom(rom_path):
-    cmd = ["./build/gbemu", "-r", rom_path, "--test", "blargg", "--headless"]
+    cmd = ["./build/gbemu_headless", "-r", rom_path, "--test", "blargg"]
     process = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,

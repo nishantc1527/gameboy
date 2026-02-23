@@ -1,10 +1,11 @@
 mod apu_reg;
+mod cpu_reg;
 mod io;
 mod mbc1;
 mod mbc3;
 mod no_mbc;
+mod ppu_reg;
 
-use crate::log_err;
 use std::{fs::File, io::Read, path::Path};
 
 #[repr(i8)]
@@ -38,16 +39,16 @@ impl Mmu {
         let extern_ram = vec![0u8; 0x20000];
         let ram_bank: u8 = 0;
         let mut mbc1_1mb_mode = false;
-        // log_info!("OPENING BOOT ROM FILE\n");
+        // println!("OPENING BOOT ROM FILE\n");
         let mut boot_rom_file = File::open(Path::new(boot_rom_file_name)).ok()?;
         if boot_rom_file.read(&mut brom).ok()? != 0x100 {
-            log_err!("COULD NOT READ FULL BOOT ROM");
+            eprintln!("COULD NOT READ FULL BOOT ROM");
             return None;
         }
-        // log_info!("OPENING ROM FILE\n");
+        // println!("OPENING ROM FILE\n");
         let mut rom_file = File::open(Path::new(rom_file_name)).ok()?;
         let _ = rom_file.read(&mut rom).ok()?;
-        // log_info!("SUCCESSFULLY READ FILES\n");
+        // println!("SUCCESSFULLY READ FILES\n");
 
         (0x0134usize..=0x0142usize).for_each(|i| {
             rom_title.push(rom[i] as char);
@@ -59,27 +60,27 @@ impl Mmu {
         match cart_type {
             0x00 | 0x01 | 0x02 | 0x03 | 0x11 | 0x13 => (),
             _ => {
-                log_err!("UNIMPLEMENTED MAPPER ${:02X}\n", cart_type);
+                eprintln!("UNIMPLEMENTED MAPPER ${:02X}\n", cart_type);
                 return None;
             }
         }
-        // log_info!("USING MAPPER: ${:02X}\n", cart_type);
+        // println!("USING MAPPER: ${:02X}\n", cart_type);
         match rom_size {
             0x00 | 0x01 | 0x03 | 0x04 | 0x05 | 0x07 => (),
             _ => {
-                log_err!("UNIMPLEMENTED ROM SIZE: ${:02X}\n", rom_size);
+                eprintln!("UNIMPLEMENTED ROM SIZE: ${:02X}\n", rom_size);
                 return None;
             }
         }
-        // log_info!("USING ROM SIZE: ${:02X}", rom_size);
+        // println!("USING ROM SIZE: ${:02X}", rom_size);
         match ram_size {
             0x00 | 0x02 | 0x03 => (),
             _ => {
-                log_err!("UNIMPLEMENTED RAM SIZE: ${:02X}\n", ram_size);
+                eprintln!("UNIMPLEMENTED RAM SIZE: ${:02X}\n", ram_size);
                 return None;
             }
         }
-        // log_info!("USING RAM SIZE: ${:02X}\n", ram_size);
+        // println!("USING RAM SIZE: ${:02X}\n", ram_size);
         let rom_bank: u8 = 1;
         let ram_enable = false;
 
@@ -87,21 +88,21 @@ impl Mmu {
             0x01 | 0x02 | 0x03 => {
                 mbc1_1mb_mode = false;
                 if rom_size > 0x06 {
-                    log_err!("ROM SIZE NOT AVAILABLE\n");
+                    eprintln!("ROM SIZE NOT AVAILABLE\n");
                     return None;
                 }
                 if ram_size > 0x03 {
-                    log_err!("RAM SIZE NOT AVAILABLE\n");
+                    eprintln!("RAM SIZE NOT AVAILABLE\n");
                     return None;
                 }
             }
             0x11 | 0x12 | 0x13 => {
                 if rom_size > 0x07 {
-                    log_err!("ROM SIZE NOT AVAILABLE\n");
+                    eprintln!("ROM SIZE NOT AVAILABLE\n");
                     return None;
                 }
                 if ram_size > 0x03 {
-                    log_err!("RAM SIZE NOT AVAILABLE\n");
+                    eprintln!("RAM SIZE NOT AVAILABLE\n");
                     return None;
                 }
             }

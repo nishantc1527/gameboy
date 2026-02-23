@@ -22,7 +22,7 @@ impl Mmu {
             let file_name = format!("{}.sav", self.rom_title);
             let mut file = File::create(Path::new(file_name.as_str()))?;
             file.write_all(&self.extern_ram[..len])?;
-            // log_info!("SAVED GAME TO: {}\n", file_name);
+            // println!("SAVED GAME TO: {}\n", file_name);
         }
         Ok(())
     }
@@ -34,7 +34,7 @@ impl Mmu {
             let file_name = format!("{}.sav", self.rom_title);
             let mut file = File::open(Path::new(file_name.as_str()))?;
             let _ = file.read(&mut self.extern_ram[..len])?;
-            // log_info!("LOADED GAME FROM: {}\n", file_name);
+            // println!("LOADED GAME FROM: {}\n", file_name);
         }
         Ok(())
     }

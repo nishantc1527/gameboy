@@ -1,15 +1,16 @@
 #pragma once
 
-#include <SDL3/SDL_audio.h>
 #include <stdint.h>
 
-extern SDL_AudioStream* stream;
-extern uint8_t ch1_enable, ch2_enable, ch3_enable, ch4_enable;
-extern uint8_t ch1_len_enable, ch1_len, ch1_len_apu_div, ch1_len_init,
-    ch1_trigger;
-extern uint8_t div_apu;
+#include "gbemu/mmu.h"
 
-void init_apu(void);
-void upd_apu(void);
+struct Apu {
+  uint8_t ch1_enable, ch2_enable, ch3_enable, ch4_enable;
+  uint8_t ch1_len_enable, ch1_len, ch1_len_apu_div, ch1_len_init, ch1_trigger;
+  uint8_t div_apu;
+};
 
-void reset_apu(void);
+struct Apu* init_apu();
+void upd_apu(struct Apu* apu, struct Mmu* mmu);
+
+void reset_apu(struct Apu* apu, struct Mmu* mmu);
