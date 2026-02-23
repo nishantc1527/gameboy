@@ -1,9 +1,10 @@
 #pragma once
 
 #include <stdint.h>
-#include "gbemu/util.h"
-#include "gbemu/mmu.h"
+
 #include "gbemu/cpu.h"
+#include "gbemu/mmu.h"
+#include "gbemu/util.h"
 
 #define FLG_Z 7
 #define FLG_N 6
@@ -16,11 +17,19 @@
 #define INTR_SERIAL 3
 #define INTR_JOYPAD 4
 
-static inline uint8_t gt_flg(struct Cpu* cpu, uint8_t flg) { return gb(cpu->F, flg); }
-static inline void st_flg(struct Cpu* cpu, uint8_t flg) { sb(&cpu->F, flg); }
-static inline void cl_flg(struct Cpu* cpu, uint8_t flg) { cb(&cpu->F, flg); }
+static inline uint8_t get_flag(struct Cpu* cpu, uint8_t flg) {
+  return get_bit(cpu->F, flg);
+}
+static inline void set_flag(struct Cpu* cpu, uint8_t flg) {
+  set_bit(&cpu->F, flg);
+}
+static inline void clear_flag(struct Cpu* cpu, uint8_t flg) {
+  clear_bit(&cpu->F, flg);
+}
 
-static inline uint8_t rd8(struct Cpu* cpu, Mmu* mmu) { return mmu_r_mem(mmu, cpu->PC++); }
+static inline uint8_t rd8(struct Cpu* cpu, Mmu* mmu) {
+  return mmu_r_mem(mmu, cpu->PC++);
+}
 
 static inline uint16_t rd16(struct Cpu* cpu, Mmu* mmu) {
   uint16_t addr1 = cpu->PC++;
@@ -51,64 +60,55 @@ static inline uint16_t pk(struct Cpu* cpu, Mmu* mmu) {
 }
 
 static inline void st_z(struct Cpu* cpu, uint8_t var) {
-  if (var == 0)
-    st_flg(cpu, FLG_Z);
+  if (var == 0) set_flag(cpu, FLG_Z);
   else
-    cl_flg(cpu, FLG_Z);
+    clear_flag(cpu, FLG_Z);
 }
 static inline void st_h_add(struct Cpu* cpu, uint8_t var1, uint8_t var2) {
-  if (((var1 & 0xF) + (var2 & 0xF)) & 0x10)
-    st_flg(cpu, FLG_H);
+  if (((var1 & 0xF) + (var2 & 0xF)) & 0x10) set_flag(cpu, FLG_H);
   else
-    cl_flg(cpu, FLG_H);
+    clear_flag(cpu, FLG_H);
 }
 static inline void st_h_add16(struct Cpu* cpu, uint16_t var1, uint16_t var2) {
-  if (((var1 & 0xFFF) + (var2 & 0xFFF)) & 0x1000)
-    st_flg(cpu, FLG_H);
+  if (((var1 & 0xFFF) + (var2 & 0xFFF)) & 0x1000) set_flag(cpu, FLG_H);
   else
-    cl_flg(cpu, FLG_H);
+    clear_flag(cpu, FLG_H);
 }
 static inline void st_h_sub(struct Cpu* cpu, uint8_t var1, uint8_t var2) {
-  if (((var1 & 0x0F) - (var2 & 0x0F)) & 0x10)
-    st_flg(cpu, FLG_H);
+  if (((var1 & 0x0F) - (var2 & 0x0F)) & 0x10) set_flag(cpu, FLG_H);
   else
-    cl_flg(cpu, FLG_H);
+    clear_flag(cpu, FLG_H);
 }
 static inline void st_c_rl(struct Cpu* cpu, uint8_t var) {
-  if (var >> 7)
-    st_flg(cpu, FLG_C);
+  if (var >> 7) set_flag(cpu, FLG_C);
   else
-    cl_flg(cpu, FLG_C);
+    clear_flag(cpu, FLG_C);
 }
 static inline void st_c_rr(struct Cpu* cpu, uint8_t var) {
-  if (var & 1)
-    st_flg(cpu, FLG_C);
+  if (var & 1) set_flag(cpu, FLG_C);
   else
-    cl_flg(cpu, FLG_C);
+    clear_flag(cpu, FLG_C);
 }
 static inline void st_c_add(struct Cpu* cpu, uint8_t var1, uint8_t var2) {
   uint16_t res = (uint16_t)var1 + (uint16_t)var2;
-  if (res > 0xFF)
-    st_flg(cpu, FLG_C);
+  if (res > 0xFF) set_flag(cpu, FLG_C);
   else
-    cl_flg(cpu, FLG_C);
+    clear_flag(cpu, FLG_C);
 }
 static inline void st_c_add16(struct Cpu* cpu, uint16_t var1, uint16_t var2) {
   int res = (int)var1 + (int)var2;
-  if (res > 0xFFFF)
-    st_flg(cpu, FLG_C);
+  if (res > 0xFFFF) set_flag(cpu, FLG_C);
   else
-    cl_flg(cpu, FLG_C);
+    clear_flag(cpu, FLG_C);
 }
 static inline void st_c_sub(struct Cpu* cpu, uint8_t var1, uint8_t var2) {
-  if (var1 < var2)
-    st_flg(cpu, FLG_C);
+  if (var1 < var2) set_flag(cpu, FLG_C);
   else
-    cl_flg(cpu, FLG_C);
+    clear_flag(cpu, FLG_C);
 }
 static inline void req_intr(Mmu* mmu, uint8_t intr) {
   uint8_t val = mmu_r_mem_raw(mmu, 0xFF0F);
-  sb(&val, intr);
+  set_bit(&val, intr);
   mmu_w_mem_raw(mmu, 0xFF0F, val);
 }
 
@@ -117,42 +117,41 @@ static inline int c_add(struct Cpu* cpu, uint8_t reg) {
   st_c_add(cpu, cpu->A, reg);
   cpu->A += reg;
   st_z(cpu, cpu->A);
-  cl_flg(cpu, FLG_N);
+  clear_flag(cpu, FLG_N);
   return 4;
 }
 
 static inline int c_adc(struct Cpu* cpu, uint8_t reg) {
   int cy = 0;
   int hy = 0;
-  if (gt_flg(cpu, FLG_C)) {
+  if (get_flag(cpu, FLG_C)) {
     st_h_add(cpu, cpu->A, 1);
     st_c_add(cpu, cpu->A, 1);
-    cy = gt_flg(cpu, FLG_C);
-    hy = gt_flg(cpu, FLG_H);
+    cy = get_flag(cpu, FLG_C);
+    hy = get_flag(cpu, FLG_H);
     cpu->A++;
   }
   c_add(cpu, reg);
-  if (cy) st_flg(cpu, FLG_C);
-  if (hy) st_flg(cpu, FLG_H);
+  if (cy) set_flag(cpu, FLG_C);
+  if (hy) set_flag(cpu, FLG_H);
   return 4;
 }
 
 static inline int c_and(struct Cpu* cpu, uint8_t reg) {
   cpu->A &= reg;
   st_z(cpu, cpu->A);
-  cl_flg(cpu, FLG_N);
-  st_flg(cpu, FLG_H);
-  cl_flg(cpu, FLG_C);
+  clear_flag(cpu, FLG_N);
+  set_flag(cpu, FLG_H);
+  clear_flag(cpu, FLG_C);
   return 4;
 }
 
 static inline int c_bit(struct Cpu* cpu, uint8_t reg, uint8_t bit) {
-  if (gb(reg, bit))
-    cl_flg(cpu, FLG_Z);
+  if (get_bit(reg, bit)) clear_flag(cpu, FLG_Z);
   else
-    st_flg(cpu, FLG_Z);
-  cl_flg(cpu, FLG_N);
-  st_flg(cpu, FLG_H);
+    set_flag(cpu, FLG_Z);
+  clear_flag(cpu, FLG_N);
+  set_flag(cpu, FLG_H);
   return 8;
 }
 
@@ -168,7 +167,7 @@ static inline int c_call(struct Cpu* cpu, Mmu* mmu, int flg) {
 
 static inline int c_cp(struct Cpu* cpu, uint8_t reg) {
   st_z(cpu, cpu->A - reg);
-  st_flg(cpu, FLG_N);
+  set_flag(cpu, FLG_N);
   st_h_sub(cpu, cpu->A, reg);
   st_c_sub(cpu, cpu->A, reg);
   return 4;
@@ -176,8 +175,8 @@ static inline int c_cp(struct Cpu* cpu, uint8_t reg) {
 
 static inline int c_cpl(struct Cpu* cpu, uint8_t* reg) {
   *reg = ~*reg;
-  st_flg(cpu, FLG_N);
-  st_flg(cpu, FLG_H);
+  set_flag(cpu, FLG_N);
+  set_flag(cpu, FLG_H);
   return 4;
 }
 
@@ -185,7 +184,7 @@ static inline int c_dec(struct Cpu* cpu, uint8_t* reg) {
   st_h_sub(cpu, *reg, 1);
   *reg = *reg - 1;
   st_z(cpu, *reg);
-  st_flg(cpu, FLG_N);
+  set_flag(cpu, FLG_N);
   return 4;
 }
 
@@ -195,7 +194,7 @@ static inline int c_dec_mem(struct Cpu* cpu, Mmu* mmu, uint16_t loc) {
   reg = reg - 1;
   mmu_w_mem(mmu, loc, reg);
   st_z(cpu, reg);
-  st_flg(cpu, FLG_N);
+  set_flag(cpu, FLG_N);
   return 12;
 }
 
@@ -203,7 +202,7 @@ static inline int c_inc(struct Cpu* cpu, uint8_t* reg) {
   st_h_add(cpu, *reg, 1);
   *reg = *reg + 1;
   st_z(cpu, *reg);
-  cl_flg(cpu, FLG_N);
+  clear_flag(cpu, FLG_N);
   return 4;
 }
 
@@ -213,7 +212,7 @@ static inline int c_inc_mem(struct Cpu* cpu, Mmu* mmu, uint16_t loc) {
   reg = reg + 1;
   mmu_w_mem(mmu, loc, reg);
   st_z(cpu, reg);
-  cl_flg(cpu, FLG_N);
+  clear_flag(cpu, FLG_N);
   return 12;
 }
 
@@ -238,9 +237,9 @@ static inline int c_jp16(struct Cpu* cpu, Mmu* mmu, int flg) {
 static inline int c_or(struct Cpu* cpu, uint8_t reg) {
   cpu->A |= reg;
   st_z(cpu, cpu->A);
-  cl_flg(cpu, FLG_N);
-  cl_flg(cpu, FLG_H);
-  cl_flg(cpu, FLG_C);
+  clear_flag(cpu, FLG_N);
+  clear_flag(cpu, FLG_H);
+  clear_flag(cpu, FLG_C);
   return 4;
 }
 
@@ -266,24 +265,24 @@ static inline int c_ret(struct Cpu* cpu, Mmu* mmu, int flg) {
 }
 
 static inline int c_rr(struct Cpu* cpu, uint8_t* reg) {
-  uint8_t carry = gt_flg(cpu, FLG_C);
+  uint8_t carry = get_flag(cpu, FLG_C);
   st_c_rr(cpu, *reg);
   *reg = (uint8_t)(*reg >> 1) | (uint8_t)(carry << 7);
   st_z(cpu, *reg);
-  cl_flg(cpu, FLG_N);
-  cl_flg(cpu, FLG_H);
+  clear_flag(cpu, FLG_N);
+  clear_flag(cpu, FLG_H);
   return 8;
 }
 
 static inline int c_rr_mem(struct Cpu* cpu, Mmu* mmu, uint16_t loc) {
   uint8_t reg = mmu_r_mem(mmu, loc);
-  uint8_t carry = gt_flg(cpu, FLG_C);
+  uint8_t carry = get_flag(cpu, FLG_C);
   st_c_rr(cpu, reg);
   reg = (uint8_t)(reg >> 1) | (uint8_t)(carry << 7);
   mmu_w_mem(mmu, loc, reg);
   st_z(cpu, reg);
-  cl_flg(cpu, FLG_N);
-  cl_flg(cpu, FLG_H);
+  clear_flag(cpu, FLG_N);
+  clear_flag(cpu, FLG_H);
   return 16;
 }
 
@@ -292,8 +291,8 @@ static inline int c_rrc(struct Cpu* cpu, uint8_t* reg) {
   st_c_rr(cpu, *reg);
   *reg = (uint8_t)(*reg >> 1) | (uint8_t)(carry << 7);
   st_z(cpu, *reg);
-  cl_flg(cpu, FLG_N);
-  cl_flg(cpu, FLG_H);
+  clear_flag(cpu, FLG_N);
+  clear_flag(cpu, FLG_H);
   return 8;
 }
 
@@ -304,30 +303,30 @@ static inline int c_rrc_mem(struct Cpu* cpu, Mmu* mmu, uint16_t loc) {
   reg = (uint8_t)(reg >> 1) | (uint8_t)(carry << 7);
   mmu_w_mem(mmu, loc, reg);
   st_z(cpu, reg);
-  cl_flg(cpu, FLG_N);
-  cl_flg(cpu, FLG_H);
+  clear_flag(cpu, FLG_N);
+  clear_flag(cpu, FLG_H);
   return 16;
 }
 
 static inline int c_rl(struct Cpu* cpu, uint8_t* reg) {
-  uint8_t carry = gt_flg(cpu, FLG_C);
+  uint8_t carry = get_flag(cpu, FLG_C);
   st_c_rl(cpu, *reg);
   *reg = (uint8_t)(*reg << 1) | carry;
   st_z(cpu, *reg);
-  cl_flg(cpu, FLG_N);
-  cl_flg(cpu, FLG_H);
+  clear_flag(cpu, FLG_N);
+  clear_flag(cpu, FLG_H);
   return 8;
 }
 
 static inline int c_rl_mem(struct Cpu* cpu, Mmu* mmu, uint16_t loc) {
   uint8_t reg = mmu_r_mem(mmu, loc);
-  uint8_t carry = gt_flg(cpu, FLG_C);
+  uint8_t carry = get_flag(cpu, FLG_C);
   st_c_rl(cpu, reg);
   reg = (uint8_t)(reg << 1) | carry;
   mmu_w_mem(mmu, loc, reg);
   st_z(cpu, reg);
-  cl_flg(cpu, FLG_N);
-  cl_flg(cpu, FLG_H);
+  clear_flag(cpu, FLG_N);
+  clear_flag(cpu, FLG_H);
   return 16;
 }
 
@@ -336,8 +335,8 @@ static inline int c_rlc(struct Cpu* cpu, uint8_t* reg) {
   st_c_rl(cpu, *reg);
   *reg = (uint8_t)(*reg << 1) | carry;
   st_z(cpu, *reg);
-  cl_flg(cpu, FLG_N);
-  cl_flg(cpu, FLG_H);
+  clear_flag(cpu, FLG_N);
+  clear_flag(cpu, FLG_H);
   return 8;
 }
 
@@ -348,8 +347,8 @@ static inline int c_rlc_mem(struct Cpu* cpu, Mmu* mmu, uint16_t loc) {
   reg = (uint8_t)(reg << 1) | carry;
   mmu_w_mem(mmu, loc, reg);
   st_z(cpu, reg);
-  cl_flg(cpu, FLG_N);
-  cl_flg(cpu, FLG_H);
+  clear_flag(cpu, FLG_N);
+  clear_flag(cpu, FLG_H);
   return 16;
 }
 
@@ -364,61 +363,60 @@ static inline int c_sub(struct Cpu* cpu, uint8_t reg) {
   st_c_sub(cpu, cpu->A, reg);
   cpu->A -= reg;
   st_z(cpu, cpu->A);
-  st_flg(cpu, FLG_N);
+  set_flag(cpu, FLG_N);
   return 4;
 }
 
 static inline int c_sbc(struct Cpu* cpu, uint8_t reg) {
   int cy = 0;
   int hy = 0;
-  if (gt_flg(cpu, FLG_C)) {
+  if (get_flag(cpu, FLG_C)) {
     st_h_sub(cpu, cpu->A, 1);
     st_c_sub(cpu, cpu->A, 1);
-    cy = gt_flg(cpu, FLG_C);
-    hy = gt_flg(cpu, FLG_H);
+    cy = get_flag(cpu, FLG_C);
+    hy = get_flag(cpu, FLG_H);
     cpu->A--;
   }
   c_sub(cpu, reg);
-  if (cy) st_flg(cpu, FLG_C);
-  if (hy) st_flg(cpu, FLG_H);
+  if (cy) set_flag(cpu, FLG_C);
+  if (hy) set_flag(cpu, FLG_H);
   return 4;
 }
 
 static inline int c_srl(struct Cpu* cpu, uint8_t* reg) {
-  if (*reg & 1)
-    st_flg(cpu, FLG_C);
+  if (*reg & 1) set_flag(cpu, FLG_C);
   else
-    cl_flg(cpu, FLG_C);
+    clear_flag(cpu, FLG_C);
   *reg = *reg >> 1;
   st_z(cpu, *reg);
-  cl_flg(cpu, FLG_N);
-  cl_flg(cpu, FLG_H);
+  clear_flag(cpu, FLG_N);
+  clear_flag(cpu, FLG_H);
   return 8;
 }
 
 static inline int c_srl_mem(struct Cpu* cpu, Mmu* mmu, uint16_t loc) {
   uint8_t reg = mmu_r_mem(mmu, loc);
-  if (reg & 1)
-    st_flg(cpu, FLG_C);
+  if (reg & 1) set_flag(cpu, FLG_C);
   else
-    cl_flg(cpu, FLG_C);
+    clear_flag(cpu, FLG_C);
   reg = reg >> 1;
   mmu_w_mem(mmu, loc, reg);
   st_z(cpu, reg);
-  cl_flg(cpu, FLG_N);
-  cl_flg(cpu, FLG_H);
+  clear_flag(cpu, FLG_N);
+  clear_flag(cpu, FLG_H);
   return 16;
 }
 
 static inline int c_set(uint8_t* reg, uint8_t bit) {
-  sb(reg, bit);
+  set_bit(reg, bit);
   return 8;
 }
 
-static inline int c_set_mem(struct Cpu* cpu, Mmu* mmu, uint16_t loc, uint8_t bit) {
+static inline int c_set_mem(struct Cpu* cpu, Mmu* mmu, uint16_t loc,
+                            uint8_t bit) {
   (void)cpu;
   uint8_t reg = mmu_r_mem(mmu, loc);
-  sb(&reg, bit);
+  set_bit(&reg, bit);
   mmu_w_mem(mmu, loc, reg);
   return 16;
 }
@@ -427,8 +425,8 @@ static inline int c_sla(struct Cpu* cpu, uint8_t* reg) {
   st_c_rl(cpu, *reg);
   *reg = (uint8_t)(*reg << 1);
   st_z(cpu, *reg);
-  cl_flg(cpu, FLG_N);
-  cl_flg(cpu, FLG_H);
+  clear_flag(cpu, FLG_N);
+  clear_flag(cpu, FLG_H);
   return 8;
 }
 
@@ -438,8 +436,8 @@ static inline int c_sla_mem(struct Cpu* cpu, Mmu* mmu, uint16_t loc) {
   reg = (uint8_t)(reg << 1);
   mmu_w_mem(mmu, loc, reg);
   st_z(cpu, reg);
-  cl_flg(cpu, FLG_N);
-  cl_flg(cpu, FLG_H);
+  clear_flag(cpu, FLG_N);
+  clear_flag(cpu, FLG_H);
   return 16;
 }
 
@@ -448,8 +446,8 @@ static inline int c_sra(struct Cpu* cpu, uint8_t* reg) {
   uint8_t bt = (*reg >> 7) & 1;
   *reg = (uint8_t)(*reg >> 1) | (uint8_t)(bt << 7);
   st_z(cpu, *reg);
-  cl_flg(cpu, FLG_N);
-  cl_flg(cpu, FLG_H);
+  clear_flag(cpu, FLG_N);
+  clear_flag(cpu, FLG_H);
   return 8;
 }
 
@@ -460,17 +458,17 @@ static inline int c_sra_mem(struct Cpu* cpu, Mmu* mmu, uint16_t loc) {
   reg = (uint8_t)(reg >> 1) | (uint8_t)(bt << 7);
   mmu_w_mem(mmu, loc, reg);
   st_z(cpu, reg);
-  cl_flg(cpu, FLG_N);
-  cl_flg(cpu, FLG_H);
+  clear_flag(cpu, FLG_N);
+  clear_flag(cpu, FLG_H);
   return 16;
 }
 
 static inline int c_swp(struct Cpu* cpu, uint8_t* reg) {
   *reg = (uint8_t)(*reg >> 4) | (uint8_t)(*reg << 4);
   st_z(cpu, *reg);
-  cl_flg(cpu, FLG_N);
-  cl_flg(cpu, FLG_H);
-  cl_flg(cpu, FLG_C);
+  clear_flag(cpu, FLG_N);
+  clear_flag(cpu, FLG_H);
+  clear_flag(cpu, FLG_C);
   return 8;
 }
 
@@ -479,43 +477,51 @@ static inline int c_swp_mem(struct Cpu* cpu, Mmu* mmu, uint16_t loc) {
   reg = (uint8_t)(reg >> 4) | (uint8_t)(reg << 4);
   mmu_w_mem(mmu, loc, reg);
   st_z(cpu, reg);
-  cl_flg(cpu, FLG_N);
-  cl_flg(cpu, FLG_H);
-  cl_flg(cpu, FLG_C);
+  clear_flag(cpu, FLG_N);
+  clear_flag(cpu, FLG_H);
+  clear_flag(cpu, FLG_C);
   return 16;
 }
 
 static inline int c_xor(struct Cpu* cpu, uint8_t reg) {
   cpu->A ^= reg;
   st_z(cpu, cpu->A);
-  cl_flg(cpu, FLG_N);
-  cl_flg(cpu, FLG_H);
-  cl_flg(cpu, FLG_C);
+  clear_flag(cpu, FLG_N);
+  clear_flag(cpu, FLG_H);
+  clear_flag(cpu, FLG_C);
   return 4;
 }
 
-static inline uint16_t gt_AF(struct Cpu* cpu) { return (uint16_t)(((uint16_t)cpu->A) << 8) | (uint16_t)cpu->F; }
+static inline uint16_t gt_AF(struct Cpu* cpu) {
+  return (uint16_t)(((uint16_t)cpu->A) << 8) | (uint16_t)cpu->F;
+}
 
 static inline void st_AF(struct Cpu* cpu, uint16_t AF) {
   cpu->A = (uint8_t)(AF >> 8);
   cpu->F = (uint8_t)AF;
 }
 
-static inline uint16_t gt_BC(struct Cpu* cpu) { return (uint16_t)(((uint16_t)cpu->B) << 8) | (uint16_t)cpu->C; }
+static inline uint16_t gt_BC(struct Cpu* cpu) {
+  return (uint16_t)(((uint16_t)cpu->B) << 8) | (uint16_t)cpu->C;
+}
 
 static inline void st_BC(struct Cpu* cpu, uint16_t BC) {
   cpu->B = (uint8_t)(BC >> 8);
   cpu->C = (uint8_t)BC;
 }
 
-static inline uint16_t gt_DE(struct Cpu* cpu) { return (uint16_t)(((uint16_t)cpu->D) << 8) | (uint16_t)cpu->E; }
+static inline uint16_t gt_DE(struct Cpu* cpu) {
+  return (uint16_t)(((uint16_t)cpu->D) << 8) | (uint16_t)cpu->E;
+}
 
 static inline void st_DE(struct Cpu* cpu, uint16_t DE) {
   cpu->D = (uint8_t)(DE >> 8);
   cpu->E = (uint8_t)DE;
 }
 
-static inline uint16_t gt_HL(struct Cpu* cpu) { return (uint16_t)(((uint16_t)cpu->H) << 8) | (uint16_t)cpu->L; }
+static inline uint16_t gt_HL(struct Cpu* cpu) {
+  return (uint16_t)(((uint16_t)cpu->H) << 8) | (uint16_t)cpu->L;
+}
 
 static inline void st_HL(struct Cpu* cpu, uint16_t HL) {
   cpu->H = (uint8_t)(HL >> 8);

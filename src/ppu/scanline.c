@@ -11,13 +11,13 @@ const uint16_t SCANLINES = 154;
 uint8_t gt_clr(uint8_t pal, int val) { return (pal >> (val << 1)) & 0b11; }
 void w_pxl(struct Ppu* ppu, int y, int x, uint8_t clr) { ppu->dsp[y][x] = clr; }
 
-void do_scanline(struct Ppu* ppu, Mmu* mmu) {
-  if (gb(mmu_r_mem(mmu, LCDC), 7)) {
+void do_scanline(struct Ppu* ppu, Mmu* mmu) {  // TODO magic numbers, split up
+  if (get_bit(mmu_r_mem(mmu, LCDC), 7)) {
     if (mmu_r_mem(mmu, LY) < SCRN_HEIGHT) {
-      if (gb(mmu_r_mem(mmu, LCDC), 0)) {
+      if (get_bit(mmu_r_mem(mmu, LCDC), 0)) {
         uint8_t ly = mmu_r_mem(mmu, LY);
-        int dat_area = gb(mmu_r_mem(mmu, LCDC), 4);
-        int mp_area = gb(mmu_r_mem(mmu, LCDC), 3);
+        int dat_area = get_bit(mmu_r_mem(mmu, LCDC), 4);
+        int mp_area = get_bit(mmu_r_mem(mmu, LCDC), 3);
         uint8_t pal = mmu_r_mem(mmu, BGP);
         for (int x = 0; x < SCRN_WIDTH; x++) {
           uint8_t by = (ly + mmu_r_mem(mmu, SCY)) % 256;
@@ -41,11 +41,11 @@ void do_scanline(struct Ppu* ppu, Mmu* mmu) {
           uint8_t ls = mmu_r_mem(mmu, (uint16_t)(idx + (uint16_t)ty));
           uint8_t ms = mmu_r_mem(mmu, (uint16_t)(idx + (uint16_t)ty + 1));
           offx = 7 - offx;
-          int clr = (gb(ms, offx) << 1) | gb(ls, offx);
+          int clr = (get_bit(ms, offx) << 1) | get_bit(ls, offx);
           w_pxl(ppu, ly, x, gt_clr(pal, clr));
         }
-        if (gb(mmu_r_mem(mmu, LCDC), 5)) {
-          mp_area = gb(mmu_r_mem(mmu, LCDC), 6);
+        if (get_bit(mmu_r_mem(mmu, LCDC), 5)) {
+          mp_area = get_bit(mmu_r_mem(mmu, LCDC), 6);
           uint8_t wx = mmu_r_mem(mmu, WX);
           uint8_t wy = mmu_r_mem(mmu, WY);
           if (wx < SCRN_WIDTH + 7 && wy < SCRN_HEIGHT &&
@@ -74,7 +74,7 @@ void do_scanline(struct Ppu* ppu, Mmu* mmu) {
               uint8_t ms =
                   mmu_r_mem(mmu, (uint16_t)(idx + (uint16_t)ty + (uint16_t)1));
               offx = 7 - offx;
-              int clr = (gb(ms, offx) << 1) | gb(ls, offx);
+              int clr = (get_bit(ms, offx) << 1) | get_bit(ls, offx);
               w_pxl(ppu, ly, x, gt_clr(pal, clr));
             }
             ppu->WIN_CNT++;
@@ -85,9 +85,9 @@ void do_scanline(struct Ppu* ppu, Mmu* mmu) {
           w_pxl(ppu, mmu_r_mem(mmu, LY), x, CLR_WHT);
         }
       }
-      if (gb(mmu_r_mem(mmu, LCDC), 1)) {
+      if (get_bit(mmu_r_mem(mmu, LCDC), 1)) {
         uint8_t ly = mmu_r_mem(mmu, LY);
-        uint8_t sz = gb(mmu_r_mem(mmu, LCDC), 2);
+        uint8_t sz = get_bit(mmu_r_mem(mmu, LCDC), 2);
         int cnt = 0;
         uint16_t obj[10] = {0};
         for (uint16_t mem_loc = 0xFE00; mem_loc <= 0xFE9F && cnt < 10;
@@ -131,8 +131,8 @@ void do_scanline(struct Ppu* ppu, Mmu* mmu) {
           if (sz) idx &= 0xFE;
           idx *= 16;
           idx += 0x8000;
-          uint8_t flipx = gb(flg, 5);
-          uint8_t flipy = gb(flg, 6);
+          uint8_t flipx = get_bit(flg, 5);
+          uint8_t flipy = get_bit(flg, 6);
           uint8_t line = ly - y;
           if (sz) {
             if (flipy) line = 15 - line;
@@ -143,15 +143,15 @@ void do_scanline(struct Ppu* ppu, Mmu* mmu) {
           uint8_t ls = mmu_r_mem(mmu, idx + line + 0);
           uint8_t ms = mmu_r_mem(mmu, (uint16_t)(idx + (uint16_t)line + 1));
           uint8_t pal;
-          if (gb(flg, 4)) pal = mmu_r_mem(mmu, OBP1);
+          if (get_bit(flg, 4)) pal = mmu_r_mem(mmu, OBP1);
           else
             pal = mmu_r_mem(mmu, OBP0);
           for (int x0 = x; x0 < x + 8; x0++) {
             if (x0 < 0) continue;
             uint8_t posx = (uint8_t)7 - (uint8_t)(x0 - x);
             if (flipx) posx = 7 - posx;
-            uint8_t clr = (uint8_t)(gb(ms, posx) << 1) | gb(ls, posx);
-            if (gb(flg, 7)) {
+            uint8_t clr = (uint8_t)(get_bit(ms, posx) << 1) | get_bit(ls, posx);
+            if (get_bit(flg, 7)) {
               if (ppu->dsp[ly][x0] == gt_clr(mmu_r_mem(mmu, BGP), 0))
                 w_pxl(ppu, ly, x0, gt_clr(pal, clr));
             } else if (clr != 0)

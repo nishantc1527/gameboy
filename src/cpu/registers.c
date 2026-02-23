@@ -11,10 +11,6 @@ const uint32_t TIM_FREQ_2 = 262144;
 const uint32_t TIM_FREQ_3 = 65536;
 const uint32_t TIM_FREQ_4 = 16384;
 
-uint8_t WIN_CNT;
-uint16_t scn;
-uint8_t frame;
-
 struct Cpu* init_cpu(void) {
   struct Cpu* cpu = malloc(sizeof(struct Cpu));
   cpu->PC = 0x0000;
@@ -45,7 +41,7 @@ void update_timer(struct Cpu* cpu, Mmu* mmu, uint8_t cycles) {
     mmu_w_mem_raw(mmu, 0xFF04, div);
     cpu->div_cnt -= CPU_FREQ / DIV_FREQ;
   }
-  if (gb(mmu_r_mem(mmu, TAC), 2)) {
+  if (get_bit(mmu_r_mem(mmu, TAC), 2)) {
     cpu->tim_cnt = (uint32_t)(cpu->tim_cnt + cycles);
     while (cpu->tim_cnt >= cpu->tim_thresh) {
       uint8_t tima = mmu_r_mem(mmu, TIMA);

@@ -6,7 +6,7 @@
 void do_intr(struct Cpu* cpu, Mmu* mmu, uint8_t intr) {
   if (cpu->bIME) {
     uint8_t val = mmu_r_mem_raw(mmu, 0xFF0F);
-    cb(&val, intr);
+    clear_bit(&val, intr);
     mmu_w_mem_raw(mmu, 0xFF0F, val);
     push(cpu, mmu, cpu->PC);
     cpu->PC = cpu->intr_loc[intr];
@@ -17,7 +17,8 @@ void do_intr(struct Cpu* cpu, Mmu* mmu, uint8_t intr) {
 
 void check_interrupt(struct Cpu* cpu, Mmu* mmu) {
   for (uint8_t intr = 0; intr < 5; intr++) {
-    if (gb(mmu_r_mem(mmu, IF), intr) && gb(mmu_r_mem(mmu, IE), intr)) {
+    if (get_bit(mmu_r_mem(mmu, IF), intr) &&
+        get_bit(mmu_r_mem(mmu, IE), intr)) {
       do_intr(cpu, mmu, intr);
     }
   }
@@ -29,13 +30,13 @@ void check_interrupt_vblank_lcd(Mmu* mmu, uint8_t stat, int prev_mode,
   int req_lcd = 0;
   if (prev_mode != curr_mode) {
     if (curr_mode == 1) req_vblank = 1;
-    if (curr_mode == 0 && gb(stat, 3)) req_lcd = 1;
-    if (curr_mode == 1 && gb(stat, 4)) req_lcd = 1;
-    if (curr_mode == 2 && gb(stat, 5)) req_lcd = 1;
+    if (curr_mode == 0 && get_bit(stat, 3)) req_lcd = 1;
+    if (curr_mode == 1 && get_bit(stat, 4)) req_lcd = 1;
+    if (curr_mode == 2 && get_bit(stat, 5)) req_lcd = 1;
   }
-  int prev_lyc = gb(stat, 2);
+  int prev_lyc = get_bit(stat, 2);
   int curr_lyc = mmu_r_mem(mmu, LY) == mmu_r_mem(mmu, LYC);
-  if (prev_lyc != curr_lyc && curr_lyc && gb(stat, 6)) req_lcd = 1;
+  if (prev_lyc != curr_lyc && curr_lyc && get_bit(stat, 6)) req_lcd = 1;
   if (req_vblank) req_intr(mmu, INTR_VBLANK);
   if (req_lcd) req_intr(mmu, INTR_LCD);
 }

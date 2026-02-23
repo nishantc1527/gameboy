@@ -4,7 +4,7 @@
 #include "gbemu/ppu.h"
 #include "gbemu/sdl.h"
 
-int handle_input(struct PPU* ppu, SDL_Event* event) {
+int handle_input(struct Ppu* ppu, SDL_Event* event) {
   SDL_ConvertEventToRenderCoordinates(rnd, event);
   nk_sdl_handle_event(ctx, event);
   switch (event->type) {

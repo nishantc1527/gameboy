@@ -10,7 +10,7 @@
 
 uint32_t buf[SCRN_HEIGHT][SCRN_WIDTH];
 
-static const uint32_t pal_lut[] = {
+const uint32_t pal_lut[] = {
     [0] = ((uint32_t)(HEX_WHT >> 16) << 24) |
           ((uint32_t)((HEX_WHT >> 8) & 0xFF) << 16) |
           ((uint32_t)(HEX_WHT & 0xFF) << 8) | (uint32_t)SDL_ALPHA_OPAQUE,
@@ -28,7 +28,7 @@ static const uint32_t pal_lut[] = {
           ((uint32_t)(HEX_BLK & 0xFF) << 8) | (uint32_t)SDL_ALPHA_OPAQUE,
 };
 
-void render(struct PPU* ppu) {
+void render(struct Ppu* ppu) {
   for (int i = 0; i < SCRN_HEIGHT; i++) {
     for (int j = 0; j < SCRN_WIDTH; j++) {
       uint8_t clr = ppu->dsp[i][j];

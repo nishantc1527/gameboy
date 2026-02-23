@@ -5,7 +5,9 @@
 #include "gbemu/ppu.h"
 #include "gbemu/sdl.h"
 
+// TODO sdl state
 int win_width, win_height;
+SDL_Texture* txt = NULL;
 
 SDL_Window* win;
 SDL_Renderer* rnd;
@@ -14,8 +16,6 @@ struct nk_context* ctx;
 Uint64 perf_freq;
 Uint64 prev_time;
 Uint64 tot_ticks = 0;
-
-SDL_Texture* txt = NULL;
 
 int init_window(const char* rom_title) {
   if (!SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO)) {

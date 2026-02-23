@@ -289,7 +289,7 @@ int step(struct Cpu* cpu, Mmu* mmu, uint8_t disassemble_enable,
       case 0x06: cpu->B = rd8(cpu, mmu); return 8;
       case 0x07:
         c_rlc(cpu, &cpu->A);
-        cl_flg(cpu, FLG_Z);
+        clear_flag(cpu, FLG_Z);
         return 4;
       case 0x08: {
         uint16_t addr = rd16(cpu, mmu);
@@ -301,7 +301,7 @@ int step(struct Cpu* cpu, Mmu* mmu, uint8_t disassemble_enable,
         st_h_add16(cpu, gt_HL(cpu), gt_BC(cpu));
         st_c_add16(cpu, gt_HL(cpu), gt_BC(cpu));
         st_HL(cpu, gt_HL(cpu) + gt_BC(cpu));
-        cl_flg(cpu, FLG_N);
+        clear_flag(cpu, FLG_N);
         return 8;
       case 0x0A: cpu->A = mmu_r_mem(mmu, gt_BC(cpu)); return 8;
       case 0x0B: st_BC(cpu, gt_BC(cpu) - 1); return 8;
@@ -310,7 +310,7 @@ int step(struct Cpu* cpu, Mmu* mmu, uint8_t disassemble_enable,
       case 0x0E: cpu->C = rd8(cpu, mmu); return 8;
       case 0x0F:
         c_rrc(cpu, &cpu->A);
-        cl_flg(cpu, FLG_Z);
+        clear_flag(cpu, FLG_Z);
         return 4;
       case 0x10: return 4;
       case 0x11: st_DE(cpu, rd16(cpu, mmu)); return 12;
@@ -321,7 +321,7 @@ int step(struct Cpu* cpu, Mmu* mmu, uint8_t disassemble_enable,
       case 0x16: cpu->D = rd8(cpu, mmu); return 8;
       case 0x17:
         c_rl(cpu, &cpu->A);
-        cl_flg(cpu, FLG_Z);
+        clear_flag(cpu, FLG_Z);
         return 4;
       case 0x18: {
         int8_t offset = (int8_t)rd8(cpu, mmu);
@@ -332,7 +332,7 @@ int step(struct Cpu* cpu, Mmu* mmu, uint8_t disassemble_enable,
         st_h_add16(cpu, gt_HL(cpu), gt_DE(cpu));
         st_c_add16(cpu, gt_HL(cpu), gt_DE(cpu));
         st_HL(cpu, gt_HL(cpu) + gt_DE(cpu));
-        cl_flg(cpu, FLG_N);
+        clear_flag(cpu, FLG_N);
         return 8;
       case 0x1A: cpu->A = mmu_r_mem(mmu, gt_DE(cpu)); return 8;
       case 0x1B: st_DE(cpu, gt_DE(cpu) - 1); return 8;
@@ -341,9 +341,9 @@ int step(struct Cpu* cpu, Mmu* mmu, uint8_t disassemble_enable,
       case 0x1E: cpu->E = rd8(cpu, mmu); return 8;
       case 0x1F:
         c_rr(cpu, &cpu->A);
-        cl_flg(cpu, FLG_Z);
+        clear_flag(cpu, FLG_Z);
         return 4;
-      case 0x20: return c_jp8(cpu, mmu, 1 - gt_flg(cpu, FLG_Z));
+      case 0x20: return c_jp8(cpu, mmu, 1 - get_flag(cpu, FLG_Z));
       case 0x21: st_HL(cpu, rd16(cpu, mmu)); return 12;
       case 0x22:
         mmu_w_mem(mmu, gt_HL(cpu), cpu->A);
@@ -355,25 +355,27 @@ int step(struct Cpu* cpu, Mmu* mmu, uint8_t disassemble_enable,
       case 0x26: cpu->H = rd8(cpu, mmu); return 8;
       case 0x27:  // Taken from here:
                   // https://forums.nesdev.org/viewtopic.php?p=196282#p196282
-        if (!gt_flg(cpu, FLG_N)) {
-          if (gt_flg(cpu, FLG_C) || cpu->A > 0x99) {
+        if (!get_flag(cpu, FLG_N)) {
+          if (get_flag(cpu, FLG_C) || cpu->A > 0x99) {
             cpu->A += 0x60;
-            st_flg(cpu, FLG_C);
+            set_flag(cpu, FLG_C);
           }
-          if (gt_flg(cpu, FLG_H) || (cpu->A & 0x0f) > 0x09) { cpu->A += 0x06; }
+          if (get_flag(cpu, FLG_H) || (cpu->A & 0x0f) > 0x09) {
+            cpu->A += 0x06;
+          }
         } else {
-          if (gt_flg(cpu, FLG_C)) cpu->A -= 0x60;
-          if (gt_flg(cpu, FLG_H)) cpu->A -= 0x06;
+          if (get_flag(cpu, FLG_C)) cpu->A -= 0x60;
+          if (get_flag(cpu, FLG_H)) cpu->A -= 0x06;
         }
         st_z(cpu, cpu->A);
-        cl_flg(cpu, FLG_H);
+        clear_flag(cpu, FLG_H);
         return 4;
-      case 0x28: return c_jp8(cpu, mmu, gt_flg(cpu, FLG_Z));
+      case 0x28: return c_jp8(cpu, mmu, get_flag(cpu, FLG_Z));
       case 0x29:
         st_h_add16(cpu, gt_HL(cpu), gt_HL(cpu));
         st_c_add16(cpu, gt_HL(cpu), gt_HL(cpu));
         st_HL(cpu, gt_HL(cpu) + gt_HL(cpu));
-        cl_flg(cpu, FLG_N);
+        clear_flag(cpu, FLG_N);
         return 8;
       case 0x2A:
         cpu->A = mmu_r_mem(mmu, gt_HL(cpu));
@@ -384,7 +386,7 @@ int step(struct Cpu* cpu, Mmu* mmu, uint8_t disassemble_enable,
       case 0x2D: return c_dec(cpu, &cpu->L);
       case 0x2E: cpu->L = rd8(cpu, mmu); return 8;
       case 0x2F: return c_cpl(cpu, &cpu->A);
-      case 0x30: return c_jp8(cpu, mmu, 1 - gt_flg(cpu, FLG_C));
+      case 0x30: return c_jp8(cpu, mmu, 1 - get_flag(cpu, FLG_C));
       case 0x31: cpu->SP = rd16(cpu, mmu); return 12;
       case 0x32:
         mmu_w_mem(mmu, gt_HL(cpu), cpu->A);
@@ -395,16 +397,16 @@ int step(struct Cpu* cpu, Mmu* mmu, uint8_t disassemble_enable,
       case 0x35: return c_dec_mem(cpu, mmu, gt_HL(cpu));
       case 0x36: mmu_w_mem(mmu, gt_HL(cpu), rd8(cpu, mmu)); return 12;
       case 0x37:
-        cl_flg(cpu, FLG_N);
-        cl_flg(cpu, FLG_H);
-        st_flg(cpu, FLG_C);
+        clear_flag(cpu, FLG_N);
+        clear_flag(cpu, FLG_H);
+        set_flag(cpu, FLG_C);
         return 4;
-      case 0x38: return c_jp8(cpu, mmu, gt_flg(cpu, FLG_C));
+      case 0x38: return c_jp8(cpu, mmu, get_flag(cpu, FLG_C));
       case 0x39:
         st_h_add16(cpu, gt_HL(cpu), cpu->SP);
         st_c_add16(cpu, gt_HL(cpu), cpu->SP);
         st_HL(cpu, gt_HL(cpu) + cpu->SP);
-        cl_flg(cpu, FLG_N);
+        clear_flag(cpu, FLG_N);
         return 8;
       case 0x3A:
         cpu->A = mmu_r_mem(mmu, gt_HL(cpu));
@@ -415,11 +417,11 @@ int step(struct Cpu* cpu, Mmu* mmu, uint8_t disassemble_enable,
       case 0x3D: return c_dec(cpu, &cpu->A);
       case 0x3E: cpu->A = rd8(cpu, mmu); return 8;
       case 0x3F:
-        cl_flg(cpu, FLG_N);
-        cl_flg(cpu, FLG_H);
-        if (gt_flg(cpu, FLG_C)) cl_flg(cpu, FLG_C);
+        clear_flag(cpu, FLG_N);
+        clear_flag(cpu, FLG_H);
+        if (get_flag(cpu, FLG_C)) clear_flag(cpu, FLG_C);
         else
-          st_flg(cpu, FLG_C);
+          set_flag(cpu, FLG_C);
         return 4;
       case 0x40:
         cpu->B = cpu->B;  // NOLINT
@@ -571,35 +573,35 @@ int step(struct Cpu* cpu, Mmu* mmu, uint8_t disassemble_enable,
       case 0xBD: return c_cp(cpu, cpu->L);
       case 0xBE: c_cp(cpu, mmu_r_mem(mmu, gt_HL(cpu))); return 8;
       case 0xBF: return c_cp(cpu, cpu->A);
-      case 0xC0: return c_ret(cpu, mmu, 1 - gt_flg(cpu, FLG_Z));
+      case 0xC0: return c_ret(cpu, mmu, 1 - get_flag(cpu, FLG_Z));
       case 0xC1: st_BC(cpu, pop(cpu, mmu)); return 12;
-      case 0xC2: return c_jp16(cpu, mmu, 1 - gt_flg(cpu, FLG_Z));
+      case 0xC2: return c_jp16(cpu, mmu, 1 - get_flag(cpu, FLG_Z));
       case 0xC3: return c_jp16(cpu, mmu, 1);
-      case 0xC4: return c_call(cpu, mmu, 1 - gt_flg(cpu, FLG_Z));
+      case 0xC4: return c_call(cpu, mmu, 1 - get_flag(cpu, FLG_Z));
       case 0xC5: push(cpu, mmu, gt_BC(cpu)); return 16;
       case 0xC6: c_add(cpu, rd8(cpu, mmu)); return 8;
       case 0xC7: return c_rst(cpu, mmu, 0x0000);
-      case 0xC8: return c_ret(cpu, mmu, gt_flg(cpu, FLG_Z));
+      case 0xC8: return c_ret(cpu, mmu, get_flag(cpu, FLG_Z));
       case 0xC9: c_ret(cpu, mmu, 1); return 16;
-      case 0xCA: return c_jp16(cpu, mmu, gt_flg(cpu, FLG_Z));
-      case 0xCC: return c_call(cpu, mmu, gt_flg(cpu, FLG_Z));
+      case 0xCA: return c_jp16(cpu, mmu, get_flag(cpu, FLG_Z));
+      case 0xCC: return c_call(cpu, mmu, get_flag(cpu, FLG_Z));
       case 0xCD: return c_call(cpu, mmu, 1);
       case 0xCE: c_adc(cpu, rd8(cpu, mmu)); return 8;
       case 0xCF: return c_rst(cpu, mmu, 0x0008);
-      case 0xD0: return c_ret(cpu, mmu, 1 - gt_flg(cpu, FLG_C));
+      case 0xD0: return c_ret(cpu, mmu, 1 - get_flag(cpu, FLG_C));
       case 0xD1: st_DE(cpu, pop(cpu, mmu)); return 12;
-      case 0xD2: return c_jp16(cpu, mmu, 1 - gt_flg(cpu, FLG_C));
-      case 0xD4: return c_call(cpu, mmu, 1 - gt_flg(cpu, FLG_C));
+      case 0xD2: return c_jp16(cpu, mmu, 1 - get_flag(cpu, FLG_C));
+      case 0xD4: return c_call(cpu, mmu, 1 - get_flag(cpu, FLG_C));
       case 0xD5: push(cpu, mmu, gt_DE(cpu)); return 16;
       case 0xD6: c_sub(cpu, rd8(cpu, mmu)); return 8;
       case 0xD7: return c_rst(cpu, mmu, 0x0010);
-      case 0xD8: return c_ret(cpu, mmu, gt_flg(cpu, FLG_C));
+      case 0xD8: return c_ret(cpu, mmu, get_flag(cpu, FLG_C));
       case 0xD9:
         cpu->bIME = 1;
         c_ret(cpu, mmu, 1);
         return 16;
-      case 0xDA: return c_jp16(cpu, mmu, gt_flg(cpu, FLG_C));
-      case 0xDC: return c_call(cpu, mmu, gt_flg(cpu, FLG_C));
+      case 0xDA: return c_jp16(cpu, mmu, get_flag(cpu, FLG_C));
+      case 0xDC: return c_call(cpu, mmu, get_flag(cpu, FLG_C));
       case 0xDE: c_sbc(cpu, rd8(cpu, mmu)); return 8;
       case 0xDF: return c_rst(cpu, mmu, 0x0018);
       case 0xE0:
@@ -615,8 +617,8 @@ int step(struct Cpu* cpu, Mmu* mmu, uint8_t disassemble_enable,
         st_h_add(cpu, (uint8_t)cpu->SP, add);
         st_c_add(cpu, (uint8_t)cpu->SP, add);
         cpu->SP = (uint16_t)(cpu->SP + (int8_t)add);
-        cl_flg(cpu, FLG_Z);
-        cl_flg(cpu, FLG_N);
+        clear_flag(cpu, FLG_Z);
+        clear_flag(cpu, FLG_N);
         return 16;
       }
       case 0xE9: cpu->PC = gt_HL(cpu); return 4;
@@ -636,8 +638,8 @@ int step(struct Cpu* cpu, Mmu* mmu, uint8_t disassemble_enable,
         uint8_t nxt = rd8(cpu, mmu);
         uint16_t add = (uint16_t)(cpu->SP + (int8_t)nxt);
         st_HL(cpu, add);
-        cl_flg(cpu, FLG_Z);
-        cl_flg(cpu, FLG_N);
+        clear_flag(cpu, FLG_Z);
+        clear_flag(cpu, FLG_N);
         st_h_add(cpu, (uint8_t)cpu->SP, nxt);
         st_c_add(cpu, (uint8_t)cpu->SP, nxt);
         return 12;

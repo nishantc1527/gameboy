@@ -29,26 +29,26 @@ void update_lcd(struct Ppu* ppu, Mmu* mmu) {
   check_interrupt_vblank_lcd(mmu, stat, prev_mode, curr_mode);
   stat &= (uint8_t)~(0b11);
   stat |= curr_mode;
-  if (mmu_r_mem(mmu, LY) == mmu_r_mem(mmu, LYC)) sb(&stat, 2);
+  if (mmu_r_mem(mmu, LY) == mmu_r_mem(mmu, LYC)) set_bit(&stat, 2);
   else
-    cb(&stat, 2);
+    clear_bit(&stat, 2);
   mmu_w_mem(mmu, 0xFF41, stat);
 }
 
 int update_input(struct Ppu* ppu, Mmu* mmu) {
   uint8_t curr_joyp = mmu_r_mem(mmu, JOYP);
   curr_joyp |= 0xF;
-  if (!gb(curr_joyp, 4)) {
-    if (ppu->in[BTN_RIGHT]) cb(&curr_joyp, 0);
-    if (ppu->in[BTN_LEFT]) cb(&curr_joyp, 1);
-    if (ppu->in[BTN_UP]) cb(&curr_joyp, 2);
-    if (ppu->in[BTN_DOWN]) cb(&curr_joyp, 3);
+  if (!get_bit(curr_joyp, 4)) {
+    if (ppu->in[BTN_RIGHT]) clear_bit(&curr_joyp, 0);
+    if (ppu->in[BTN_LEFT]) clear_bit(&curr_joyp, 1);
+    if (ppu->in[BTN_UP]) clear_bit(&curr_joyp, 2);
+    if (ppu->in[BTN_DOWN]) clear_bit(&curr_joyp, 3);
   }
-  if (!gb(curr_joyp, 5)) {
-    if (ppu->in[BTN_A]) cb(&curr_joyp, 0);
-    if (ppu->in[BTN_B]) cb(&curr_joyp, 1);
-    if (ppu->in[BTN_SELECT]) cb(&curr_joyp, 2);
-    if (ppu->in[BTN_START]) cb(&curr_joyp, 3);
+  if (!get_bit(curr_joyp, 5)) {
+    if (ppu->in[BTN_A]) clear_bit(&curr_joyp, 0);
+    if (ppu->in[BTN_B]) clear_bit(&curr_joyp, 1);
+    if (ppu->in[BTN_SELECT]) clear_bit(&curr_joyp, 2);
+    if (ppu->in[BTN_START]) clear_bit(&curr_joyp, 3);
   }
   check_interrupt_joypad(mmu, mmu_r_mem(mmu, JOYP), curr_joyp);
   mmu_w_mem(mmu, 0xFF00, curr_joyp);
