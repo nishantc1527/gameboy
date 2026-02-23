@@ -1,11 +1,14 @@
+import os
+
 import pytest
 
 from core import check_stream
 
 roms = [
-    "test_roms/blargg/cpu_instrs/cpu_instrs.gb",
-    "test_roms/blargg/instr_timing/instr_timing.gb",
-]
+    os.path.join(d, f)
+    for (d, _, files) in os.walk("test_roms/blargg/cpu_instrs/individual")
+    for f in files
+] + ["test_roms/blargg/instr_timing/instr_timing.gb"]
 
 # from pathlib import Path
 # roms = list(Path("test_roms/blargg").rglob("*.gb"))

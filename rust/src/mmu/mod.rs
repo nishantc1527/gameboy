@@ -152,7 +152,7 @@ impl Mmu {
                 }
                 match loc {
                     apu_reg::NR10 => self.mem[loc as usize] | 0x80,
-                    apu_reg::NR11 => self.mem[loc as usize] | 0x3F,
+                    // apu_reg::NR11 => self.mem[loc as usize] | 0x3F,
                     apu_reg::NR12 => self.mem[loc as usize] | 0x00,
                     apu_reg::NR13 => self.mem[loc as usize] | 0xFF,
                     apu_reg::NR14 => self.mem[loc as usize] | 0xBF,

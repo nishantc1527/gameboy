@@ -1,10 +1,13 @@
+import os
+
 import pytest
 
 from core import check_out
 
 roms = [
-    "test_roms/blargg/dmg_sound/rom_singles/01-registers.gb",
-    "test_roms/blargg/dmg_sound/rom_singles/02-len ctr.gb",
+    os.path.join(d, f)
+    for (d, _, files) in os.walk("test_roms/blargg/dmg_sound/rom_singles")
+    for f in files
 ]
 
 

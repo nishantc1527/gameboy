@@ -41,14 +41,15 @@ int gbemu_step_frame(gbemu* gb) {
     upd_apu(gb->apu, gb->mmu);
     check_interrupt(gb->cpu, gb->mmu);
   }
-  if (mmu_r_mem(gb->mmu, 0xA001) == 0xDE &&
+  if (gb->test_category == TEST_BLARGG_AUDIO &&
+      mmu_r_mem(gb->mmu, 0xA001) == 0xDE &&
       mmu_r_mem(gb->mmu, 0xA002) == 0xB0 &&
       mmu_r_mem(gb->mmu, 0xA003) == 0x61) {
     uint8_t status = mmu_r_mem(gb->mmu, 0xA000);
     if (status != 0x80) {
       if (status == 0x00) printf("PASSED\n");
       else
-        printf("FAILED\n");
+        printf("FAILED %d\n", status);
       gb->bdone = 1;
     }
   }

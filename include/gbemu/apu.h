@@ -6,7 +6,7 @@
 
 struct Apu {
   uint8_t ch1_enable, ch2_enable, ch3_enable, ch4_enable;
-  uint8_t ch1_len_enable, ch1_len, ch1_len_apu_div, ch1_len_init, ch1_trigger;
+  uint8_t ch1_len_enable, ch1_len, ch1_len_apu_div, ch1_len_init;
   uint8_t div_apu;
 };
 
