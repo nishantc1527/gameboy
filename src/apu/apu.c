@@ -17,29 +17,33 @@ void upd_apu(struct Apu* apu, struct Mmu* mmu) {
     reset_apu(apu, mmu);
     return;
   }
+  uint8_t nr11 = mmu_r_mem_raw(mmu, NR11);
   uint8_t nr14 = mmu_r_mem_raw(mmu, NR14);
-  uint8_t curr_trigger = get_bit(nr14, 7);
-  if (curr_trigger && !apu->ch1_trigger) {
-    apu->ch1_trigger = 1;
+  uint8_t curr_ch1_len = nr11 & 0b111111;
+  if (get_bit(nr14, 7)) {
+    apu->ch1_len_init = curr_ch1_len;
+    if (apu->ch1_len == 0x40) { apu->ch1_len = 0; }
+    apu->ch1_len_apu_div = apu->div_apu;
     apu->ch1_enable = 1;
-    if (get_bit(nr14, 6)) {
-      apu->ch1_len_enable = 1;
-      uint8_t nr11 = mmu_r_mem_raw(mmu, NR11);
-      if (nr11 != apu->ch1_len_init) {
-        apu->ch1_len = nr11 & 0b111111;
-        apu->ch1_len_apu_div = apu->div_apu;
-      }
-    }
-  } else if (!curr_trigger && apu->ch1_trigger) {
-    apu->ch1_trigger = 0;
-    apu->ch1_enable = 0;
+    if (get_bit(nr14, 6)) apu->ch1_len_enable = 1;
+  }
+  if (apu->ch1_len_init != curr_ch1_len) {
+    apu->ch1_len = curr_ch1_len;
+    apu->ch1_len_init = curr_ch1_len;
+    apu->ch1_len_apu_div = apu->div_apu;
   }
   if (apu->ch1_enable && apu->ch1_len_enable &&
       (uint8_t)(apu->div_apu - apu->ch1_len_apu_div) >= 2) {
     apu->ch1_len++;
     apu->ch1_len_apu_div = apu->div_apu;
-    if (apu->ch1_len == 0x40) apu->ch1_enable = 0;
+    if (apu->ch1_len == 0x40) {
+      apu->ch1_enable = 0;
+      apu->ch1_len = 0;
+      apu->ch1_len_init = curr_ch1_len;
+    }
   }
+  clear_bit(&nr14, 7);
+  mmu_w_mem_raw(mmu, NR14, nr14);
   uint8_t ctrl = mmu_r_mem(mmu, NR52) & 0xF0;
   if (apu->ch1_enable) set_bit(&ctrl, 0);
   if (apu->ch2_enable) set_bit(&ctrl, 1);
@@ -49,6 +53,9 @@ void upd_apu(struct Apu* apu, struct Mmu* mmu) {
 }
 
 void reset_apu(struct Apu* apu, struct Mmu* mmu) {
+  apu->ch1_enable = apu->ch2_enable = apu->ch3_enable = apu->ch4_enable = 0;
+  apu->ch1_len_enable = 0;
+  apu->ch1_len = apu->ch1_len_init = 0;
   mmu_w_mem(mmu, NR10, 0x00);
   mmu_w_mem(mmu, NR11, 0x00);
   mmu_w_mem(mmu, NR12, 0x00);

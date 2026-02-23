@@ -1,9 +1,11 @@
 import subprocess
+
 import pytest
+
+from core import check_out
 
 roms = [
     "test_roms/mooneye-test-suite/acceptance/halt_ime0_ei.gb",
-
     "test_roms/mooneye-test-suite/emulator-only/mbc1/bits_bank1.gb",
     "test_roms/mooneye-test-suite/emulator-only/mbc1/bits_bank2.gb",
 ]
@@ -11,10 +13,9 @@ roms = [
 # from pathlib import Path
 # roms = list(Path("test_roms/mooneye-test-suite").rglob("*.gb"))
 
+
 @pytest.mark.timeout(20)
 # @pytest.mark.parametrize("rom_path", roms, ids=lambda p: p.stem)
 @pytest.mark.parametrize("rom_path", roms)
 def test_mooneye_rom(rom_path):
-    cmd = ["./build/gbemu_headless", "-r", rom_path, "--test", "mooneye"]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
-    assert "PASSED" in result.stdout, f"ROM {rom_path} FAILED:\n{result.stdout}"
+    check_out(rom_path, "mooneye")

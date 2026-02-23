@@ -9,8 +9,11 @@ mod ppu_reg;
 use std::{fs::File, io::Read, path::Path};
 
 #[repr(i8)]
+#[allow(dead_code)]
 enum TestCategory {
     Blargg = 0,
+    Mooneye = 1,
+    BlarggAudio = 2,
 }
 
 pub struct Mmu {
