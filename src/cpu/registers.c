@@ -15,8 +15,8 @@ uint8_t WIN_CNT;
 uint16_t scn;
 uint8_t frame;
 
-struct CPU* init_cpu(void) {
-  struct CPU* cpu = malloc(sizeof(struct CPU));
+struct Cpu* init_cpu(void) {
+  struct Cpu* cpu = malloc(sizeof(struct Cpu));
   cpu->PC = 0x0000;
   cpu->bHALT = 0;
   cpu->div_cnt = 0;
@@ -29,7 +29,7 @@ struct CPU* init_cpu(void) {
   return cpu;
 }
 
-void update_timer(struct CPU* cpu, Mmu* mmu, uint8_t cycles) {
+void update_timer(struct Cpu* cpu, Mmu* mmu, uint8_t cycles) {
   uint8_t val = mmu_r_mem(mmu, TAC);
   switch (val & 0b11) {
     case 0b00: cpu->tim_thresh = TIM_FREQ_1; break;

@@ -7,8 +7,8 @@
 #include "gbemu/mmu.h"
 #include "gbemu/util.h"
 
-struct PPU* init_ppu(void) {
-  struct PPU* ppu = malloc(sizeof(struct PPU));
+struct Ppu* init_ppu(void) {
+  struct Ppu* ppu = malloc(sizeof(struct Ppu));
   ppu->WIN_CNT = 0;
   ppu->scn = 0;
   ppu->frame = 0;
@@ -16,7 +16,7 @@ struct PPU* init_ppu(void) {
   return ppu;
 }
 
-void update_lcd(struct PPU* ppu, Mmu* mmu) {
+void update_lcd(struct Ppu* ppu, Mmu* mmu) {
   uint8_t stat = mmu_r_mem(mmu, LCD_STAT);
   int prev_mode = stat & 0b11;
   uint8_t curr_mode;
@@ -35,7 +35,7 @@ void update_lcd(struct PPU* ppu, Mmu* mmu) {
   mmu_w_mem(mmu, 0xFF41, stat);
 }
 
-int update_input(struct PPU* ppu, Mmu* mmu) {
+int update_input(struct Ppu* ppu, Mmu* mmu) {
   uint8_t curr_joyp = mmu_r_mem(mmu, JOYP);
   curr_joyp |= 0xF;
   if (!gb(curr_joyp, 4)) {

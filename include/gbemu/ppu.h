@@ -24,7 +24,7 @@
 
 extern const uint16_t SCANLINE_LEN, SCANLINES;
 
-struct PPU {
+struct Ppu {
   uint8_t dsp[SCRN_HEIGHT][SCRN_WIDTH];
   uint8_t WIN_CNT;
   uint16_t scn;
@@ -32,13 +32,13 @@ struct PPU {
   int in[8];
 };
 
-struct PPU* init_ppu(void);
+struct Ppu* init_ppu(void);
 
 // Handle input
-int update_input(struct PPU* ppu, Mmu* mmu);
+int update_input(struct Ppu* ppu, Mmu* mmu);
 
 // Update registers
-void update_lcd(struct PPU* ppu, Mmu* mmu);
+void update_lcd(struct Ppu* ppu, Mmu* mmu);
 
 // Perform scanline
-void do_scanline(struct PPU* ppu, Mmu* mmu);
+void do_scanline(struct Ppu* ppu, Mmu* mmu);

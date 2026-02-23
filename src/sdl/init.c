@@ -17,31 +17,28 @@ Uint64 tot_ticks = 0;
 
 SDL_Texture* txt = NULL;
 
-int init_window(const char* rom_title, uint8_t headless) {
-  if (!headless) {
-    if (!SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO)) {
-      SDL_LogError(SDL_LOG_CATEGORY_SYSTEM, "ERROR INITIALIZING SDL: %s\n",
-                   SDL_GetError());
-      return 1;
-    }
-    if (!SDL_CreateWindowAndRenderer(rom_title, SCRN_WIDTH * SCALE_X,
-                                     SCRN_HEIGHT * SCALE_Y, 0, &win, &rnd)) {
-      SDL_LogError(SDL_LOG_CATEGORY_VIDEO,
-                   "ERROR CREATING WINDOW & RENDERER: %s\n", SDL_GetError());
-      return 1;
-    }
-    SDL_GetWindowSize(win, &win_width, &win_height);
-    txt =
-        SDL_CreateTexture(rnd, SDL_PIXELFORMAT_RGBA8888,
-                          SDL_TEXTUREACCESS_STREAMING, SCRN_WIDTH, SCRN_HEIGHT);
-    SDL_SetTextureScaleMode(txt, SDL_SCALEMODE_NEAREST);
-    if (!txt) {
-      SDL_LogError(SDL_LOG_CATEGORY_ERROR, "UNABLE TO CREATE TEXTURE\n");
-      return 0;
-    }
-    ctx = nk_sdl_init(win, rnd, nk_sdl_allocator());
-    nk_sdl_style_set_debug_font(ctx);
+int init_window(const char* rom_title) {
+  if (!SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO)) {
+    SDL_LogError(SDL_LOG_CATEGORY_SYSTEM, "ERROR INITIALIZING SDL: %s\n",
+                 SDL_GetError());
+    return 1;
   }
+  if (!SDL_CreateWindowAndRenderer(rom_title, SCRN_WIDTH * SCALE_X,
+                                   SCRN_HEIGHT * SCALE_Y, 0, &win, &rnd)) {
+    SDL_LogError(SDL_LOG_CATEGORY_VIDEO,
+                 "ERROR CREATING WINDOW & RENDERER: %s\n", SDL_GetError());
+    return 1;
+  }
+  SDL_GetWindowSize(win, &win_width, &win_height);
+  txt = SDL_CreateTexture(rnd, SDL_PIXELFORMAT_RGBA8888,
+                          SDL_TEXTUREACCESS_STREAMING, SCRN_WIDTH, SCRN_HEIGHT);
+  SDL_SetTextureScaleMode(txt, SDL_SCALEMODE_NEAREST);
+  if (!txt) {
+    SDL_LogError(SDL_LOG_CATEGORY_ERROR, "UNABLE TO CREATE TEXTURE\n");
+    return 0;
+  }
+  ctx = nk_sdl_init(win, rnd, nk_sdl_allocator());
+  nk_sdl_style_set_debug_font(ctx);
   perf_freq = SDL_GetPerformanceFrequency();
   prev_time = SDL_GetPerformanceCounter();
   return 0;

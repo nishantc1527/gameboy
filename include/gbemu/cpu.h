@@ -11,7 +11,7 @@ extern const uint32_t TIM_FREQ_2;
 extern const uint32_t TIM_FREQ_3;
 extern const uint32_t TIM_FREQ_4;
 
-struct CPU {
+struct Cpu {
   uint8_t A, B, C, D, E, F, H, L;
   uint16_t PC, SP;
   uint8_t bHALT, bIME;
@@ -20,16 +20,16 @@ struct CPU {
 };
 
 // Check interrupts
-void check_interrupt(struct CPU* cpu, Mmu* mmu);
+void check_interrupt(struct Cpu* cpu, Mmu* mmu);
 void check_interrupt_vblank_lcd(Mmu* mmu, uint8_t stat, int prev_mode,
                                 int curr_mode);
 void check_interrupt_timer(Mmu* mmu, uint8_t tima);
 void check_interrupt_serial(Mmu* mmu);
 void check_interrupt_joypad(Mmu* mmu, uint8_t prev_joyp, uint8_t curr_joyp);
 
-struct CPU* init_cpu(void);
+struct Cpu* init_cpu(void);
 
-void update_timer(struct CPU* cpu, Mmu* mmu, uint8_t cycles);
+void update_timer(struct Cpu* cpu, Mmu* mmu, uint8_t cycles);
 void check_dma(Mmu* mmu);
-int step(struct CPU* cpu, Mmu* mmu, uint8_t disassemble_enable,
+int step(struct Cpu* cpu, Mmu* mmu, uint8_t disassemble_enable,
          int test_category, uint8_t* b_done);

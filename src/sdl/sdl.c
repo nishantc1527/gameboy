@@ -9,9 +9,10 @@
 #include "gbemu/pokemon.h"
 
 static SDL_AppResult usage() {
-  SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-               "Usage: gbemu [-r/--rom rom file] [-t/--test test rom category] "
-               "[-h/--headless] [-d/--disassembly]\n");
+  SDL_LogError(
+      SDL_LOG_CATEGORY_ERROR,
+      "Usage: gbemu [-r/--rom <rom file>] [-t/--test <blargg|mooneye>] "
+      "[-d/--disassembly]\n");
   return SDL_APP_FAILURE;
 }
 
@@ -19,7 +20,6 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc,
                           char* argv[] __attribute__((unused))) {
   char* rom_name = NULL;
   int test_category = -1;
-  uint8_t headless = 0;
   uint8_t disassemble_enable = 0;
 
   if (argc < 1) return usage();
@@ -36,9 +36,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc,
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "UNKNOWN TEST: %s\n", s);
         return SDL_APP_FAILURE;
       }
-    } else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--headless"))
-      headless = 1;
-    else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--disassembly"))
+    } else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--disassembly"))
       disassemble_enable = 1;
     else {
       SDL_LogError(SDL_LOG_CATEGORY_ERROR, "UNKNOWN COMMAND LINE OPTION %s\n",
@@ -51,8 +49,8 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc,
     return SDL_APP_FAILURE;
   }
   // SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "INITIALIZING\n");
-  GbEmu* gb = gbemu_init(rom_name, test_category, headless, disassemble_enable);
-  if (init_window(mmu_get_rom_title(gb->mmu), gb->headless)) {
+  gbemu* gb = gbemu_init(rom_name, test_category, disassemble_enable);
+  if (init_window(mmu_get_rom_title(gb->mmu))) {
     gbemu_free(gb);
     return SDL_APP_FAILURE;
   }
@@ -62,7 +60,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc,
 }
 
 SDL_AppResult SDL_AppIterate(void* appstate) {
-  GbEmu* gb = appstate;
+  gbemu* gb = appstate;
   if (gb->b_done) return SDL_APP_SUCCESS;
   Uint64 curr = SDL_GetPerformanceCounter();
   Uint64 elapsed = curr - prev_time;
@@ -71,26 +69,24 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
   gb->ppu->scn = 0;
   Uint64 frame_cyc = (Uint64)SCANLINE_LEN * (Uint64)SCANLINES;
   Uint64 frame_ticks = (frame_cyc * perf_freq) / CPU_FREQ;
-  if (!gb->headless && tot_ticks >= frame_ticks * 10) {
+  if (tot_ticks >= frame_ticks * 10) {
     // SDL_LogWarn(SDL_LOG_CATEGORY_RENDER, "Performance drop by %d frames\n",
     // (int)(tot_ticks / frame_ticks));
     tot_ticks = 0;
-  } else if (gb->headless || tot_ticks >= frame_ticks) {
-    if (gbemu_run_frame(gb) == -1) return SDL_APP_FAILURE;
+  } else if (tot_ticks >= frame_ticks) {
+    if (gbemu_step_frame(gb) == -1) return SDL_APP_FAILURE;
     tot_ticks -= frame_ticks;
   }
   update_input(gb->ppu, gb->mmu);
-  if (!gb->headless) {
-    render(gb->ppu);
-    // draw_ui();
-    SDL_RenderPresent(rnd);
-  }
+  render(gb->ppu);
+  // draw_ui();
+  SDL_RenderPresent(rnd);
   return SDL_APP_CONTINUE;
 }
 
 SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event) {
-  GbEmu* gb = appstate;
-  if (handle_input(gb->ppu, event, gb->headless)) return SDL_APP_SUCCESS;
+  gbemu* gb = appstate;
+  if (handle_input(gb->ppu, event)) return SDL_APP_SUCCESS;
   return SDL_APP_CONTINUE;
 }
 

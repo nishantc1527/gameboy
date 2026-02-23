@@ -6,7 +6,7 @@
 #include "gbemu/mmu.h"
 #include "internal.h"
 
-int step(struct CPU* cpu, Mmu* mmu, uint8_t disassemble_enable,
+int step(struct Cpu* cpu, Mmu* mmu, uint8_t disassemble_enable,
          int test_category, uint8_t* b_done) {
   if (cpu->bHALT) return 4;
   uint8_t instr = rd8(cpu, mmu);

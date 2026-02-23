@@ -9,9 +9,9 @@ const uint16_t SCANLINE_LEN = 456;
 const uint16_t SCANLINES = 154;
 
 uint8_t gt_clr(uint8_t pal, int val) { return (pal >> (val << 1)) & 0b11; }
-void w_pxl(struct PPU* ppu, int y, int x, uint8_t clr) { ppu->dsp[y][x] = clr; }
+void w_pxl(struct Ppu* ppu, int y, int x, uint8_t clr) { ppu->dsp[y][x] = clr; }
 
-void do_scanline(struct PPU* ppu, Mmu* mmu) {
+void do_scanline(struct Ppu* ppu, Mmu* mmu) {
   if (gb(mmu_r_mem(mmu, LCDC), 7)) {
     if (mmu_r_mem(mmu, LY) < SCRN_HEIGHT) {
       if (gb(mmu_r_mem(mmu, LCDC), 0)) {

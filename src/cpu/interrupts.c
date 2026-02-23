@@ -3,7 +3,7 @@
 #include "gbemu/util.h"
 #include "internal.h"
 
-void do_intr(struct CPU* cpu, Mmu* mmu, uint8_t intr) {
+void do_intr(struct Cpu* cpu, Mmu* mmu, uint8_t intr) {
   if (cpu->bIME) {
     uint8_t val = mmu_r_mem_raw(mmu, 0xFF0F);
     cb(&val, intr);
@@ -15,7 +15,7 @@ void do_intr(struct CPU* cpu, Mmu* mmu, uint8_t intr) {
   cpu->bIME = 0;
 }
 
-void check_interrupt(struct CPU* cpu, Mmu* mmu) {
+void check_interrupt(struct Cpu* cpu, Mmu* mmu) {
   for (uint8_t intr = 0; intr < 5; intr++) {
     if (gb(mmu_r_mem(mmu, IF), intr) && gb(mmu_r_mem(mmu, IE), intr)) {
       do_intr(cpu, mmu, intr);

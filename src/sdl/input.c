@@ -4,9 +4,9 @@
 #include "gbemu/ppu.h"
 #include "gbemu/sdl.h"
 
-int handle_input(struct PPU* ppu, SDL_Event* event, uint8_t headless) {
+int handle_input(struct PPU* ppu, SDL_Event* event) {
   SDL_ConvertEventToRenderCoordinates(rnd, event);
-  if (!headless) nk_sdl_handle_event(ctx, event);
+  nk_sdl_handle_event(ctx, event);
   switch (event->type) {
     case SDL_EVENT_QUIT: return 1;
     case SDL_EVENT_KEY_DOWN:

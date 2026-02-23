@@ -19,8 +19,8 @@ extern Uint64 tot_ticks;
 extern Uint64 prev_time;
 extern Uint64 perf_freq;
 
-int init_window(const char* rom_title, uint8_t headless);
+int init_window(const char* rom_title);
 
-int handle_input(struct PPU* ppu, SDL_Event* event, uint8_t headless);
-void render(struct PPU* ppu);
+int handle_input(struct Ppu* ppu, SDL_Event* event);
+void render(struct Ppu* ppu);
 void draw_ui(void);

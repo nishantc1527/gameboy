@@ -10,17 +10,16 @@
 #define TEST_MOONEYE 1
 
 typedef struct {
-  struct CPU* cpu;
+  struct Cpu* cpu;
   Mmu* mmu;
-  struct PPU* ppu;
+  struct Ppu* ppu;
   char* rom_name;
   int test_category;
-  uint8_t headless;
   uint8_t disassemble_enable;
   uint8_t b_done;
-} GbEmu;
+} gbemu;
 
-GbEmu* gbemu_init(char* rom_name, int test_category, uint8_t headless,
+gbemu* gbemu_init(char* rom_name, int test_category,
                   uint8_t disassemble_enable);
-int gbemu_run_frame(GbEmu* gb);
-void gbemu_free(GbEmu* gb);
+int gbemu_step_frame(gbemu* gb);
+void gbemu_free(gbemu* gb);

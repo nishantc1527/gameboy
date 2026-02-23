@@ -7,12 +7,11 @@
 #include "gbemu/ppu.h"
 #include "rom_locs.h"
 
-GbEmu* gbemu_init(char* rom_name, int test_category, uint8_t headless,
+gbemu* gbemu_init(char* rom_name, int test_category,
                   uint8_t disassemble_enable) {
-  GbEmu* gb = malloc(sizeof(GbEmu));
+  gbemu* gb = malloc(sizeof(gbemu));
   gb->rom_name = rom_name;
   gb->test_category = test_category;
-  gb->headless = headless;
   gb->disassemble_enable = disassemble_enable;
   gb->b_done = 0;
   gb->cpu = init_cpu();
@@ -22,7 +21,7 @@ GbEmu* gbemu_init(char* rom_name, int test_category, uint8_t headless,
   return gb;
 }
 
-int gbemu_run_frame(GbEmu* gb) {
+int gbemu_step_frame(gbemu* gb) {
   gb->ppu->frame = 0;
   while (!gb->ppu->frame) {
     const int cyc = step(gb->cpu, gb->mmu, gb->disassemble_enable,
@@ -41,7 +40,7 @@ int gbemu_run_frame(GbEmu* gb) {
   return 0;
 }
 
-void gbemu_free(GbEmu* gb) {
+void gbemu_free(gbemu* gb) {
   if (!gb) return;
   free(gb->cpu);
   free(gb->ppu);

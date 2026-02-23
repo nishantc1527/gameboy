@@ -5,7 +5,7 @@
 #include "gbemu/mmu.h"
 #include "internal.h"
 
-int disassemble(struct CPU* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx) {
+int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx) {
   if (!mmu_r_mem(mmu, 0xFF50)) return 0;
   printf("$%04X %02X ", cpu->PC, instr);
   if (instr == 0xCB) {
