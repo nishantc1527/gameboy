@@ -1,9 +1,8 @@
 #pragma once
 
-#include <SDL3/SDL.h>
 #include <stdint.h>
 
-#include "gbemu/cpu.h"
+#include "gbemu/mmu.h"
 
 #define BTN_A 0
 #define BTN_B 1
@@ -23,24 +22,23 @@
 #define CLR_BLK 3
 #define CLR_EXT 4
 
-extern uint8_t dsp[SCRN_HEIGHT][SCRN_WIDTH];
-
-extern uint8_t WIN_CNT;
-extern uint16_t scn;
-extern uint8_t frame;
-extern int in[8];
-
 extern const uint16_t SCANLINE_LEN, SCANLINES;
-extern uint8_t headless;
 
-// Initialize window and renderer
-void init_ppu(void);
+struct PPU {
+  uint8_t dsp[SCRN_HEIGHT][SCRN_WIDTH];
+  uint8_t WIN_CNT;
+  uint16_t scn;
+  uint8_t frame;
+  int in[8];
+};
+
+struct PPU* init_ppu(void);
 
 // Handle input
-int update_input(struct CPU* cpu);
+int update_input(struct PPU* ppu, Mmu* mmu);
 
 // Update registers
-void update_lcd(struct CPU* cpu);
+void update_lcd(struct PPU* ppu, Mmu* mmu);
 
 // Perform scanline
-void do_scanline(void);
+void do_scanline(struct PPU* ppu, Mmu* mmu);

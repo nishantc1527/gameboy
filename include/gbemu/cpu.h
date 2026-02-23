@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#include "gbemu/mmu.h"
+
 extern const uint32_t CPU_FREQ;
 extern const uint32_t DIV_FREQ;
 extern const uint32_t TIM_FREQ_1;
@@ -18,14 +20,16 @@ struct CPU {
 };
 
 // Check interrupts
-void check_interrupt(struct CPU* cpu);
-void check_interrupt_vblank_lcd(uint8_t stat, int prev_mode, int curr_mode);
-void check_interrupt_timer(uint8_t tima);
-void check_interrupt_serial(void);
-void check_interrupt_joypad(uint8_t prev_joyp, uint8_t curr_joyp);
+void check_interrupt(struct CPU* cpu, Mmu* mmu);
+void check_interrupt_vblank_lcd(Mmu* mmu, uint8_t stat, int prev_mode,
+                                int curr_mode);
+void check_interrupt_timer(Mmu* mmu, uint8_t tima);
+void check_interrupt_serial(Mmu* mmu);
+void check_interrupt_joypad(Mmu* mmu, uint8_t prev_joyp, uint8_t curr_joyp);
 
 struct CPU* init_cpu(void);
 
-void update_timer(struct CPU* cpu, uint8_t cycles);
-void check_dma(void);
-int step(struct CPU* cpu);
+void update_timer(struct CPU* cpu, Mmu* mmu, uint8_t cycles);
+void check_dma(Mmu* mmu);
+int step(struct CPU* cpu, Mmu* mmu, uint8_t disassemble_enable,
+         int test_category, uint8_t* b_done);

@@ -15,7 +15,7 @@ void do_intr(struct CPU* cpu, Mmu* mmu, uint8_t intr) {
   cpu->bIME = 0;
 }
 
-void check_interrupt(struct CPU* cpu) {
+void check_interrupt(struct CPU* cpu, Mmu* mmu) {
   for (uint8_t intr = 0; intr < 5; intr++) {
     if (gb(mmu_r_mem(mmu, IF), intr) && gb(mmu_r_mem(mmu, IE), intr)) {
       do_intr(cpu, mmu, intr);
@@ -23,7 +23,7 @@ void check_interrupt(struct CPU* cpu) {
   }
 }
 
-void check_interrupt_vblank_lcd(uint8_t stat, int prev_mode,
+void check_interrupt_vblank_lcd(Mmu* mmu, uint8_t stat, int prev_mode,
                                 int curr_mode) {
   int req_vblank = 0;
   int req_lcd = 0;
@@ -40,16 +40,16 @@ void check_interrupt_vblank_lcd(uint8_t stat, int prev_mode,
   if (req_lcd) req_intr(mmu, INTR_LCD);
 }
 
-void check_interrupt_timer(uint8_t tima) {
+void check_interrupt_timer(Mmu* mmu, uint8_t tima) {
   if (tima == 0xFF) req_intr(mmu, INTR_TIMER);
 }
 
-void check_interrupt_serial() {
+void check_interrupt_serial(Mmu* mmu) {
+  (void)mmu;
   // TODO
 }
 
-void check_interrupt_joypad(uint8_t prev_joyp,
-                            uint8_t curr_joyp) {
+void check_interrupt_joypad(Mmu* mmu, uint8_t prev_joyp, uint8_t curr_joyp) {
   int req = 0;
   for (int i = 0; i < 4; i++) {
     int prev = (prev_joyp >> i) & 1;

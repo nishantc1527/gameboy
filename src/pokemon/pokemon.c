@@ -8,12 +8,12 @@
 uint8_t pokemon_enabled;
 char* p_table[0x100];
 
-void p_init_data() {
-  p_set_checksum();
+void p_init_data(Mmu* mmu) {
+  p_set_checksum(mmu);
   p_init_table();
 }
 
-void p_get_name(char name[]) {
+void p_get_name(Mmu* mmu, char name[]) {
   const uint16_t n = 0xB;
   const uint16_t src = 0x2598;
   uint8_t enc[n];

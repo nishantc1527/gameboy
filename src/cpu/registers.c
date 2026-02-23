@@ -15,7 +15,6 @@ const uint32_t TIM_FREQ_4 = 16384;
 
 uint8_t WIN_CNT;
 uint16_t scn;
-uint32_t tim_cnt, div_cnt;
 uint8_t frame;
 
 struct CPU* init_cpu(void) {
@@ -32,7 +31,7 @@ struct CPU* init_cpu(void) {
   return cpu;
 }
 
-void update_timer(struct CPU* cpu, uint8_t cycles) {
+void update_timer(struct CPU* cpu, Mmu* mmu, uint8_t cycles) {
   uint8_t val = mmu_r_mem(mmu, TAC);
   switch (val & 0b11) {
     case 0b00: cpu->tim_thresh = TIM_FREQ_1; break;
@@ -52,7 +51,7 @@ void update_timer(struct CPU* cpu, uint8_t cycles) {
     cpu->tim_cnt = (uint32_t)(cpu->tim_cnt + cycles);
     while (cpu->tim_cnt >= cpu->tim_thresh) {
       uint8_t tima = mmu_r_mem(mmu, TIMA);
-      check_interrupt_timer(tima);
+      check_interrupt_timer(mmu, tima);
       if (tima == 0xFF) tima = mmu_r_mem(mmu, TMA);
       else
         tima++;
@@ -62,7 +61,7 @@ void update_timer(struct CPU* cpu, uint8_t cycles) {
   }
 }
 
-void check_dma(void) {
+void check_dma(Mmu* mmu) {
   if (mmu_r_mem(mmu, DMA) <= 0xDF) {
     uint16_t src = mmu_r_mem(mmu, DMA) * 0x100;
     for (uint16_t t = 0; t < 0xA0; t++) {

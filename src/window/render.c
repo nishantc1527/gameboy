@@ -28,10 +28,10 @@ static const uint32_t pal_lut[] = {
           ((uint32_t)(HEX_BLK & 0xFF) << 8) | (uint32_t)SDL_ALPHA_OPAQUE,
 };
 
-void render(void) {
+void render(struct PPU* ppu) {
   for (int i = 0; i < SCRN_HEIGHT; i++) {
     for (int j = 0; j < SCRN_WIDTH; j++) {
-      uint8_t clr = dsp[i][j];
+      uint8_t clr = ppu->dsp[i][j];
       buf[i][j] = pal_lut[clr];
     }
   }

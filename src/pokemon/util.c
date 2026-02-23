@@ -11,7 +11,7 @@ void p_string_convert(char dst[], uint16_t n, uint8_t encoded[]) {
   }
 }
 
-void p_set_checksum(void) {
+void p_set_checksum(Mmu* mmu) {
   uint8_t sum = 255;
   for (uint16_t loc = 0x2598; loc <= 0x3522; loc++)
     sum -= mmu_r_ram_raw(mmu, loc);

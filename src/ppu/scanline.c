@@ -5,15 +5,13 @@
 #include "gbemu/util.h"
 #include "internal.h"
 
-uint8_t dsp[SCRN_HEIGHT][SCRN_WIDTH];
-
 const uint16_t SCANLINE_LEN = 456;
 const uint16_t SCANLINES = 154;
 
 uint8_t gt_clr(uint8_t pal, int val) { return (pal >> (val << 1)) & 0b11; }
-void w_pxl(int y, int x, uint8_t clr) { dsp[y][x] = clr; }
+void w_pxl(struct PPU* ppu, int y, int x, uint8_t clr) { ppu->dsp[y][x] = clr; }
 
-void do_scanline(void) {
+void do_scanline(struct PPU* ppu, Mmu* mmu) {
   if (gb(mmu_r_mem(mmu, LCDC), 7)) {
     if (mmu_r_mem(mmu, LY) < SCRN_HEIGHT) {
       if (gb(mmu_r_mem(mmu, LCDC), 0)) {
@@ -44,7 +42,7 @@ void do_scanline(void) {
           uint8_t ms = mmu_r_mem(mmu, (uint16_t)(idx + (uint16_t)ty + 1));
           offx = 7 - offx;
           int clr = (gb(ms, offx) << 1) | gb(ls, offx);
-          w_pxl(ly, x, gt_clr(pal, clr));
+          w_pxl(ppu, ly, x, gt_clr(pal, clr));
         }
         if (gb(mmu_r_mem(mmu, LCDC), 5)) {
           mp_area = gb(mmu_r_mem(mmu, LCDC), 6);
@@ -53,7 +51,7 @@ void do_scanline(void) {
           if (wx < SCRN_WIDTH + 7 && wy < SCRN_HEIGHT &&
               mmu_r_mem(mmu, LY) >= wy) {
             wx = wx - 7;
-            wy = WIN_CNT;
+            wy = ppu->WIN_CNT;
             uint8_t tiley = wy / 8;
             int offy = wy % 8;
             int ty = offy << 1;
@@ -77,14 +75,14 @@ void do_scanline(void) {
                   mmu_r_mem(mmu, (uint16_t)(idx + (uint16_t)ty + (uint16_t)1));
               offx = 7 - offx;
               int clr = (gb(ms, offx) << 1) | gb(ls, offx);
-              w_pxl(ly, x, gt_clr(pal, clr));
+              w_pxl(ppu, ly, x, gt_clr(pal, clr));
             }
-            WIN_CNT++;
+            ppu->WIN_CNT++;
           }
         }
       } else {
         for (int x = 0; x < SCRN_WIDTH; x++) {
-          w_pxl(mmu_r_mem(mmu, LY), x, CLR_WHT);
+          w_pxl(ppu, mmu_r_mem(mmu, LY), x, CLR_WHT);
         }
       }
       if (gb(mmu_r_mem(mmu, LCDC), 1)) {
@@ -154,10 +152,10 @@ void do_scanline(void) {
             if (flipx) posx = 7 - posx;
             uint8_t clr = (uint8_t)(gb(ms, posx) << 1) | gb(ls, posx);
             if (gb(flg, 7)) {
-              if (dsp[ly][x0] == gt_clr(mmu_r_mem(mmu, BGP), 0))
-                w_pxl(ly, x0, gt_clr(pal, clr));
+              if (ppu->dsp[ly][x0] == gt_clr(mmu_r_mem(mmu, BGP), 0))
+                w_pxl(ppu, ly, x0, gt_clr(pal, clr));
             } else if (clr != 0)
-              w_pxl(ly, x0, gt_clr(pal, clr));
+              w_pxl(ppu, ly, x0, gt_clr(pal, clr));
           }
         }
       }
@@ -166,8 +164,8 @@ void do_scanline(void) {
     ly++;
     if (ly >= SCANLINES) {
       ly = 0;
-      WIN_CNT = 0;
-      frame = 1;
+      ppu->WIN_CNT = 0;
+      ppu->frame = 1;
     }
     mmu_w_mem(mmu, 0xFF44, ly);
   } else

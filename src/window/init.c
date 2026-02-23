@@ -3,7 +3,6 @@
 #include <stdio.h>
 
 #include "display.h"
-#include "gbemu/mmu.h"
 #include "gbemu/ppu.h"
 #include "gbemu/window.h"
 
@@ -19,15 +18,14 @@ Uint64 tot_ticks = 0;
 
 SDL_Texture* txt = NULL;
 
-int init_window(void) {
+int init_window(const char* rom_title, uint8_t headless) {
   if (!headless) {
     if (!SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO)) {
       SDL_LogError(SDL_LOG_CATEGORY_SYSTEM, "ERROR INITIALIZING SDL: %s\n",
                    SDL_GetError());
       return 1;
     }
-    if (!SDL_CreateWindowAndRenderer(mmu_get_rom_title(mmu),
-                                     SCRN_WIDTH * SCALE_X,
+    if (!SDL_CreateWindowAndRenderer(rom_title, SCRN_WIDTH * SCALE_X,
                                      SCRN_HEIGHT * SCALE_Y, 0, &win, &rnd)) {
       SDL_LogError(SDL_LOG_CATEGORY_VIDEO,
                    "ERROR CREATING WINDOW & RENDERER: %s\n", SDL_GetError());
