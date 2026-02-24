@@ -649,10 +649,7 @@ int step(struct Cpu* cpu, Mmu* mmu, uint8_t disassemble_enable,
       case 0xFB: cpu->bIME = 1; return 4;
       case 0xFE: c_cp(cpu, rd8(cpu, mmu)); return 8;
       case 0xFF: return c_rst(cpu, mmu, 0x0038);
-      default:
-        fprintf(stderr, "UNIMPLEMENTED INSTRUCTION\n");
-        disassemble(cpu, mmu, instr, 0);
-        return -1;
+      default: fprintf(stderr, "UNIMPLEMENTED INSTRUCTION\n"); return -1;
     }
   }
 }

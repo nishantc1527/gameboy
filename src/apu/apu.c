@@ -24,10 +24,9 @@ void upd_apu(struct Apu* apu, struct Mmu* mmu) {
   uint8_t nr12 = mmu_r_mem(mmu, NR12);
   uint8_t nr14 = mmu_r_mem_raw(mmu, NR14);
   uint8_t curr_ch1_len_init = nr11 & 0x3F;
-  apu->ch1_len_enable = get_bit(nr14, 6);
   if (get_bit(nr14, 7) && (nr12 & 0xF8)) {
     apu->ch1_enable = 1;
-    if (apu->ch1_len >= 0x40) {
+    if (apu->ch1_len >= 0x40 || !apu->ch1_len_enable) {
       apu->ch1_len = 0;
       apu->ch1_len_apu_div = apu->div_apu;
     }
@@ -37,12 +36,18 @@ void upd_apu(struct Apu* apu, struct Mmu* mmu) {
     apu->ch1_len_init = curr_ch1_len_init;
     apu->ch1_len_apu_div = apu->div_apu;
   }
-  if (!apu->ch1_len_enable) apu->ch1_len_apu_div = apu->div_apu;
-  if (apu->ch1_len_enable &&
-      (uint8_t)(apu->div_apu - apu->ch1_len_apu_div) >= 2) {
-    apu->ch1_len++;
+  uint8_t curr_ch1_len_enable = get_bit(nr14, 6);
+  if (!apu->ch1_len_enable && curr_ch1_len_enable &&
+      apu->div_apu == apu->ch1_len_apu_div && apu->ch1_len < 0x40) {
+    // apu->div_apu++;
+  }
+  apu->ch1_len_enable = curr_ch1_len_enable;
+  if ((uint8_t)(apu->div_apu - apu->ch1_len_apu_div) >= 2) {
     apu->ch1_len_apu_div = apu->div_apu;
-    if (apu->ch1_len >= 0x40) apu->ch1_enable = 0;
+    if (apu->ch1_len_enable) {
+      apu->ch1_len++;
+      if (apu->ch1_len >= 0x40) apu->ch1_enable = 0;
+    }
   }
   clear_bit(&nr14, 7);
   mmu_w_mem_raw(mmu, NR14, nr14);
