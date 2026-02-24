@@ -8,6 +8,8 @@ struct Apu* init_apu() {
   apu->ch1_enable = apu->ch2_enable = apu->ch3_enable = apu->ch4_enable = 0;
   apu->ch1_len_enable = 0;
   apu->ch1_len = apu->ch1_len_apu_div = apu->ch1_len_init = 0x00;
+  apu->ch2_len_enable = 0;
+  apu->ch2_len = apu->ch2_len_apu_div = apu->ch2_len_init = 0x00;
   apu->div_apu = 0x00;
   return apu;
 }
@@ -19,7 +21,7 @@ void upd_apu(struct Apu* apu, struct Mmu* mmu) {
   uint8_t nr14 = mmu_r_mem_raw(mmu, NR14);
   uint8_t curr_ch1_len_init = nr11 & 0x3F;
   apu->ch1_len_enable = get_bit(nr14, 6);
-  if (get_bit(nr14, 7) && (nr12 & 0xF8) != 0) {
+  if (get_bit(nr14, 7) && (nr12 & 0xF8)) {
     apu->ch1_enable = 1;
     if (apu->ch1_len >= 0x40) {
       apu->ch1_len = 0;
@@ -42,6 +44,36 @@ void upd_apu(struct Apu* apu, struct Mmu* mmu) {
   mmu_w_mem_raw(mmu, NR14, nr14);
   nr11 |= 0x3F;
   mmu_w_mem_raw(mmu, NR11, nr11);
+  if (nr12 <= 0x07) apu->ch1_enable = 0;
+  uint8_t nr21 = mmu_r_mem_raw(mmu, NR21);
+  uint8_t nr22 = mmu_r_mem(mmu, NR22);
+  uint8_t nr24 = mmu_r_mem_raw(mmu, NR24);
+  uint8_t curr_ch2_len_init = nr21 & 0x3F;
+  apu->ch2_len_enable = get_bit(nr24, 6);
+  if (get_bit(nr24, 7) && (nr22 & 0xF8)) {
+    apu->ch2_enable = 1;
+    if (apu->ch2_len >= 0x40) {
+      apu->ch2_len = 0;
+      apu->ch2_len_apu_div = apu->div_apu;
+    }
+  }
+  if (curr_ch2_len_init != 0x3F) {
+    apu->ch2_len = curr_ch2_len_init;
+    apu->ch2_len_init = curr_ch2_len_init;
+    apu->ch2_len_apu_div = apu->div_apu;
+  }
+  if (!apu->ch2_len_enable) apu->ch2_len_apu_div = apu->div_apu;
+  if (apu->ch2_len_enable &&
+      (uint8_t)(apu->div_apu - apu->ch2_len_apu_div) >= 2) {
+    apu->ch2_len++;
+    apu->ch2_len_apu_div = apu->div_apu;
+    if (apu->ch2_len >= 0x40) apu->ch2_enable = 0;
+  }
+  clear_bit(&nr24, 7);
+  mmu_w_mem_raw(mmu, NR24, nr24);
+  nr21 |= 0x3F;
+  mmu_w_mem_raw(mmu, NR21, nr21);
+  if (nr22 <= 0x07) apu->ch2_enable = 0;
   uint8_t ctrl = mmu_r_mem(mmu, NR52) & 0xF0;
   if (apu->ch1_enable) set_bit(&ctrl, 0);
   if (apu->ch2_enable) set_bit(&ctrl, 1);
@@ -54,6 +86,8 @@ void reset_apu(struct Apu* apu, struct Mmu* mmu) {
   apu->ch1_enable = apu->ch2_enable = apu->ch3_enable = apu->ch4_enable = 0;
   apu->ch1_len_enable = 0;
   apu->ch1_len = apu->ch1_len_init = 0x00;
+  apu->ch2_len_enable = 0;
+  apu->ch2_len = apu->ch2_len_init = 0x00;
   mmu_w_mem(mmu, NR10, 0x00);
   mmu_w_mem(mmu, NR11, 0x00);
   mmu_w_mem(mmu, NR12, 0x00);
