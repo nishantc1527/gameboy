@@ -21,6 +21,8 @@ SRC_DIR       := src
 
 INC_DIRS      := config include
 LIB_DIR       := vendor
+SDL_DIR       := sdl
+HEADLESS_DIR  := headless
 
 CFLAGS        := -O2 -std=c2x
 CPPFLAGS      := $(foreach d, $(INC_DIRS), -I$(d)) $(foreach d, $(LIB_DIR), -isystem $(d))
@@ -28,9 +30,9 @@ SDL_CFLAGS    := $(shell pkg-config --cflags sdl3)
 SDL_LDLIBS    := $(shell pkg-config --libs sdl3)
 VERIFY_FLAGS  := -Wall -Wextra -Wpedantic -Werror
 
-CORE_SRCS     := $(shell find $(SRC_DIR)/core $(SRC_DIR)/cpu $(SRC_DIR)/ppu $(SRC_DIR)/apu $(SRC_DIR)/pokemon -name "*.c")
-SDL_SRCS      := $(shell find $(SRC_DIR)/sdl -name "*.c")
-HEADLESS_SRC  := $(SRC_DIR)/headless/main.c
+CORE_SRCS     := $(shell find $(SRC_DIR) -name "*.c")
+SDL_SRCS      := $(shell find $(SDL_DIR) -name "*.c")
+HEADLESS_SRC  := $(HEADLESS_DIR)/main.c
 
 C_HDRS        := $(shell find include/gbemu/ -name "*.h")
 RUST_SRCS     := $(shell find $(RUST_DIR)/src -name "*.rs")

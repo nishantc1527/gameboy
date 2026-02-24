@@ -1,7 +1,5 @@
 #include "gbemu/apu.h"
 
-#include <stdio.h>
-
 #include "gbemu/mmu.h"
 #include "gbemu/util.h"
 
