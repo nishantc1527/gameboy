@@ -6,7 +6,8 @@
 #include "internal.h"
 
 int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
-                const uint16_t* watch_addrs, uint8_t watch_count) {
+                const uint16_t* watch_addrs, uint8_t watch_count,
+                uint64_t total_cycles) {
   if (!mmu_r_mem(mmu, 0xFF50)) return 0;
   printf("$%04X %02X ", cpu->PC, instr);
   if (instr == 0xCB) {
@@ -645,9 +646,10 @@ int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
       default: printf("UNKNOWN INSTRUCTION %02X\n", instr); return 1;
     }
   }
-  printf("A:%d F:%d B:%d C:%d D:%d E:%d H:%d L:%d SP:%d PC:%d PCMEM:%d\n",
-         cpu->A, cpu->F, cpu->B, cpu->C, cpu->D, cpu->E, cpu->H, cpu->L,
-         cpu->SP, cpu->PC, mmu_r_mem(mmu, cpu->PC));
+  printf(
+      "A:%d F:%d B:%d C:%d D:%d E:%d H:%d L:%d SP:%d PC:%d PCMEM:%d CYC:%llu\n",
+      cpu->A, cpu->F, cpu->B, cpu->C, cpu->D, cpu->E, cpu->H, cpu->L, cpu->SP,
+      cpu->PC, mmu_r_mem(mmu, cpu->PC), (unsigned long long)total_cycles);
   for (uint8_t i = 0; i < watch_count; i++)
     printf("MEM[%04X]=%02X\n", watch_addrs[i], mmu_r_mem(mmu, watch_addrs[i]));
   return 0;

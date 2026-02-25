@@ -17,11 +17,13 @@ gbemu* gbemu_init(char* rom_name, int test_category, uint8_t disassemble_enable,
   gb->disassemble_enable = disassemble_enable;
   gb->bdone = 0;
   gb->watch_count = watch_addrs ? (watch_count < 8 ? watch_count : 8) : 0;
-  for (uint8_t i = 0; i < gb->watch_count; i++) gb->watch_addrs[i] = watch_addrs[i];
+  for (uint8_t i = 0; i < gb->watch_count; i++)
+    gb->watch_addrs[i] = watch_addrs[i];
   gb->cpu = init_cpu();
   gb->mmu = mmu_init(rom_name, BOOT_ROM_FILE, (int8_t)test_category);
   gb->apu = init_apu();
   gb->ppu = init_ppu();
+  gb->total_cycles = 0;
   mmu_load(gb->mmu);
   return gb;
 }
@@ -30,9 +32,10 @@ int gbemu_step_frame(gbemu* gb) {
   gb->ppu->frame = 0;
   while (!gb->ppu->frame) {
     const int cyc = step(gb->cpu, gb->mmu, gb->apu, gb->disassemble_enable,
-                         gb->test_category, &gb->bdone,
-                         gb->watch_addrs, gb->watch_count);
+                         gb->test_category, &gb->bdone, gb->watch_addrs,
+                         gb->watch_count, gb->total_cycles);
     if (cyc == -1) return -1;
+    gb->total_cycles += (uint64_t)cyc;
     gb->ppu->scn = (uint16_t)(gb->ppu->scn + cyc);
     if (gb->ppu->scn >= SCANLINE_LEN) {
       do_scanline(gb->ppu, gb->mmu);

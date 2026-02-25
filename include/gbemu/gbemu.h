@@ -23,6 +23,7 @@ typedef struct {
   uint8_t bdone;
   uint16_t watch_addrs[8];
   uint8_t watch_count;
+  uint64_t total_cycles;
 } gbemu;
 
 gbemu* gbemu_init(char* rom_name, int test_category, uint8_t disassemble_enable,
