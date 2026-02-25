@@ -87,7 +87,7 @@ $(PYTHON):
 	$(PYTHON) -m pip install -r $(REQS)
 
 test: $(PYTHON) $(BUILD_DIR)/gbemu_headless
-	$(PYTHON) -m pytest -v -n auto
+	$(PYTHON) -m pytest
 
 verify: clean $(RUST_HDR)
 	$(FORMAT) --dry-run -Werror $(CORE_SRCS) $(SDL_SRCS) $(HEADLESS_SRC) $(C_HDRS)
