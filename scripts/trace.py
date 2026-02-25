@@ -100,7 +100,6 @@ def main():
         for line in lines[-last_n:]:
             print(line, end="")
 
-
     if around_addr:
         if not around_hits:
             print(f"Address ${around_addr} never reached.", file=sys.stderr)

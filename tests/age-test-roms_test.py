@@ -1,0 +1,20 @@
+import os
+import sys
+
+import pytest
+
+from core import check_stream
+
+roms = [
+    os.path.join(d, f)
+    for (d, _, files) in os.walk("test_roms/age-test-roms")
+    for f in files
+    if f.endswith(".gb") and "dmg" in f
+]
+
+
+@pytest.mark.skip()
+@pytest.mark.timeout(30)
+@pytest.mark.parametrize("rom", roms)
+def test_age(rom):
+    check_stream(rom, "age")

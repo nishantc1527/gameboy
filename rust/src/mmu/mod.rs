@@ -6,15 +6,8 @@ mod mbc3;
 mod no_mbc;
 mod ppu_reg;
 
+use super::TestCategory;
 use std::{fs::File, io::Read, path::Path};
-
-#[repr(i8)]
-#[allow(dead_code)]
-enum TestCategory {
-    Blargg = 0,
-    Mooneye = 1,
-    BlarggAudio = 2,
-}
 
 pub struct Mmu {
     rom_title: String,
@@ -207,11 +200,19 @@ impl Mmu {
                 if (0xE000..=0xFDFF).contains(&loc) {
                     loc -= 0x2000;
                 }
-                if self.test_category == TestCategory::Blargg as i8 && loc == 0xFF01 {
+                if (self.test_category == TestCategory::TEST_BLARGG_CPU as i8
+                    || self.test_category == TestCategory::TEST_BLARGG_AUDIO as i8
+                    || self.test_category == TestCategory::TEST_BLARGG_CPU_TIME as i8
+                    || self.test_category == TestCategory::TEST_BLARGG_MEM_TIME as i8)
+                    && loc == 0xFF01
+                {
                     print!("{}", val as char);
                 }
                 if loc == 0xFF04 {
                     self.mem[loc as usize] = 0x00;
+                } else if loc == 0xFF02 && val & 0x81 == 0x81 {
+                    self.mem[loc as usize] = val & 0x7F;
+                    self.mem[0xFF0F] |= 0x08;
                 } else {
                     self.mem[loc as usize] = val;
                 }

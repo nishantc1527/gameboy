@@ -50,8 +50,7 @@ void update_timer(struct Cpu* cpu, Mmu* mmu, struct Apu* apu, uint8_t cycles) {
       uint8_t tima = mmu_r_mem(mmu, TIMA);
       check_interrupt_timer(mmu, tima);
       if (tima == 0xFF) tima = mmu_r_mem(mmu, TMA);
-      else
-        tima++;
+      else tima++;
       mmu_w_mem(mmu, 0xFF05, tima);
       cpu->tim_cnt -= cpu->tim_thresh;
     }

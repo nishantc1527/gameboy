@@ -1,1 +1,3 @@
 language = "C"
+[export]
+include = ["TestCategory"]

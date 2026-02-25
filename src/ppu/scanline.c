@@ -30,14 +30,12 @@ void do_scanline(struct Ppu* ppu, Mmu* mmu) {  // TODO magic numbers, split up
           uint16_t idx =
               (uint16_t)((uint16_t)tiley * (uint16_t)32) + (uint16_t)tilex;
           if (mp_area == 0) idx += 0x9800;
-          else
-            idx += 0x9C00;
+          else idx += 0x9C00;
           idx = mmu_r_mem(mmu, idx);
           if (dat_area == 0) idx = (uint16_t)((int8_t)idx + (uint16_t)128);
           idx *= 16;
           if (dat_area == 0) idx += 0x8800;
-          else
-            idx += 0x8000;
+          else idx += 0x8000;
           uint8_t ls = mmu_r_mem(mmu, (uint16_t)(idx + (uint16_t)ty));
           uint8_t ms = mmu_r_mem(mmu, (uint16_t)(idx + (uint16_t)ty + 1));
           offx = 7 - offx;
@@ -62,14 +60,12 @@ void do_scanline(struct Ppu* ppu, Mmu* mmu) {  // TODO magic numbers, split up
               uint16_t idx =
                   (uint16_t)((uint16_t)tiley * (uint16_t)32) + (uint16_t)tilex;
               if (mp_area == 0) idx += 0x9800;
-              else
-                idx += 0x9C00;
+              else idx += 0x9C00;
               idx = mmu_r_mem(mmu, idx);
               if (dat_area == 0) idx = (uint16_t)((int8_t)idx + (uint16_t)128);
               idx *= 16;
               if (dat_area == 0) idx += 0x8800;
-              else
-                idx += 0x8000;
+              else idx += 0x8000;
               uint8_t ls = mmu_r_mem(mmu, idx + (uint16_t)ty);
               uint8_t ms =
                   mmu_r_mem(mmu, (uint16_t)(idx + (uint16_t)ty + (uint16_t)1));
@@ -97,8 +93,7 @@ void do_scanline(struct Ppu* ppu, Mmu* mmu) {  // TODO magic numbers, split up
           if (ly < y) continue;
           if (sz) {
             if (ly >= y + 16) continue;
-          } else if (ly >= y + 8)
-            continue;
+          } else if (ly >= y + 8) continue;
           obj[cnt++] = mem_loc;
         }
         uint16_t maxx = 0x0100;
@@ -144,8 +139,7 @@ void do_scanline(struct Ppu* ppu, Mmu* mmu) {  // TODO magic numbers, split up
           uint8_t ms = mmu_r_mem(mmu, (uint16_t)(idx + (uint16_t)line + 1));
           uint8_t pal;
           if (get_bit(flg, 4)) pal = mmu_r_mem(mmu, OBP1);
-          else
-            pal = mmu_r_mem(mmu, OBP0);
+          else pal = mmu_r_mem(mmu, OBP0);
           for (int x0 = x; x0 < x + 8; x0++) {
             if (x0 < 0) continue;
             uint8_t posx = (uint8_t)7 - (uint8_t)(x0 - x);
@@ -154,8 +148,7 @@ void do_scanline(struct Ppu* ppu, Mmu* mmu) {  // TODO magic numbers, split up
             if (get_bit(flg, 7)) {
               if (ppu->dsp[ly][x0] == gt_clr(mmu_r_mem(mmu, BGP), 0))
                 w_pxl(ppu, ly, x0, gt_clr(pal, clr));
-            } else if (clr != 0)
-              w_pxl(ppu, ly, x0, gt_clr(pal, clr));
+            } else if (clr != 0) w_pxl(ppu, ly, x0, gt_clr(pal, clr));
           }
         }
       }
@@ -168,6 +161,13 @@ void do_scanline(struct Ppu* ppu, Mmu* mmu) {  // TODO magic numbers, split up
       ppu->frame = 1;
     }
     mmu_w_mem(mmu, 0xFF44, ly);
-  } else
+  } else {
     mmu_w_mem(mmu, 0xFF44, 0);
+    ppu->WIN_CNT = 0;
+    ppu->off_scn++;
+    if (ppu->off_scn >= SCANLINES) {
+      ppu->off_scn = 0;
+      ppu->frame = 1;
+    }
+  }
 }

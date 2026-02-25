@@ -29,6 +29,7 @@ struct Ppu {
   uint8_t WIN_CNT;
   uint16_t scn;
   uint8_t frame;
+  uint8_t off_scn;
   int in[8];
 };
 

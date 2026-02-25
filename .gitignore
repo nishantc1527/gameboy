@@ -9,6 +9,6 @@ rust/target/
 compile_commands.json
 .venv/
 **/__pycache__/
-.idea/
+.zed/
 *.log
 include/rust.h

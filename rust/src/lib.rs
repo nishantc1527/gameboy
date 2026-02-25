@@ -3,6 +3,27 @@ mod mmu;
 use mmu::Mmu;
 use std::ffi::{CStr, c_char};
 
+#[repr(C)]
+pub enum TestCategory {
+    TEST_AGE,
+    TEST_BLARGG_CPU,
+    TEST_BLARGG_AUDIO,
+    TEST_BLARGG_CPU_TIME,
+    TEST_BLARGG_MEM_TIME,
+    TEST_BULLY,
+    TEST_ACID2,
+    TEST_GAMBATTE,
+    TEST_MICRO,
+    TEST_LITTLE,
+    TEST_MBC3,
+    TEST_MEALYBUG,
+    TEST_MOONEYE,
+    TEST_SAME,
+    TEST_SCRIBBLE,
+    TEST_STRIKE,
+    TEST_TURTLE,
+}
+
 #[unsafe(no_mangle)]
 extern "C" fn mmu_init(
     rom_file_name: *const c_char,

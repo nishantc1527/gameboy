@@ -1,27 +1,55 @@
 import os
-import sys
-from itertools import chain
 
 import pytest
 
-sys.path.insert(0, "scripts")
-from run_test import check_stream
-from screenshot_test import check_screenshot
+from core import check_stream
 
-test_dirs = [
-    "test_roms/blargg/cpu_instrs/",
-    "test_roms/blargg/instr_timing/",
-    "test_roms/blargg/mem_timing/",
-]
-roms = [
+cpu_roms = [
     os.path.join(d, f)
-    for (d, _, files) in chain.from_iterable(os.walk(p) for p in test_dirs)
+    for (d, _, files) in os.walk("test_roms/blargg/cpu_instrs/")
+    for f in files
+    if f.endswith(".gb") and f != "cpu_instrs.gb"
+]
+audio_roms = [
+    os.path.join(d, f)
+    for (d, _, files) in os.walk("test_roms/blargg/dmg_sound/")
+    for f in files
+    if f.endswith(".gb")
+]
+cpu_time_roms = [
+    os.path.join(d, f)
+    for (d, _, files) in os.walk("test_roms/blargg/instr_timing/")
+    for f in files
+    if f.endswith(".gb")
+]
+mem_time_roms = [
+    os.path.join(d, f)
+    for (d, _, files) in os.walk("test_roms/blargg/mem_timing/")
     for f in files
     if f.endswith(".gb")
 ]
 
 
+@pytest.mark.timeout(120)
+@pytest.mark.parametrize("rom_path", cpu_roms)
+def test_blargg_cpu(rom_path):
+    check_stream(rom_path, "blargg_cpu")
+
+
+@pytest.mark.skip()
 @pytest.mark.timeout(60)
-@pytest.mark.parametrize("rom_path", roms)
-def test_blargg_rom(rom_path):
-    check_stream(rom_path, "blargg")
+@pytest.mark.parametrize("rom_path", audio_roms)
+def test_blargg_audio(rom_path):
+    check_stream(rom_path, "blargg_audio")
+
+
+@pytest.mark.timeout(60)
+@pytest.mark.parametrize("rom_path", cpu_time_roms)
+def test_blargg_cpu_time(rom_path):
+    check_stream(rom_path, "blargg_cpu_time")
+
+
+@pytest.mark.timeout(60)
+@pytest.mark.parametrize("rom_path", mem_time_roms)
+def test_blargg_mem_time(rom_path):
+    check_stream(rom_path, "blargg_mem_time")

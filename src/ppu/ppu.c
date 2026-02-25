@@ -12,6 +12,7 @@ struct Ppu* init_ppu(void) {
   ppu->WIN_CNT = 0;
   ppu->scn = 0;
   ppu->frame = 0;
+  ppu->off_scn = 0;
   for (int i = 0; i < 8; i++) ppu->in[i] = 0;
   return ppu;
 }
@@ -21,17 +22,14 @@ void update_lcd(struct Ppu* ppu, Mmu* mmu) {
   int prev_mode = stat & 0b11;
   uint8_t curr_mode;
   if (ppu->scn <= 80) curr_mode = 2;
-  else if (ppu->scn <= 172)
-    curr_mode = 3;  // TODO length of mode 3 can change
-  else
-    curr_mode = 0;
+  else if (ppu->scn <= 172) curr_mode = 3;  // TODO length of mode 3 can change
+  else curr_mode = 0;
   if (mmu_r_mem(mmu, LY) >= SCRN_HEIGHT) curr_mode = 1;
   check_interrupt_vblank_lcd(mmu, stat, prev_mode, curr_mode);
   stat &= (uint8_t)~(0b11);
   stat |= curr_mode;
   if (mmu_r_mem(mmu, LY) == mmu_r_mem(mmu, LYC)) set_bit(&stat, 2);
-  else
-    clear_bit(&stat, 2);
+  else clear_bit(&stat, 2);
   mmu_w_mem(mmu, 0xFF41, stat);
 }
 

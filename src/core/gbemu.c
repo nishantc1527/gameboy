@@ -7,6 +7,7 @@
 #include "gbemu/cpu.h"
 #include "gbemu/mmu.h"
 #include "gbemu/ppu.h"
+#include "gbemu/util.h"
 #include "rom_locs.h"
 
 gbemu* gbemu_init(char* rom_name, int test_category, uint8_t disassemble_enable,
@@ -24,6 +25,7 @@ gbemu* gbemu_init(char* rom_name, int test_category, uint8_t disassemble_enable,
   gb->apu = init_apu();
   gb->ppu = init_ppu();
   gb->total_cycles = 0;
+  gb->total_frames = 0;
   mmu_load(gb->mmu);
   return gb;
 }
@@ -56,11 +58,41 @@ int gbemu_step_frame(gbemu* gb) {
     uint8_t status = mmu_r_mem(gb->mmu, 0xA000);
     if (status != 0x80) {
       if (status == 0x00) printf("PASSED\n");
-      else
-        printf("FAILED %d\n", status);
+      else printf("FAILED %d\n", status);
       gb->bdone = 1;
     }
   }
+  gb->total_frames++;
+  if ((gb->test_category == TEST_BLARGG_CPU ||
+       gb->test_category == TEST_BLARGG_AUDIO) &&
+      gb->total_frames >= BROM_FRAMES + 60 * 60)
+    gb->bdone = 1;
+  if ((gb->test_category == TEST_BLARGG_CPU_TIME ||
+       gb->test_category == TEST_BLARGG_MEM_TIME) &&
+      gb->total_frames >= BROM_FRAMES + 120)
+    gb->bdone = 1;
+  if (gb->test_category == TEST_BULLY && gb->total_frames >= BROM_FRAMES + 30)
+    gb->bdone = 1;
+  if (gb->test_category == TEST_GAMBATTE &&
+      gb->total_frames >= BROM_FRAMES + 15)
+    gb->bdone = 1;
+  if (gb->test_category == TEST_MICRO && gb->total_frames >= BROM_FRAMES + 10) {
+    uint8_t result = mmu_r_mem(gb->mmu, 0xFF82);
+    if (result == 0x01) printf("Passed\n");
+    else if (result == 0xFF) printf("Failed\n");
+    gb->bdone = 1;
+  }
+  if (gb->test_category == TEST_LITTLE && gb->total_frames >= BROM_FRAMES + 30)
+    gb->bdone = 1;
+  if (gb->test_category == TEST_MBC3 && gb->total_frames >= BROM_FRAMES + 60)
+    gb->bdone = 1;
+  if (gb->test_category == TEST_SCRIBBLE &&
+      gb->total_frames >= BROM_FRAMES + 10)
+    gb->bdone = 1;
+  if (gb->test_category == TEST_STRIKE && gb->total_frames >= BROM_FRAMES + 30)
+    gb->bdone = 1;
+  if (gb->test_category == TEST_TURTLE && gb->total_frames >= BROM_FRAMES + 30)
+    gb->bdone = 1;
   return 0;
 }
 
