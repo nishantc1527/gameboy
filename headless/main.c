@@ -10,7 +10,8 @@ static void usage(void) {
   fprintf(stderr,
           "Usage: gbemu_headless [-r/--rom <rom file>] [-t/--test "
           "<blargg|mooneye|blargg_audio|acid2>] "
-          "[-d/--disassembly] [-s/--screenshot <out.png>]\n");
+          "[-d/--disassembly] [-s/--screenshot <out.png>] "
+          "[-w/--watch <hex addr>]...\n");
 }
 
 static const uint8_t ACID_COLORS[5] = {0xFF, 0xAA, 0x55, 0x00, 0x00};
@@ -31,6 +32,8 @@ int main(int argc, char* argv[]) {
   char* screenshot_path = NULL;
   int test_category = -1;
   int disassemble_enable = 0;
+  uint16_t watch_addrs[8];
+  uint8_t watch_count = 0;
   for (int i = 1; i < argc; i++) {
     if ((!strcmp(argv[i], "-r") || !strcmp(argv[i], "--rom")) && i + 1 < argc)
       rom_name = argv[++i];
@@ -54,7 +57,13 @@ int main(int argc, char* argv[]) {
     else if ((!strcmp(argv[i], "-s") || !strcmp(argv[i], "--screenshot")) &&
              i + 1 < argc)
       screenshot_path = argv[++i];
-    else {
+    else if ((!strcmp(argv[i], "-w") || !strcmp(argv[i], "--watch")) &&
+             i + 1 < argc) {
+      if (watch_count < 8)
+        watch_addrs[watch_count++] = (uint16_t)strtol(argv[++i], NULL, 16);
+      else
+        i++;
+    } else {
       fprintf(stderr, "UNKNOWN COMMAND LINE OPTION: %s\n", argv[i]);
       usage();
       return 1;
@@ -70,7 +79,8 @@ int main(int argc, char* argv[]) {
     printf("MUST PROVIDE TEST FOR SCREENSHOT\n");
     return 1;
   }
-  gbemu* gb = gbemu_init(rom_name, test_category, (uint8_t)disassemble_enable);
+  gbemu* gb = gbemu_init(rom_name, test_category, (uint8_t)disassemble_enable,
+                         watch_addrs, watch_count);
   if (!gb) return 1;
   while (!gb->bdone) {
     if (gbemu_step_frame(gb) == -1) {

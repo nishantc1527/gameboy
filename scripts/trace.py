@@ -21,6 +21,7 @@ def main():
     last_n = None
     limit = None
     around_addr = None
+    watch_addrs = []
 
     i = 0
     while i < len(args):
@@ -40,11 +41,16 @@ def main():
         elif a == "--around" and i + 1 < len(args):
             around_addr = args[i + 1].upper().lstrip("$")
             i += 2
+        elif a == "--watch" and i + 1 < len(args):
+            watch_addrs.append(args[i + 1].upper().lstrip("$"))
+            i += 2
         else:
             print(f"Unknown option: {a}", file=sys.stderr)
             sys.exit(1)
 
     cmd = ["./build/gbemu_headless", "-r", rom, "--test", category, "--disassembly"]
+    for addr in watch_addrs:
+        cmd += ["--watch", addr]
     p = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
     )
@@ -52,6 +58,7 @@ def main():
     lines = []
     around_buf = deque(maxlen=20)  # lines before hit
     around_hits = []
+    after_remaining = 0
     count = 0
 
     try:
@@ -59,7 +66,8 @@ def main():
             is_instr = line.startswith("$")
 
             if around_addr and is_instr and around_addr in line.split()[0].upper():
-                around_hits.append((list(around_buf), line))
+                around_hits.append((list(around_buf), line, []))
+                after_remaining = 20
 
             if last_n is not None:
                 lines.append(line)
@@ -67,7 +75,11 @@ def main():
                 if grep_pat.search(line):
                     print(line, end="")
             elif around_addr:
-                around_buf.append(line)
+                if after_remaining > 0 and around_hits:
+                    around_hits[-1][2].append(line)
+                    after_remaining -= 1
+                else:
+                    around_buf.append(line)
             else:
                 print(line, end="")
 
@@ -91,13 +103,14 @@ def main():
     if around_addr:
         if not around_hits:
             print(f"Address ${around_addr} never reached.", file=sys.stderr)
-        for before, hit in around_hits:
+        for before, hit, after in around_hits:
             print(f"--- hit ${around_addr} ---")
             for l in before:
                 print(l, end="")
             print(hit, end="")
+            for l in after:
+                print(l, end="")
 
-            print(hit, end="")
 
 if __name__ == "__main__":
     main()

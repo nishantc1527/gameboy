@@ -7,12 +7,13 @@
 #include "internal.h"
 
 int step(struct Cpu* cpu, Mmu* mmu, struct Apu* apu, uint8_t disassemble_enable,
-         int test_category, uint8_t* b_done) {
+         int test_category, uint8_t* b_done, const uint16_t* watch_addrs,
+         uint8_t watch_count) {
   if (cpu->bHALT) return 4;
   uint8_t instr = rd8(cpu, mmu);
   if (instr == 0xCB) {
     uint8_t prfx = rd8(cpu, mmu);
-    if (disassemble_enable && disassemble(cpu, mmu, instr, prfx)) {
+    if (disassemble_enable && disassemble(cpu, mmu, instr, prfx, watch_addrs, watch_count)) {
     }  // return -1 when completing disassembler
     switch (prfx) {
       case 0x00: return c_rlc(cpu, &cpu->B);
@@ -297,11 +298,11 @@ int step(struct Cpu* cpu, Mmu* mmu, struct Apu* apu, uint8_t disassemble_enable,
       case 0xFF: return c_set(&cpu->A, 7);
       default:
         fprintf(stderr, "UNIMPLEMENTED PREFIX INSTRUCTION\n");
-        disassemble(cpu, mmu, instr, prfx);
+        disassemble(cpu, mmu, instr, prfx, watch_addrs, watch_count);
         return -1;
     }
   } else {
-    if (disassemble_enable && disassemble(cpu, mmu, instr, 0)) {
+    if (disassemble_enable && disassemble(cpu, mmu, instr, 0, watch_addrs, watch_count)) {
     }  // return -1 when completing disassembler
     switch (instr) {
       case 0x00: return 4;

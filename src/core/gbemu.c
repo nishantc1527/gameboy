@@ -9,13 +9,15 @@
 #include "gbemu/ppu.h"
 #include "rom_locs.h"
 
-gbemu* gbemu_init(char* rom_name, int test_category,
-                  uint8_t disassemble_enable) {
+gbemu* gbemu_init(char* rom_name, int test_category, uint8_t disassemble_enable,
+                  const uint16_t* watch_addrs, uint8_t watch_count) {
   gbemu* gb = malloc(sizeof(gbemu));
   gb->rom_name = rom_name;
   gb->test_category = test_category;
   gb->disassemble_enable = disassemble_enable;
   gb->bdone = 0;
+  gb->watch_count = watch_addrs ? (watch_count < 8 ? watch_count : 8) : 0;
+  for (uint8_t i = 0; i < gb->watch_count; i++) gb->watch_addrs[i] = watch_addrs[i];
   gb->cpu = init_cpu();
   gb->mmu = mmu_init(rom_name, BOOT_ROM_FILE, (int8_t)test_category);
   gb->apu = init_apu();
@@ -28,7 +30,8 @@ int gbemu_step_frame(gbemu* gb) {
   gb->ppu->frame = 0;
   while (!gb->ppu->frame) {
     const int cyc = step(gb->cpu, gb->mmu, gb->apu, gb->disassemble_enable,
-                         gb->test_category, &gb->bdone);
+                         gb->test_category, &gb->bdone,
+                         gb->watch_addrs, gb->watch_count);
     if (cyc == -1) return -1;
     gb->ppu->scn = (uint16_t)(gb->ppu->scn + cyc);
     if (gb->ppu->scn >= SCANLINE_LEN) {

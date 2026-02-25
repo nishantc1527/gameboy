@@ -21,9 +21,11 @@ typedef struct {
   int test_category;
   uint8_t disassemble_enable;
   uint8_t bdone;
+  uint16_t watch_addrs[8];
+  uint8_t watch_count;
 } gbemu;
 
-gbemu* gbemu_init(char* rom_name, int test_category,
-                  uint8_t disassemble_enable);
+gbemu* gbemu_init(char* rom_name, int test_category, uint8_t disassemble_enable,
+                  const uint16_t* watch_addrs, uint8_t watch_count);
 int gbemu_step_frame(gbemu* gb);
 void gbemu_free(gbemu* gb);

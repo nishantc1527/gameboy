@@ -35,7 +35,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc,
     return SDL_APP_FAILURE;
   }
   // SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "INITIALIZING\n");
-  gbemu* gb = gbemu_init(rom_name, -1, disassemble_enable);
+  gbemu* gb = gbemu_init(rom_name, -1, disassemble_enable, NULL, 0);
   if (init_window(mmu_get_rom_title(gb->mmu))) {
     gbemu_free(gb);
     return SDL_APP_FAILURE;
