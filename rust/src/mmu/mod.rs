@@ -200,10 +200,10 @@ impl Mmu {
                 if (0xE000..=0xFDFF).contains(&loc) {
                     loc -= 0x2000;
                 }
-                if (self.test_category == TestCategory::TEST_BLARGG_CPU as i8
-                    || self.test_category == TestCategory::TEST_BLARGG_AUDIO as i8
-                    || self.test_category == TestCategory::TEST_BLARGG_CPU_TIME as i8
-                    || self.test_category == TestCategory::TEST_BLARGG_MEM_TIME as i8)
+                if (self.test_category == TestCategory::TestBlarggCpu as i8
+                    || self.test_category == TestCategory::TestBlarggAudio as i8
+                    || self.test_category == TestCategory::TestBlarggCpuTime as i8
+                    || self.test_category == TestCategory::TestBlarggMemTime as i8)
                     && loc == 0xFF01
                 {
                     print!("{}", val as char);

@@ -51,7 +51,7 @@ int gbemu_step_frame(gbemu* gb) {
     upd_apu(gb->apu, gb->mmu);
     check_interrupt(gb->cpu, gb->mmu);
   }
-  if (gb->test_category == TEST_BLARGG_AUDIO &&
+  if (gb->test_category == TestBlarggAudio &&
       mmu_r_mem(gb->mmu, 0xA001) == 0xDE &&
       mmu_r_mem(gb->mmu, 0xA002) == 0xB0 &&
       mmu_r_mem(gb->mmu, 0xA003) == 0x61) {
@@ -63,35 +63,33 @@ int gbemu_step_frame(gbemu* gb) {
     }
   }
   gb->total_frames++;
-  if ((gb->test_category == TEST_BLARGG_CPU ||
-       gb->test_category == TEST_BLARGG_AUDIO) &&
+  if ((gb->test_category == TestBlarggCpu ||
+       gb->test_category == TestBlarggAudio) &&
       gb->total_frames >= BROM_FRAMES + 60 * 60)
     gb->bdone = 1;
-  if ((gb->test_category == TEST_BLARGG_CPU_TIME ||
-       gb->test_category == TEST_BLARGG_MEM_TIME) &&
+  if ((gb->test_category == TestBlarggCpuTime ||
+       gb->test_category == TestBlarggMemTime) &&
       gb->total_frames >= BROM_FRAMES + 120)
     gb->bdone = 1;
-  if (gb->test_category == TEST_BULLY && gb->total_frames >= BROM_FRAMES + 30)
+  if (gb->test_category == TestBully && gb->total_frames >= BROM_FRAMES + 30)
     gb->bdone = 1;
-  if (gb->test_category == TEST_GAMBATTE &&
-      gb->total_frames >= BROM_FRAMES + 15)
+  if (gb->test_category == TestGambatte && gb->total_frames >= BROM_FRAMES + 15)
     gb->bdone = 1;
-  if (gb->test_category == TEST_MICRO && gb->total_frames >= BROM_FRAMES + 10) {
+  if (gb->test_category == TestMicro && gb->total_frames >= BROM_FRAMES + 10) {
     uint8_t result = mmu_r_mem(gb->mmu, 0xFF82);
     if (result == 0x01) printf("Passed\n");
     else if (result == 0xFF) printf("Failed\n");
     gb->bdone = 1;
   }
-  if (gb->test_category == TEST_LITTLE && gb->total_frames >= BROM_FRAMES + 30)
+  if (gb->test_category == TestLittle && gb->total_frames >= BROM_FRAMES + 30)
     gb->bdone = 1;
-  if (gb->test_category == TEST_MBC3 && gb->total_frames >= BROM_FRAMES + 60)
+  if (gb->test_category == TestMbc3 && gb->total_frames >= BROM_FRAMES + 60)
     gb->bdone = 1;
-  if (gb->test_category == TEST_SCRIBBLE &&
-      gb->total_frames >= BROM_FRAMES + 10)
+  if (gb->test_category == TestScribble && gb->total_frames >= BROM_FRAMES + 10)
     gb->bdone = 1;
-  if (gb->test_category == TEST_STRIKE && gb->total_frames >= BROM_FRAMES + 30)
+  if (gb->test_category == TestStrike && gb->total_frames >= BROM_FRAMES + 30)
     gb->bdone = 1;
-  if (gb->test_category == TEST_TURTLE && gb->total_frames >= BROM_FRAMES + 30)
+  if (gb->test_category == TestTurtle && gb->total_frames >= BROM_FRAMES + 30)
     gb->bdone = 1;
   return 0;
 }

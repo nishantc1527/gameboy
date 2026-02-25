@@ -473,15 +473,14 @@ int step(struct Cpu* cpu, Mmu* mmu, struct Apu* apu, uint8_t disassemble_enable,
         return 4;
       case 0x40:
         cpu->B = cpu->B;  // NOLINT
-        if (test_category == TEST_AGE || test_category == TEST_MOONEYE ||
-            test_category == TEST_SAME) {
+        if (test_category == TestAge || test_category == TestMooneye ||
+            test_category == TestSame) {
           if (cpu->B == 3 && cpu->C == 5 && cpu->D == 8 && cpu->E == 13 &&
               cpu->H == 21 && cpu->L == 34)
             printf("Passed\n");
           else printf("Failed\n");
           *b_done = 1;
-        } else if (test_category == TEST_ACID2 ||
-                   test_category == TEST_MEALYBUG)
+        } else if (test_category == TestAcid2 || test_category == TestMealybug)
           *b_done = 1;
         return 4;
       case 0x41: cpu->B = cpu->C; return 4;

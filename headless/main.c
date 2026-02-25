@@ -34,25 +34,23 @@ int main(int argc, char* argv[]) {
     else if ((!strcmp(argv[i], "-t") || !strcmp(argv[i], "--test")) &&
              i + 1 < argc) {
       char* s = argv[++i];
-      if (!strcmp(s, "age")) test_category = TEST_AGE;
-      else if (!strcmp(s, "blargg_cpu")) test_category = TEST_BLARGG_CPU;
-      else if (!strcmp(s, "blargg_audio")) test_category = TEST_BLARGG_AUDIO;
-      else if (!strcmp(s, "blargg_cpu_time"))
-        test_category = TEST_BLARGG_CPU_TIME;
-      else if (!strcmp(s, "blargg_mem_time"))
-        test_category = TEST_BLARGG_MEM_TIME;
-      else if (!strcmp(s, "bully")) test_category = TEST_BULLY;
-      else if (!strcmp(s, "acid2")) test_category = TEST_ACID2;
-      else if (!strcmp(s, "gambatte")) test_category = TEST_GAMBATTE;
-      else if (!strcmp(s, "micro")) test_category = TEST_MICRO;
-      else if (!strcmp(s, "little")) test_category = TEST_LITTLE;
-      else if (!strcmp(s, "mbc3")) test_category = TEST_MBC3;
-      else if (!strcmp(s, "mealybug")) test_category = TEST_MEALYBUG;
-      else if (!strcmp(s, "mooneye")) test_category = TEST_MOONEYE;
-      else if (!strcmp(s, "same")) test_category = TEST_SAME;
-      else if (!strcmp(s, "scribble")) test_category = TEST_SCRIBBLE;
-      else if (!strcmp(s, "strike")) test_category = TEST_STRIKE;
-      else if (!strcmp(s, "turtle")) test_category = TEST_TURTLE;
+      if (!strcmp(s, "age")) test_category = TestAge;
+      else if (!strcmp(s, "blargg_cpu")) test_category = TestBlarggCpu;
+      else if (!strcmp(s, "blargg_audio")) test_category = TestBlarggAudio;
+      else if (!strcmp(s, "blargg_cpu_time")) test_category = TestBlarggCpuTime;
+      else if (!strcmp(s, "blargg_mem_time")) test_category = TestBlarggMemTime;
+      else if (!strcmp(s, "bully")) test_category = TestBully;
+      else if (!strcmp(s, "acid2")) test_category = TestAcid2;
+      else if (!strcmp(s, "gambatte")) test_category = TestGambatte;
+      else if (!strcmp(s, "micro")) test_category = TestMicro;
+      else if (!strcmp(s, "little")) test_category = TestLittle;
+      else if (!strcmp(s, "mbc3")) test_category = TestMbc3;
+      else if (!strcmp(s, "mealybug")) test_category = TestMealybug;
+      else if (!strcmp(s, "mooneye")) test_category = TestMooneye;
+      else if (!strcmp(s, "same")) test_category = TestSame;
+      else if (!strcmp(s, "scribble")) test_category = TestScribble;
+      else if (!strcmp(s, "strike")) test_category = TestStrike;
+      else if (!strcmp(s, "turtle")) test_category = TestTurtle;
       else {
         fprintf(stderr, "UNKNOWN TEST CATEGORY: %s\n", s);
         return 1;
