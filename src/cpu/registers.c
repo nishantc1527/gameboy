@@ -18,6 +18,7 @@ struct Cpu* init_cpu(void) {
   cpu->bHALT = 0;
   cpu->div_cnt = 0;
   cpu->tim_cnt = 0;
+  cpu->cyc_ext = 0;
   cpu->intr_loc[0] = 0x0040;
   cpu->intr_loc[1] = 0x0048;
   cpu->intr_loc[2] = 0x0050;

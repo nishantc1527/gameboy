@@ -27,7 +27,7 @@ gbemu* gbemu_init(char* rom_name, int test_category,
 int gbemu_step_frame(gbemu* gb) {
   gb->ppu->frame = 0;
   while (!gb->ppu->frame) {
-    const int cyc = step(gb->cpu, gb->mmu, gb->disassemble_enable,
+    const int cyc = step(gb->cpu, gb->mmu, gb->apu, gb->disassemble_enable,
                          gb->test_category, &gb->bdone);
     if (cyc == -1) return -1;
     gb->ppu->scn = (uint16_t)(gb->ppu->scn + cyc);
@@ -36,7 +36,9 @@ int gbemu_step_frame(gbemu* gb) {
       gb->ppu->scn -= SCANLINE_LEN;
     }
     update_lcd(gb->ppu, gb->mmu);
-    update_timer(gb->cpu, gb->mmu, gb->apu, (uint8_t)cyc);
+    uint8_t cyc_left = (uint8_t)(cyc - gb->cpu->cyc_ext);
+    gb->cpu->cyc_ext = 0;
+    update_timer(gb->cpu, gb->mmu, gb->apu, cyc_left);
     check_dma(gb->mmu);
     upd_apu(gb->apu, gb->mmu);
     check_interrupt(gb->cpu, gb->mmu);

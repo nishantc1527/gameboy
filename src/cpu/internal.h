@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 
+#include "gbemu/apu.h"
 #include "gbemu/cpu.h"
 #include "gbemu/mmu.h"
 #include "gbemu/util.h"
@@ -16,6 +17,12 @@
 #define INTR_TIMER 2
 #define INTR_SERIAL 3
 #define INTR_JOYPAD 4
+
+static inline void mem_tick(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
+                                   uint8_t pre_cycles) {
+  update_timer(cpu, mmu, apu, pre_cycles);
+  cpu->cyc_ext = (uint8_t)(cpu->cyc_ext + pre_cycles);
+}
 
 static inline uint8_t get_flag(struct Cpu* cpu, uint8_t flg) {
   return get_bit(cpu->F, flg);
@@ -188,10 +195,13 @@ static inline int c_dec(struct Cpu* cpu, uint8_t* reg) {
   return 4;
 }
 
-static inline int c_dec_mem(struct Cpu* cpu, Mmu* mmu, uint16_t loc) {
+static inline int c_dec_mem(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
+                            uint16_t loc) {
+  mem_tick(cpu, mmu, apu, 4);
   uint8_t reg = mmu_r_mem(mmu, loc);
   st_h_sub(cpu, reg, 1);
   reg = reg - 1;
+  mem_tick(cpu, mmu, apu, 4);
   mmu_w_mem(mmu, loc, reg);
   st_z(cpu, reg);
   set_flag(cpu, FLG_N);
@@ -206,10 +216,13 @@ static inline int c_inc(struct Cpu* cpu, uint8_t* reg) {
   return 4;
 }
 
-static inline int c_inc_mem(struct Cpu* cpu, Mmu* mmu, uint16_t loc) {
+static inline int c_inc_mem(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
+                            uint16_t loc) {
+  mem_tick(cpu, mmu, apu, 4);
   uint8_t reg = mmu_r_mem(mmu, loc);
   st_h_add(cpu, reg, 1);
   reg = reg + 1;
+  mem_tick(cpu, mmu, apu, 4);
   mmu_w_mem(mmu, loc, reg);
   st_z(cpu, reg);
   clear_flag(cpu, FLG_N);
@@ -248,10 +261,12 @@ static inline int c_res(uint8_t* reg, uint8_t bit) {
   return 8;
 }
 
-static inline int c_res_mem(struct Cpu* cpu, Mmu* mmu, uint16_t loc, int bit) {
-  (void)cpu;
+static inline int c_res_mem(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
+                            uint16_t loc, int bit) {
+  mem_tick(cpu, mmu, apu, 8);
   uint8_t reg = mmu_r_mem(mmu, loc);
   reg = (uint8_t)(reg & ~(1 << bit));
+  mem_tick(cpu, mmu, apu, 4);
   mmu_w_mem(mmu, loc, reg);
   return 16;
 }
@@ -274,11 +289,14 @@ static inline int c_rr(struct Cpu* cpu, uint8_t* reg) {
   return 8;
 }
 
-static inline int c_rr_mem(struct Cpu* cpu, Mmu* mmu, uint16_t loc) {
+static inline int c_rr_mem(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
+                           uint16_t loc) {
+  mem_tick(cpu, mmu, apu, 8);
   uint8_t reg = mmu_r_mem(mmu, loc);
   uint8_t carry = get_flag(cpu, FLG_C);
   st_c_rr(cpu, reg);
   reg = (uint8_t)(reg >> 1) | (uint8_t)(carry << 7);
+  mem_tick(cpu, mmu, apu, 4);
   mmu_w_mem(mmu, loc, reg);
   st_z(cpu, reg);
   clear_flag(cpu, FLG_N);
@@ -296,11 +314,14 @@ static inline int c_rrc(struct Cpu* cpu, uint8_t* reg) {
   return 8;
 }
 
-static inline int c_rrc_mem(struct Cpu* cpu, Mmu* mmu, uint16_t loc) {
+static inline int c_rrc_mem(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
+                            uint16_t loc) {
+  mem_tick(cpu, mmu, apu, 8);
   uint8_t reg = mmu_r_mem(mmu, loc);
   uint8_t carry = reg & 1;
   st_c_rr(cpu, reg);
   reg = (uint8_t)(reg >> 1) | (uint8_t)(carry << 7);
+  mem_tick(cpu, mmu, apu, 4);
   mmu_w_mem(mmu, loc, reg);
   st_z(cpu, reg);
   clear_flag(cpu, FLG_N);
@@ -318,11 +339,14 @@ static inline int c_rl(struct Cpu* cpu, uint8_t* reg) {
   return 8;
 }
 
-static inline int c_rl_mem(struct Cpu* cpu, Mmu* mmu, uint16_t loc) {
+static inline int c_rl_mem(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
+                           uint16_t loc) {
+  mem_tick(cpu, mmu, apu, 8);
   uint8_t reg = mmu_r_mem(mmu, loc);
   uint8_t carry = get_flag(cpu, FLG_C);
   st_c_rl(cpu, reg);
   reg = (uint8_t)(reg << 1) | carry;
+  mem_tick(cpu, mmu, apu, 4);
   mmu_w_mem(mmu, loc, reg);
   st_z(cpu, reg);
   clear_flag(cpu, FLG_N);
@@ -340,11 +364,14 @@ static inline int c_rlc(struct Cpu* cpu, uint8_t* reg) {
   return 8;
 }
 
-static inline int c_rlc_mem(struct Cpu* cpu, Mmu* mmu, uint16_t loc) {
+static inline int c_rlc_mem(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
+                            uint16_t loc) {
+  mem_tick(cpu, mmu, apu, 8);
   uint8_t reg = mmu_r_mem(mmu, loc);
   uint8_t carry = (reg >> 7) & 1;
   st_c_rl(cpu, reg);
   reg = (uint8_t)(reg << 1) | carry;
+  mem_tick(cpu, mmu, apu, 4);
   mmu_w_mem(mmu, loc, reg);
   st_z(cpu, reg);
   clear_flag(cpu, FLG_N);
@@ -394,12 +421,15 @@ static inline int c_srl(struct Cpu* cpu, uint8_t* reg) {
   return 8;
 }
 
-static inline int c_srl_mem(struct Cpu* cpu, Mmu* mmu, uint16_t loc) {
+static inline int c_srl_mem(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
+                            uint16_t loc) {
+  mem_tick(cpu, mmu, apu, 8);
   uint8_t reg = mmu_r_mem(mmu, loc);
   if (reg & 1) set_flag(cpu, FLG_C);
   else
     clear_flag(cpu, FLG_C);
   reg = reg >> 1;
+  mem_tick(cpu, mmu, apu, 4);
   mmu_w_mem(mmu, loc, reg);
   st_z(cpu, reg);
   clear_flag(cpu, FLG_N);
@@ -412,11 +442,12 @@ static inline int c_set(uint8_t* reg, uint8_t bit) {
   return 8;
 }
 
-static inline int c_set_mem(struct Cpu* cpu, Mmu* mmu, uint16_t loc,
-                            uint8_t bit) {
-  (void)cpu;
+static inline int c_set_mem(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
+                            uint16_t loc, uint8_t bit) {
+  mem_tick(cpu, mmu, apu, 8);
   uint8_t reg = mmu_r_mem(mmu, loc);
   set_bit(&reg, bit);
+  mem_tick(cpu, mmu, apu, 4);
   mmu_w_mem(mmu, loc, reg);
   return 16;
 }
@@ -430,10 +461,13 @@ static inline int c_sla(struct Cpu* cpu, uint8_t* reg) {
   return 8;
 }
 
-static inline int c_sla_mem(struct Cpu* cpu, Mmu* mmu, uint16_t loc) {
+static inline int c_sla_mem(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
+                            uint16_t loc) {
+  mem_tick(cpu, mmu, apu, 8);
   uint8_t reg = mmu_r_mem(mmu, loc);
   st_c_rl(cpu, reg);
   reg = (uint8_t)(reg << 1);
+  mem_tick(cpu, mmu, apu, 4);
   mmu_w_mem(mmu, loc, reg);
   st_z(cpu, reg);
   clear_flag(cpu, FLG_N);
@@ -451,11 +485,14 @@ static inline int c_sra(struct Cpu* cpu, uint8_t* reg) {
   return 8;
 }
 
-static inline int c_sra_mem(struct Cpu* cpu, Mmu* mmu, uint16_t loc) {
+static inline int c_sra_mem(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
+                            uint16_t loc) {
+  mem_tick(cpu, mmu, apu, 8);
   uint8_t reg = mmu_r_mem(mmu, loc);
   st_c_rr(cpu, reg);
   uint8_t bt = (reg >> 7) & 1;
   reg = (uint8_t)(reg >> 1) | (uint8_t)(bt << 7);
+  mem_tick(cpu, mmu, apu, 4);
   mmu_w_mem(mmu, loc, reg);
   st_z(cpu, reg);
   clear_flag(cpu, FLG_N);
@@ -472,9 +509,12 @@ static inline int c_swp(struct Cpu* cpu, uint8_t* reg) {
   return 8;
 }
 
-static inline int c_swp_mem(struct Cpu* cpu, Mmu* mmu, uint16_t loc) {
+static inline int c_swp_mem(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
+                            uint16_t loc) {
+  mem_tick(cpu, mmu, apu, 8);
   uint8_t reg = mmu_r_mem(mmu, loc);
   reg = (uint8_t)(reg >> 4) | (uint8_t)(reg << 4);
+  mem_tick(cpu, mmu, apu, 4);
   mmu_w_mem(mmu, loc, reg);
   st_z(cpu, reg);
   clear_flag(cpu, FLG_N);

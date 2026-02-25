@@ -18,9 +18,13 @@ struct Cpu {
   uint8_t bHALT, bIME;
   uint32_t tim_cnt, tim_thresh, div_cnt;
   uint16_t intr_loc[5];
+  uint8_t cyc_ext;
 };
 
-// Check interrupts
+struct Cpu* init_cpu(void);
+int step(struct Cpu* cpu, Mmu* mmu, struct Apu* apu, uint8_t disassemble_enable,
+         int test_category, uint8_t* b_done);
+
 void check_interrupt(struct Cpu* cpu, Mmu* mmu);
 void check_interrupt_vblank_lcd(Mmu* mmu, uint8_t stat, int prev_mode,
                                 int curr_mode);
@@ -28,9 +32,5 @@ void check_interrupt_timer(Mmu* mmu, uint8_t tima);
 void check_interrupt_serial(Mmu* mmu);
 void check_interrupt_joypad(Mmu* mmu, uint8_t prev_joyp, uint8_t curr_joyp);
 
-struct Cpu* init_cpu(void);
-
 void update_timer(struct Cpu* cpu, Mmu* mmu, struct Apu* apu, uint8_t cycles);
 void check_dma(Mmu* mmu);
-int step(struct Cpu* cpu, Mmu* mmu, uint8_t disassemble_enable,
-         int test_category, uint8_t* b_done);
