@@ -1,9 +1,12 @@
 import os
+import sys
 from itertools import chain
 
 import pytest
 
-from core import check_stream
+sys.path.insert(0, "scripts")
+from run_test import check_stream
+from screenshot_test import check_screenshot
 
 test_dirs = [
     "test_roms/blargg/cpu_instrs/",

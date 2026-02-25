@@ -8,7 +8,7 @@ rust/target/
 !test_roms/**/*.gb
 compile_commands.json
 .venv/
-tests/__pycache__/
+**/__pycache__/
 .idea/
 *.log
 include/rust.h

@@ -1,6 +1,9 @@
+import sys
+
 import pytest
 
-from core import check_out
+sys.path.insert(0, "scripts")
+from run_test import check_out
 
 roms = [
     "test_roms/mooneye-test-suite/acceptance/halt_ime0_ei.gb",

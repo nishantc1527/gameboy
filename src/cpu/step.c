@@ -477,6 +477,8 @@ int step(struct Cpu* cpu, Mmu* mmu, struct Apu* apu, uint8_t disassemble_enable,
           else
             printf("FAILED\n");
           *b_done = 1;
+        } else if (test_category == TEST_ACID2) {
+          *b_done = 1;
         }
         return 4;
       case 0x41: cpu->B = cpu->C; return 4;

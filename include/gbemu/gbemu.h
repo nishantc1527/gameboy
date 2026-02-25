@@ -10,6 +10,7 @@
 #define TEST_BLARGG 0
 #define TEST_MOONEYE 1
 #define TEST_BLARGG_AUDIO 2
+#define TEST_ACID2 3
 
 typedef struct {
   struct Apu* apu;
