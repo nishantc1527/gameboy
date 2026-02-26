@@ -153,8 +153,7 @@ void reset_apu(struct Apu* apu, struct Mmu* mmu) {
   apu->ch1_len_enable = apu->ch2_len_enable = apu->ch3_len_enable =
       apu->ch4_len_enable = 0;
   apu->ch1_len = apu->ch1_len_init = apu->ch2_len = apu->ch2_len_init =
-      apu->ch3_len = apu->ch3_len_init = apu->ch4_len = apu->ch4_len_init =
-          0x00;
+      apu->ch3_len = apu->ch3_len_init = 0x00;
   mmu_w_mem(mmu, NR10, 0x00);
   mmu_w_mem(mmu, NR11, 0x00);
   mmu_w_mem(mmu, NR12, 0x00);
@@ -169,7 +168,7 @@ void reset_apu(struct Apu* apu, struct Mmu* mmu) {
   mmu_w_mem(mmu, NR32, 0x00);
   mmu_w_mem(mmu, NR33, 0x00);
   mmu_w_mem(mmu, NR34, 0x00);
-  mmu_w_mem(mmu, NR41, 0x00);
+  // mmu_w_mem(mmu, NR41, 0x00);
   mmu_w_mem(mmu, NR42, 0x00);
   mmu_w_mem(mmu, NR43, 0x00);
   mmu_w_mem(mmu, NR44, 0x00);

@@ -79,6 +79,7 @@ int gbemu_step_frame(gbemu* gb) {
     uint8_t result = mmu_r_mem(gb->mmu, 0xFF82);
     if (result == 0x01) printf("Passed\n");
     else if (result == 0xFF) printf("Failed\n");
+    else printf("TEST DID NOT COMPLETE\n");
     gb->bdone = 1;
   }
   if (gb->test_category == TestLittle && gb->total_frames >= BROM_FRAMES + 30)

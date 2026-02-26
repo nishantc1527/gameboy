@@ -10,9 +10,9 @@ void do_intr(struct Cpu* cpu, Mmu* mmu, uint8_t intr) {
     mmu_w_mem_raw(mmu, 0xFF0F, val);
     push(cpu, mmu, cpu->PC);
     cpu->PC = cpu->intr_loc[intr];
-  }
+    cpu->bIME = 0;
+  } else if (cpu->bHALT) cpu->bHALT_BUG = 1;
   cpu->bHALT = 0;
-  cpu->bIME = 0;
 }
 
 void check_interrupt(struct Cpu* cpu, Mmu* mmu) {

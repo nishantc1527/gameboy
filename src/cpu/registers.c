@@ -16,6 +16,7 @@ struct Cpu* init_cpu(void) {
   struct Cpu* cpu = malloc(sizeof(struct Cpu));
   cpu->PC = 0x0000;
   cpu->bHALT = 0;
+  cpu->bHALT_BUG = 0;
   cpu->div_cnt = 0;
   cpu->tim_cnt = 0;
   cpu->cyc_ext = 0;

@@ -1,5 +1,4 @@
 import os
-import sys
 
 import pytest
 
@@ -13,7 +12,7 @@ roms = [
 ]
 
 
-@pytest.mark.skip()
+# @pytest.mark.skip()
 @pytest.mark.timeout(60)
 @pytest.mark.parametrize("rom_path", roms)
 def test_micro(rom_path):

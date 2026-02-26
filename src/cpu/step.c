@@ -6,9 +6,10 @@
 #include "gbemu/mmu.h"
 #include "internal.h"
 
-int step(struct Cpu* cpu, Mmu* mmu, struct Apu* apu, uint8_t disassemble_enable,
-         int test_category, uint8_t* b_done, const uint16_t* watch_addrs,
-         uint8_t watch_count, uint64_t total_cycles) {
+static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
+                      uint8_t disassemble_enable, int test_category,
+                      uint8_t* b_done, const uint16_t* watch_addrs,
+                      uint8_t watch_count, uint64_t total_cycles) {
   if (cpu->bHALT) return 4;
   uint8_t instr = rd8(cpu, mmu);
   if (instr == 0xCB) {
@@ -723,12 +724,20 @@ int step(struct Cpu* cpu, Mmu* mmu, struct Apu* apu, uint8_t disassemble_enable,
         uint8_t n = rd8(cpu, mmu);
         mem_tick(cpu, mmu, apu, 8);
         mmu_w_mem(mmu, 0xFF00 + (uint16_t)n, cpu->A);
+        if (n == 0x04) {
+          cpu->div_cnt = 0;
+          cpu->tim_cnt = 0;
+        }
         return 12;
       }
       case 0xE1: st_HL(cpu, pop(cpu, mmu)); return 12;
       case 0xE2:
         mem_tick(cpu, mmu, apu, 4);
         mmu_w_mem(mmu, 0xFF00 + cpu->C, cpu->A);
+        if (cpu->C == 0x04) {
+          cpu->div_cnt = 0;
+          cpu->tim_cnt = 0;
+        }
         return 8;
       case 0xE5: push(cpu, mmu, gt_HL(cpu)); return 16;
       case 0xE6: c_and(cpu, rd8(cpu, mmu)); return 8;
@@ -747,6 +756,10 @@ int step(struct Cpu* cpu, Mmu* mmu, struct Apu* apu, uint8_t disassemble_enable,
         uint16_t addr = rd16(cpu, mmu);
         mem_tick(cpu, mmu, apu, 12);
         mmu_w_mem(mmu, addr, cpu->A);
+        if (addr == 0xFF04) {
+          cpu->div_cnt = 0;
+          cpu->tim_cnt = 0;
+        }
         return 16;
       }
       case 0xEE: c_xor(cpu, rd8(cpu, mmu)); return 8;
@@ -789,4 +802,16 @@ int step(struct Cpu* cpu, Mmu* mmu, struct Apu* apu, uint8_t disassemble_enable,
       default: fprintf(stderr, "UNIMPLEMENTED INSTRUCTION\n"); return -1;
     }
   }
+}
+
+int step(struct Cpu* cpu, Mmu* mmu, struct Apu* apu, uint8_t disassemble_enable,
+         int test_category, uint8_t* b_done, const uint16_t* watch_addrs,
+         uint8_t watch_count, uint64_t total_cycles) {
+  uint16_t pc_before = cpu->PC;
+  uint8_t halt_bug = cpu->bHALT_BUG;
+  cpu->bHALT_BUG = 0;
+  int cyc = step_inner(cpu, mmu, apu, disassemble_enable, test_category, b_done,
+                       watch_addrs, watch_count, total_cycles);
+  if (halt_bug) cpu->PC = pc_before;
+  return cyc;
 }
