@@ -59,6 +59,12 @@ void upd_apu(struct Apu* apu, struct Mmu* mmu) {
   apu->apu_on = curr_apu_on;
 
   if (!curr_apu_on) {
+    uint8_t nr11 = mmu_r_mem_raw(mmu, NR11);
+    if ((nr11 & 0x3F) != 0x3F) apu->ch1_len = nr11 & 0x3F;
+    uint8_t nr21 = mmu_r_mem_raw(mmu, NR21);
+    if ((nr21 & 0x3F) != 0x3F) apu->ch2_len = nr21 & 0x3F;
+    uint8_t nr31 = mmu_r_mem_raw(mmu, NR31);
+    if (nr31 != 0xFF) apu->ch3_len = nr31;
     uint8_t nr41 = mmu_r_mem_raw(mmu, NR41);
     apu->ch4_len = nr41 & 0x3F;
     apu->length_clock = 0;
