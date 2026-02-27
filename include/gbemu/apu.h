@@ -17,6 +17,7 @@ struct Apu {
   uint8_t sweep_timer;
   uint8_t sweep_enable;
   uint8_t sweep_neg_used;
+  uint8_t ch_len_dirty;
 };
 
 struct Apu* init_apu();

@@ -3,6 +3,8 @@
 #include "gbemu/mmu.h"
 #include "gbemu/util.h"
 
+#define NR_LEN_DIRTY 0xFF4C
+
 struct Apu* init_apu() {
   struct Apu* apu = malloc(sizeof(struct Apu));
   apu->ch1_enable = apu->ch2_enable = apu->ch3_enable = apu->ch4_enable = 0;
@@ -18,6 +20,7 @@ struct Apu* init_apu() {
   apu->sweep_timer = 0;
   apu->sweep_enable = 0;
   apu->sweep_neg_used = 0;
+  apu->ch_len_dirty = 0;
   return apu;
 }
 
@@ -58,15 +61,26 @@ void upd_apu(struct Apu* apu, struct Mmu* mmu) {
   }
   apu->apu_on = curr_apu_on;
 
+  uint8_t len_dirty = mmu_r_mem_raw(mmu, NR_LEN_DIRTY);
+  mmu_w_mem_raw(mmu, NR_LEN_DIRTY, 0x00);
+
   if (!curr_apu_on) {
-    uint8_t nr11 = mmu_r_mem_raw(mmu, NR11);
-    if ((nr11 & 0x3F) != 0x3F) apu->ch1_len = nr11 & 0x3F;
-    uint8_t nr21 = mmu_r_mem_raw(mmu, NR21);
-    if ((nr21 & 0x3F) != 0x3F) apu->ch2_len = nr21 & 0x3F;
-    uint8_t nr31 = mmu_r_mem_raw(mmu, NR31);
-    if (nr31 != 0xFF) apu->ch3_len = nr31;
-    uint8_t nr41 = mmu_r_mem_raw(mmu, NR41);
-    apu->ch4_len = nr41 & 0x3F;
+    if (len_dirty & 0x01) {
+      uint8_t nr11 = mmu_r_mem_raw(mmu, NR11);
+      apu->ch1_len = nr11 & 0x3F;
+    }
+    if (len_dirty & 0x02) {
+      uint8_t nr21 = mmu_r_mem_raw(mmu, NR21);
+      apu->ch2_len = nr21 & 0x3F;
+    }
+    if (len_dirty & 0x04) {
+      uint8_t nr31 = mmu_r_mem_raw(mmu, NR31);
+      apu->ch3_len = nr31;
+    }
+    if (len_dirty & 0x08) {
+      uint8_t nr41 = mmu_r_mem_raw(mmu, NR41);
+      apu->ch4_len = nr41 & 0x3F;
+    }
     apu->length_clock = 0;
     apu->sweep_clock = 0;
     return;
@@ -79,20 +93,27 @@ void upd_apu(struct Apu* apu, struct Mmu* mmu) {
   uint8_t nr14 = mmu_r_mem_raw(mmu, NR14);
   uint8_t curr_ch1_len_enable = get_bit(nr14, 6);
   uint8_t ch1_triggered = get_bit(nr14, 7);
-  if ((nr11 & 0x3F) != 0x3F) apu->ch1_len = nr11 & 0x3F;
-  if (ch1_triggered && (nr12 & 0xF8)) {
-    apu->ch1_enable = 1;
-    if (apu->ch1_len >= 0x40) apu->ch1_len = 0;
-    uint8_t pace = (nr10 >> 4) & 0x07;
-    uint8_t shift = nr10 & 0x07;
-    apu->sweep_freq = ((uint16_t)(nr14 & 0x07) << 8) | nr13;
-    apu->sweep_timer = (pace != 0) ? pace : 8;
-    apu->sweep_enable = (pace != 0 || shift != 0) ? 1 : 0;
-    apu->sweep_neg_used = 0;
-    if (shift != 0) {
-      uint8_t overflow = 0;
-      sweep_calc(apu, nr10, &overflow);
-      if (overflow) apu->ch1_enable = 0;
+  if ((len_dirty & 0x01) || (nr11 & 0x3F) != 0x3F) apu->ch1_len = nr11 & 0x3F;
+  if (!apu->ch1_len_enable && curr_ch1_len_enable && (apu->div_apu & 1) == 0) {
+    if (clock_length_u8(&apu->ch1_len, 0x40)) apu->ch1_enable = 0;
+  }
+  if (ch1_triggered) {
+    if (apu->ch1_len >= 0x40) {
+      apu->ch1_len = (curr_ch1_len_enable && (apu->div_apu & 1) == 0) ? 1 : 0;
+    }
+    if (nr12 & 0xF8) {
+      apu->ch1_enable = 1;
+      uint8_t pace = (nr10 >> 4) & 0x07;
+      uint8_t shift = nr10 & 0x07;
+      apu->sweep_freq = ((uint16_t)(nr14 & 0x07) << 8) | nr13;
+      apu->sweep_timer = (pace != 0) ? pace : 8;
+      apu->sweep_enable = (pace != 0 || shift != 0) ? 1 : 0;
+      apu->sweep_neg_used = 0;
+      if (shift != 0) {
+        uint8_t overflow = 0;
+        sweep_calc(apu, nr10, &overflow);
+        if (overflow) apu->ch1_enable = 0;
+      }
     }
   }
   apu->ch1_len_enable = curr_ch1_len_enable;
@@ -138,10 +159,15 @@ void upd_apu(struct Apu* apu, struct Mmu* mmu) {
   uint8_t nr24 = mmu_r_mem_raw(mmu, NR24);
   uint8_t curr_ch2_len_enable = get_bit(nr24, 6);
   uint8_t ch2_triggered = get_bit(nr24, 7);
-  if ((nr21 & 0x3F) != 0x3F) apu->ch2_len = nr21 & 0x3F;
-  if (ch2_triggered && (nr22 & 0xF8)) {
-    apu->ch2_enable = 1;
-    if (apu->ch2_len >= 0x40) apu->ch2_len = 0;
+  if ((len_dirty & 0x02) || (nr21 & 0x3F) != 0x3F) apu->ch2_len = nr21 & 0x3F;
+  if (!apu->ch2_len_enable && curr_ch2_len_enable && (apu->div_apu & 1) == 0) {
+    if (clock_length_u8(&apu->ch2_len, 0x40)) apu->ch2_enable = 0;
+  }
+  if (ch2_triggered) {
+    if (apu->ch2_len >= 0x40) {
+      apu->ch2_len = (curr_ch2_len_enable && (apu->div_apu & 1) == 0) ? 1 : 0;
+    }
+    if (nr22 & 0xF8) apu->ch2_enable = 1;
   }
   apu->ch2_len_enable = curr_ch2_len_enable;
   if (apu->length_clock && apu->ch2_len_enable) {
@@ -157,10 +183,15 @@ void upd_apu(struct Apu* apu, struct Mmu* mmu) {
   uint8_t nr34 = mmu_r_mem_raw(mmu, NR34);
   uint8_t curr_ch3_len_enable = get_bit(nr34, 6);
   uint8_t ch3_triggered = get_bit(nr34, 7);
-  if (nr31 != 0xFF) apu->ch3_len = nr31;
-  if (ch3_triggered && (nr30 & 0x80)) {
-    apu->ch3_enable = 1;
-    if (apu->ch3_len >= 0x100) apu->ch3_len = 0;
+  if ((len_dirty & 0x04) || nr31 != 0xFF) apu->ch3_len = nr31;
+  if (!apu->ch3_len_enable && curr_ch3_len_enable && (apu->div_apu & 1) == 0) {
+    if (clock_length_u16(&apu->ch3_len, 0x100)) apu->ch3_enable = 0;
+  }
+  if (ch3_triggered) {
+    if (apu->ch3_len >= 0x100) {
+      apu->ch3_len = (curr_ch3_len_enable && (apu->div_apu & 1) == 0) ? 1 : 0;
+    }
+    if (nr30 & 0x80) apu->ch3_enable = 1;
   }
   apu->ch3_len_enable = curr_ch3_len_enable;
   if (apu->length_clock && apu->ch3_len_enable) {
@@ -175,10 +206,15 @@ void upd_apu(struct Apu* apu, struct Mmu* mmu) {
   uint8_t nr44 = mmu_r_mem_raw(mmu, NR44);
   uint8_t curr_ch4_len_enable = get_bit(nr44, 6);
   uint8_t ch4_triggered = get_bit(nr44, 7);
-  if ((nr41 & 0x3F) != 0x3F) apu->ch4_len = nr41 & 0x3F;
-  if (ch4_triggered && (nr42 & 0xF8)) {
-    apu->ch4_enable = 1;
-    if (apu->ch4_len >= 0x40) apu->ch4_len = 0;
+  if ((len_dirty & 0x08) || (nr41 & 0x3F) != 0x3F) apu->ch4_len = nr41 & 0x3F;
+  if (!apu->ch4_len_enable && curr_ch4_len_enable && (apu->div_apu & 1) == 0) {
+    if (clock_length_u8(&apu->ch4_len, 0x40)) apu->ch4_enable = 0;
+  }
+  if (ch4_triggered) {
+    if (apu->ch4_len >= 0x40) {
+      apu->ch4_len = (curr_ch4_len_enable && (apu->div_apu & 1) == 0) ? 1 : 0;
+    }
+    if (nr42 & 0xF8) apu->ch4_enable = 1;
   }
   apu->ch4_len_enable = curr_ch4_len_enable;
   if (apu->length_clock && apu->ch4_len_enable) {

@@ -212,8 +212,11 @@ impl Mmu {
                 {
                     if loc == 0xFF11 || loc == 0xFF16 {
                         self.mem[loc as usize] = val & 0x3F;
+                        let bit: u8 = if loc == 0xFF11 { 0x01 } else { 0x02 };
+                        self.mem[0xFF4C] |= bit;
                     } else if loc == 0xFF1B {
                         self.mem[loc as usize] = val;
+                        self.mem[0xFF4C] |= 0x04;
                     }
                 } else if loc == 0xFF04 {
                     self.mem[loc as usize] = 0x00;
@@ -221,6 +224,13 @@ impl Mmu {
                     self.mem[loc as usize] = val & 0x7F;
                     self.mem[0xFF0F] |= 0x08;
                 } else {
+                    match loc {
+                        0xFF11 => self.mem[0xFF4C] |= 0x01,
+                        0xFF16 => self.mem[0xFF4C] |= 0x02,
+                        0xFF1B => self.mem[0xFF4C] |= 0x04,
+                        0xFF20 => self.mem[0xFF4C] |= 0x08,
+                        _ => {}
+                    }
                     self.mem[loc as usize] = val;
                 }
             }
