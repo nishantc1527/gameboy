@@ -145,7 +145,7 @@ impl Mmu {
                 }
                 match loc {
                     apu_reg::NR10 => self.mem[loc as usize] | 0x80,
-                    // apu_reg::NR11 => self.mem[loc as usize] | 0x3F,
+                    apu_reg::NR11 => self.mem[loc as usize] | 0x3F,
                     apu_reg::NR12 => self.mem[loc as usize] | 0x00,
                     apu_reg::NR13 => self.mem[loc as usize] | 0xFF,
                     apu_reg::NR14 => self.mem[loc as usize] | 0xBF,
@@ -208,7 +208,9 @@ impl Mmu {
                 {
                     print!("{}", val as char);
                 }
-                if loc == 0xFF04 {
+                if (0xFF10..0xFF26).contains(&loc) && loc != 0xFF20 && self.mem[0xFF26] & 0x80 == 0
+                {
+                } else if loc == 0xFF04 {
                     self.mem[loc as usize] = 0x00;
                 } else if loc == 0xFF02 && val & 0x81 == 0x81 {
                     self.mem[loc as usize] = val & 0x7F;

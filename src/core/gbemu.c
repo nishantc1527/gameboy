@@ -57,8 +57,8 @@ int gbemu_step_frame(gbemu* gb) {
       mmu_r_mem(gb->mmu, 0xA003) == 0x61) {
     uint8_t status = mmu_r_mem(gb->mmu, 0xA000);
     if (status != 0x80) {
-      if (status == 0x00) printf("PASSED\n");
-      else printf("FAILED %d\n", status);
+      if (status == 0x00) printf("Passed\n");
+      else printf("Failed %d\n", status);
       gb->bdone = 1;
     }
   }

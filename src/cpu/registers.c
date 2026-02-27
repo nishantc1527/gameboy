@@ -41,7 +41,11 @@ void update_timer(struct Cpu* cpu, Mmu* mmu, struct Apu* apu, uint8_t cycles) {
   while (cpu->div_cnt >= CPU_FREQ / DIV_FREQ) {
     uint8_t div = mmu_r_mem(mmu, DIV);
     div++;
-    if (get_bit(mmu_r_mem(mmu, DIV), 4) && !get_bit(div, 4)) apu->div_apu++;
+    if (get_bit(mmu_r_mem(mmu, DIV), 4) && !get_bit(div, 4)) {
+      apu->div_apu++;
+      if ((apu->div_apu & 1) == 0) apu->length_clock = 1;
+      if ((apu->div_apu & 3) == 0) apu->sweep_clock = 1;
+    }
     mmu_w_mem_raw(mmu, DIV, div);
     cpu->div_cnt -= CPU_FREQ / DIV_FREQ;
   }
