@@ -21,15 +21,20 @@ void update_lcd(struct Ppu* ppu, Mmu* mmu) {
   uint8_t stat = mmu_r_mem(mmu, LCD_STAT);
   int prev_mode = stat & 0b11;
   uint8_t curr_mode;
-  if (ppu->scn <= 80) curr_mode = 2;
-  else if (ppu->scn <= 172) curr_mode = 3;  // TODO length of mode 3 can change
-  else curr_mode = 0;
+  if (ppu->scn <= 80)
+    curr_mode = 2;
+  else if (ppu->scn <= 172)
+    curr_mode = 3;  // TODO length of mode 3 can change
+  else
+    curr_mode = 0;
   if (mmu_r_mem(mmu, LY) >= SCRN_HEIGHT) curr_mode = 1;
   check_interrupt_vblank_lcd(mmu, stat, prev_mode, curr_mode);
   stat &= (uint8_t)~(0b11);
   stat |= curr_mode;
-  if (mmu_r_mem(mmu, LY) == mmu_r_mem(mmu, LYC)) set_bit(&stat, 2);
-  else clear_bit(&stat, 2);
+  if (mmu_r_mem(mmu, LY) == mmu_r_mem(mmu, LYC))
+    set_bit(&stat, 2);
+  else
+    clear_bit(&stat, 2);
   mmu_w_mem(mmu, 0xFF41, stat);
 }
 

@@ -31,10 +31,18 @@ struct Cpu* init_cpu(void) {
 void update_timer(struct Cpu* cpu, Mmu* mmu, struct Apu* apu, uint8_t cycles) {
   uint8_t val = mmu_r_mem(mmu, TAC);
   switch (val & 0b11) {
-    case 0b00: cpu->tim_thresh = TIM_FREQ_1; break;
-    case 0b01: cpu->tim_thresh = TIM_FREQ_2; break;
-    case 0b10: cpu->tim_thresh = TIM_FREQ_3; break;
-    case 0b11: cpu->tim_thresh = TIM_FREQ_4; break;
+    case 0b00:
+      cpu->tim_thresh = TIM_FREQ_1;
+      break;
+    case 0b01:
+      cpu->tim_thresh = TIM_FREQ_2;
+      break;
+    case 0b10:
+      cpu->tim_thresh = TIM_FREQ_3;
+      break;
+    case 0b11:
+      cpu->tim_thresh = TIM_FREQ_4;
+      break;
   }
   cpu->tim_thresh = CPU_FREQ / cpu->tim_thresh;
   cpu->div_cnt = (uint32_t)(cpu->div_cnt + cycles);
@@ -55,8 +63,10 @@ void update_timer(struct Cpu* cpu, Mmu* mmu, struct Apu* apu, uint8_t cycles) {
     while (cpu->tim_cnt >= cpu->tim_thresh) {
       uint8_t tima = mmu_r_mem(mmu, TIMA);
       check_interrupt_timer(mmu, tima);
-      if (tima == 0xFF) tima = mmu_r_mem(mmu, TMA);
-      else tima++;
+      if (tima == 0xFF)
+        tima = mmu_r_mem(mmu, TMA);
+      else
+        tima++;
       mmu_w_mem(mmu, 0xFF05, tima);
       cpu->tim_cnt -= cpu->tim_thresh;
     }

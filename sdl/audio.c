@@ -10,8 +10,8 @@ int init_audio(void) {
       .channels = 2,
       .freq = APU_SAMPLE_RATE,
   };
-  audio_stream =
-      SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL, NULL);
+  audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
+                                           &spec, NULL, NULL);
   if (!audio_stream) {
     SDL_LogError(SDL_LOG_CATEGORY_AUDIO, "Failed to open audio device: %s\n",
                  SDL_GetError());
