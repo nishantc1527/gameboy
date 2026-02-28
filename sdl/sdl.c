@@ -61,6 +61,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     tot_ticks = 0;
   } else if (tot_ticks >= frame_ticks) {
     if (gbemu_step_frame(gb) == -1) return SDL_APP_FAILURE;
+    push_audio(gb->apu);
     tot_ticks -= frame_ticks;
   }
   update_input(gb->ppu, gb->mmu);

@@ -18,7 +18,7 @@ Uint64 prev_time;
 Uint64 tot_ticks = 0;
 
 int init_window(const char* rom_title) {
-  if (!SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO)) {
+  if (!SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
     SDL_LogError(SDL_LOG_CATEGORY_SYSTEM, "ERROR INITIALIZING SDL: %s\n",
                  SDL_GetError());
     return 1;
@@ -41,5 +41,6 @@ int init_window(const char* rom_title) {
   nk_sdl_style_set_debug_font(ctx);
   perf_freq = SDL_GetPerformanceFrequency();
   prev_time = SDL_GetPerformanceCounter();
+  init_audio();
   return 0;
 }

@@ -24,3 +24,7 @@ int init_window(const char* rom_title);
 int handle_input(struct Ppu* ppu, SDL_Event* event);
 void render(struct Ppu* ppu);
 void draw_ui(void);
+
+struct Apu;
+int init_audio(void);
+void push_audio(struct Apu* apu);

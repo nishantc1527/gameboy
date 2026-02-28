@@ -45,6 +45,7 @@ void update_timer(struct Cpu* cpu, Mmu* mmu, struct Apu* apu, uint8_t cycles) {
       apu->div_apu++;
       if ((apu->div_apu & 1) == 0) apu->length_clock = 1;
       if ((apu->div_apu & 3) == 0) apu->sweep_clock = 1;
+      if ((apu->div_apu & 7) == 7) apu->envelope_clock = 1;
     }
     mmu_w_mem_raw(mmu, DIV, div);
     cpu->div_cnt -= CPU_FREQ / DIV_FREQ;

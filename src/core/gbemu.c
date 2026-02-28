@@ -48,7 +48,7 @@ int gbemu_step_frame(gbemu* gb) {
     gb->cpu->cyc_ext = 0;
     update_timer(gb->cpu, gb->mmu, gb->apu, cyc_left);
     check_dma(gb->mmu);
-    upd_apu(gb->apu, gb->mmu);
+    upd_apu(gb->apu, gb->mmu, cyc_left);
     check_interrupt(gb->cpu, gb->mmu);
   }
   if (gb->test_category == TestBlarggAudio &&
