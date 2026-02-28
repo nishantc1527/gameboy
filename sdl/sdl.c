@@ -55,19 +55,20 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
   gb->ppu->scn = 0;
   Uint64 frame_cyc = (Uint64)SCANLINE_LEN * (Uint64)SCANLINES;
   Uint64 frame_ticks = (frame_cyc * perf_freq) / CPU_FREQ;
-  if (tot_ticks >= frame_ticks * 10) {
-    // SDL_LogWarn(SDL_LOG_CATEGORY_RENDER, "Performance drop by %d frames\n",
-    // (int)(tot_ticks / frame_ticks));
-    tot_ticks = 0;
-  } else if (tot_ticks >= frame_ticks) {
+  if (tot_ticks >= frame_ticks * 2) tot_ticks = frame_ticks;
+  if (tot_ticks >= frame_ticks) {
     if (gbemu_step_frame(gb) == -1) return SDL_APP_FAILURE;
     push_audio(gb->apu);
     tot_ticks -= frame_ticks;
+    update_input(gb->ppu, gb->mmu);
+    render(gb->ppu);
+    // draw_ui();
+    SDL_RenderPresent(rnd);
+  } else {
+    Uint64 remaining = frame_ticks - tot_ticks;
+    Uint64 sleep_ms = (remaining * 1000) / perf_freq;
+    if (sleep_ms > 1) SDL_Delay((Uint32)(sleep_ms - 1));
   }
-  update_input(gb->ppu, gb->mmu);
-  render(gb->ppu);
-  // draw_ui();
-  SDL_RenderPresent(rnd);
   return SDL_APP_CONTINUE;
 }
 
