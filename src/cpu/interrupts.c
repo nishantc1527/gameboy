@@ -11,7 +11,8 @@ void do_intr(struct Cpu* cpu, Mmu* mmu, uint8_t intr) {
     push(cpu, mmu, cpu->PC);
     cpu->PC = cpu->intr_loc[intr];
     cpu->bIME = 0;
-  } else if (cpu->bHALT) cpu->bHALT_BUG = 1;
+  } else if (cpu->bHALT)
+    cpu->bHALT_BUG = 1;
   cpu->bHALT = 0;
 }
 

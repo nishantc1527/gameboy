@@ -57,8 +57,10 @@ int gbemu_step_frame(gbemu* gb) {
       mmu_r_mem(gb->mmu, 0xA003) == 0x61) {
     uint8_t status = mmu_r_mem(gb->mmu, 0xA000);
     if (status != 0x80) {
-      if (status == 0x00) printf("Passed\n");
-      else printf("Failed %d\n", status);
+      if (status == 0x00)
+        printf("Passed\n");
+      else
+        printf("Failed %d\n", status);
       gb->bdone = 1;
     }
   }
@@ -77,9 +79,12 @@ int gbemu_step_frame(gbemu* gb) {
     gb->bdone = 1;
   if (gb->test_category == TestMicro && gb->total_frames >= BROM_FRAMES + 10) {
     uint8_t result = mmu_r_mem(gb->mmu, 0xFF82);
-    if (result == 0x01) printf("Passed\n");
-    else if (result == 0xFF) printf("Failed\n");
-    else printf("TEST DID NOT COMPLETE\n");
+    if (result == 0x01)
+      printf("Passed\n");
+    else if (result == 0xFF)
+      printf("Failed\n");
+    else
+      printf("TEST DID NOT COMPLETE\n");
     gb->bdone = 1;
   }
   if (gb->test_category == TestLittle && gb->total_frames >= BROM_FRAMES + 30)

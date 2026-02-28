@@ -80,7 +80,9 @@ static uint8_t clock_length_u16(uint16_t* len, uint16_t max) {
   do {                                                 \
     int32_t _t = (int32_t)(timer) - (int32_t)(cycles); \
     while (_t <= 0) {                                  \
-      { advance; }                                     \
+      {                                                \
+        advance;                                       \
+      }                                                \
       _t += (int32_t)(period);                         \
     }                                                  \
     (timer) = (uint16_t)_t;                            \
@@ -90,7 +92,9 @@ static uint8_t clock_length_u16(uint16_t* len, uint16_t max) {
   do {                                                 \
     int32_t _t = (int32_t)(timer) - (int32_t)(cycles); \
     while (_t <= 0) {                                  \
-      { advance; }                                     \
+      {                                                \
+        advance;                                       \
+      }                                                \
       _t += (int32_t)(period);                         \
     }                                                  \
     (timer) = (uint32_t)_t;                            \

@@ -45,7 +45,8 @@ void draw_ui(void) {
   if (nk_begin(ctx, "Show", nk_rect(0, 0, SCRN_WIDTH * SCALE_X, 35),
                NK_WINDOW_BORDER | NK_WINDOW_NO_SCROLLBAR)) {
     nk_layout_row_dynamic(ctx, 35, 1);
-    if (nk_button_label(ctx, "File")) {}
+    if (nk_button_label(ctx, "File")) {
+    }
   }
   nk_end(ctx);
   nk_sdl_render(ctx, NK_ANTI_ALIASING_ON);
