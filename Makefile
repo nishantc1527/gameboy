@@ -46,7 +46,7 @@ DEPS          := $(ALL_OBJS:.o=.d)
 
 .PHONY: all gbemu gbemu_headless clean format test verify
 
-all: gbemu gbemu_headless
+all: gbemu gbemu_headless $(PYTHON)
 
 gbemu: $(BUILD_DIR)/gbemu
 gbemu_headless: $(BUILD_DIR)/gbemu_headless
