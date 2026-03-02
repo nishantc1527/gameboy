@@ -25,6 +25,7 @@ pub struct Mmu {
     ram_bank: u8,
     ram_enable: bool,
     mbc1_1mb_mode: bool,
+    mbc1_multicart: bool,
     test_category: i8,
 }
 
@@ -38,6 +39,7 @@ impl Mmu {
         let extern_ram = vec![0u8; 0x20000];
         let ram_bank: u8 = 0;
         let mut mbc1_1mb_mode = false;
+        let mut mbc1_multicart = false;
         // println!("OPENING BOOT ROM FILE\n");
         let mut boot_rom_file = File::open(Path::new(boot_rom_file_name)).ok()?;
         if boot_rom_file.read(&mut brom).ok()? != 0x100 {
@@ -88,6 +90,7 @@ impl Mmu {
         match cart_type {
             0x01 | 0x02 | 0x03 => {
                 mbc1_1mb_mode = false;
+                mbc1_multicart = mbc1::detect_multicart(&rom, rom_size);
                 if rom_size > 0x06 {
                     eprintln!("ROM SIZE NOT AVAILABLE\n");
                     return None;
@@ -139,6 +142,7 @@ impl Mmu {
             ram_bank,
             ram_enable,
             mbc1_1mb_mode,
+            mbc1_multicart,
             test_category,
         })
     }
