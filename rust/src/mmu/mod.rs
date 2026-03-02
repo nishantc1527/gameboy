@@ -4,6 +4,7 @@ mod io;
 mod mbc1;
 mod mbc2;
 mod mbc3;
+mod mbc5;
 mod no_mbc;
 mod ppu_reg;
 
@@ -20,6 +21,7 @@ pub struct Mmu {
     rom: Vec<u8>,
     extern_ram: Vec<u8>,
     rom_bank: u8,
+    rom_bank_hi: u8,
     ram_bank: u8,
     ram_enable: bool,
     mbc1_1mb_mode: bool,
@@ -55,7 +57,8 @@ impl Mmu {
         let rom_size: u8 = rom[0x0148];
         let ram_size: u8 = rom[0x0149];
         match cart_type {
-            0x00 | 0x01 | 0x02 | 0x03 | 0x05 | 0x06 | 0x11 | 0x13 => (),
+            0x00 | 0x01 | 0x02 | 0x03 | 0x05 | 0x06 | 0x11 | 0x13
+            | 0x19 | 0x1A | 0x1B | 0x1C | 0x1D | 0x1E => (),
             _ => {
                 eprintln!("UNIMPLEMENTED MAPPER ${:02X}\n", cart_type);
                 return None;
@@ -63,7 +66,7 @@ impl Mmu {
         }
         // println!("USING MAPPER: ${:02X}\n", cart_type);
         match rom_size {
-            0x00 | 0x01 | 0x02 | 0x03 | 0x04 | 0x05 | 0x07 => (),
+            0x00 | 0x01 | 0x02 | 0x03 | 0x04 | 0x05 | 0x06 | 0x07 | 0x08 => (),
             _ => {
                 eprintln!("UNIMPLEMENTED ROM SIZE: ${:02X}\n", rom_size);
                 return None;
@@ -71,7 +74,7 @@ impl Mmu {
         }
         // println!("USING ROM SIZE: ${:02X}", rom_size);
         match ram_size {
-            0x00 | 0x02 | 0x03 => (),
+            0x00 | 0x02 | 0x03 | 0x04 => (),
             _ => {
                 eprintln!("UNIMPLEMENTED RAM SIZE: ${:02X}\n", ram_size);
                 return None;
@@ -79,6 +82,7 @@ impl Mmu {
         }
         // println!("USING RAM SIZE: ${:02X}\n", ram_size);
         let rom_bank: u8 = 1;
+        let rom_bank_hi: u8 = 0;
         let ram_enable = false;
 
         match cart_type {
@@ -109,6 +113,16 @@ impl Mmu {
                     return None;
                 }
             }
+            0x19 | 0x1A | 0x1B | 0x1C | 0x1D | 0x1E => {
+                if rom_size > 0x08 {
+                    eprintln!("ROM SIZE NOT AVAILABLE\n");
+                    return None;
+                }
+                if ram_size > 0x04 {
+                    eprintln!("RAM SIZE NOT AVAILABLE\n");
+                    return None;
+                }
+            }
             _ => (),
         }
         Some(Mmu {
@@ -121,6 +135,7 @@ impl Mmu {
             rom,
             extern_ram,
             rom_bank,
+            rom_bank_hi,
             ram_bank,
             ram_enable,
             mbc1_1mb_mode,
@@ -139,6 +154,7 @@ impl Mmu {
                 0x01 | 0x02 | 0x03 => self.mbc1_read_rom(loc),
                 0x05 | 0x06 => self.mbc2_read_rom(loc),
                 0x11 | 0x12 | 0x13 => self.mbc3_read_rom(loc),
+                0x19 | 0x1A | 0x1B | 0x1C | 0x1D | 0x1E => self.mbc5_read_rom(loc),
                 _ => 0xFF,
             },
             0xA000..0xC000 => match self.cart_type {
@@ -146,6 +162,7 @@ impl Mmu {
                 0x01 | 0x02 | 0x03 => self.mbc1_read_ram(loc),
                 0x05 | 0x06 => self.mbc2_read_ram(loc),
                 0x11 | 0x12 | 0x13 => self.mbc3_read_ram(loc),
+                0x19 | 0x1A | 0x1B | 0x1C | 0x1D | 0x1E => self.mbc5_read_ram(loc),
                 _ => 0xFF,
             },
             mut loc => {
@@ -198,6 +215,7 @@ impl Mmu {
                 0x01 | 0x02 | 0x03 => self.mbc1_write_rom(loc, val),
                 0x05 | 0x06 => self.mbc2_write_rom(loc, val),
                 0x11 | 0x12 | 0x13 => self.mbc3_write_rom(loc, val),
+                0x19 | 0x1A | 0x1B | 0x1C | 0x1D | 0x1E => self.mbc5_write_rom(loc, val),
                 _ => (),
             },
             0xA000..0xC000 => match self.cart_type {
@@ -205,6 +223,7 @@ impl Mmu {
                 0x01 | 0x02 | 0x03 => self.mbc1_write_ram(loc, val),
                 0x05 | 0x06 => self.mbc2_write_ram(loc, val),
                 0x11 | 0x12 | 0x13 => self.mbc3_write_ram(loc, val),
+                0x19 | 0x1A | 0x1B | 0x1C | 0x1D | 0x1E => self.mbc5_write_ram(loc, val),
                 _ => (),
             },
             mut loc => {
