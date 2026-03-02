@@ -113,6 +113,7 @@ verify: clean $(RUST_HDR)
 # $(TIDY) $(CORE_SRCS) -header-filter='.*' --checks='*' --warnings-as-errors='*' -- $(CFLAGS) $(BASE_CPPFLAGS)
 # $(CPPCHECK) --enable=all --inconclusive --error-exitcode=1 $(SRC_DIR) include/
 	$(MAKE) gbemu_headless CFLAGS="$(CFLAGS) $(VERIFY_FLAGS)"
+	$(PYTHON) scripts/check_coverage.py
 	$(MAKE) test all
 
 -include $(DEPS)

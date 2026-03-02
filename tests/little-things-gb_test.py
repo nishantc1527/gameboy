@@ -2,11 +2,19 @@ import pytest
 
 from core import check_screenshot
 
-
-@pytest.mark.timeout(30)
-def test_little_things():
-    check_screenshot(
+roms = [
+    (
         "test_roms/little-things-gb/firstwhite.gb",
         "test_roms/little-things-gb/firstwhite-dmg-cgb.png",
-        "little",
-    )
+    ),
+    (
+        "test_roms/little-things-gb/tellinglys.gb",
+        "test_roms/little-things-gb/tellinglys-dmg.png",
+    ),
+]
+
+
+@pytest.mark.timeout(30)
+@pytest.mark.parametrize("rom, ref", roms)
+def test_little_things(rom, ref):
+    check_screenshot(rom, ref, "little")

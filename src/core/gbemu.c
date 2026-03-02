@@ -51,7 +51,8 @@ int gbemu_step_frame(gbemu* gb) {
     upd_apu(gb->apu, gb->mmu, cyc_left);
     check_interrupt(gb->cpu, gb->mmu);
   }
-  if (gb->test_category == TestBlarggAudio &&
+  if ((gb->test_category == TestBlarggAudio ||
+       gb->test_category == TestBlarggCgbSound) &&
       mmu_r_mem(gb->mmu, 0xA001) == 0xDE &&
       mmu_r_mem(gb->mmu, 0xA002) == 0xB0 &&
       mmu_r_mem(gb->mmu, 0xA003) == 0x61) {
@@ -73,6 +74,19 @@ int gbemu_step_frame(gbemu* gb) {
        gb->test_category == TestBlarggMemTime) &&
       gb->total_frames >= BROM_FRAMES + 120)
     gb->bdone = 1;
+  if ((gb->test_category == TestBlarggHaltBug ||
+       gb->test_category == TestBlarggInterruptTime) &&
+      gb->total_frames >= BROM_FRAMES + 120)
+    gb->bdone = 1;
+  if (gb->test_category == TestBlarggMemTime2 &&
+      gb->total_frames >= BROM_FRAMES + 240)
+    gb->bdone = 1;
+  if (gb->test_category == TestBlarggOamBug &&
+      gb->total_frames >= BROM_FRAMES + 1260)
+    gb->bdone = 1;
+  if (gb->test_category == TestBlarggCgbSound &&
+      gb->total_frames >= BROM_FRAMES + 2220)
+    gb->bdone = 1;
   if (gb->test_category == TestBully && gb->total_frames >= BROM_FRAMES + 30)
     gb->bdone = 1;
   if (gb->test_category == TestGambatte && gb->total_frames >= BROM_FRAMES + 15)
@@ -91,6 +105,37 @@ int gbemu_step_frame(gbemu* gb) {
     gb->bdone = 1;
   if (gb->test_category == TestMbc3 && gb->total_frames >= BROM_FRAMES + 60)
     gb->bdone = 1;
+  /* rtc3test: emulate button presses to select each subtest after the boot
+   * ROM ends, then wait the emulated duration from the how-to table.
+   *   basic tests : A               → 13 s = 780 frames
+   *   range tests : down, A         → 8 s  = 480 frames
+   *   sub-second  : down, down, A   → 26 s = 1560 frames
+   * Each button is held for 10 frames; sequential presses have 10-frame gaps. */
+  if (gb->test_category == TestRtc3Basic ||
+      gb->test_category == TestRtc3Range ||
+      gb->test_category == TestRtc3Sub) {
+    uint64_t f = gb->total_frames - BROM_FRAMES;
+    int btn_down = 0, btn_a = 0;
+    if (gb->test_category == TestRtc3Basic) {
+      btn_a = (f < 10) ? 1 : 0;
+    } else if (gb->test_category == TestRtc3Range) {
+      btn_down = (f < 10) ? 1 : 0;
+      btn_a = (f >= 20 && f < 30) ? 1 : 0;
+    } else {
+      btn_down = (f < 10 || (f >= 20 && f < 30)) ? 1 : 0;
+      btn_a = (f >= 40 && f < 50) ? 1 : 0;
+    }
+    gb->ppu->in[BTN_DOWN] = btn_down;
+    gb->ppu->in[BTN_A] = btn_a;
+    update_input(gb->ppu, gb->mmu);
+    if ((gb->test_category == TestRtc3Basic &&
+         gb->total_frames >= BROM_FRAMES + 10 + 13 * 60) ||
+        (gb->test_category == TestRtc3Range &&
+         gb->total_frames >= BROM_FRAMES + 30 + 8 * 60) ||
+        (gb->test_category == TestRtc3Sub &&
+         gb->total_frames >= BROM_FRAMES + 50 + 26 * 60))
+      gb->bdone = 1;
+  }
   if (gb->test_category == TestScribble && gb->total_frames >= BROM_FRAMES + 10)
     gb->bdone = 1;
   if (gb->test_category == TestStrike && gb->total_frames >= BROM_FRAMES + 30)

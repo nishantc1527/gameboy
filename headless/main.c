@@ -44,6 +44,16 @@ int main(int argc, char* argv[]) {
         test_category = TestBlarggCpuTime;
       else if (!strcmp(s, "blargg_mem_time"))
         test_category = TestBlarggMemTime;
+      else if (!strcmp(s, "blargg_halt_bug"))
+        test_category = TestBlarggHaltBug;
+      else if (!strcmp(s, "blargg_interrupt_time"))
+        test_category = TestBlarggInterruptTime;
+      else if (!strcmp(s, "blargg_mem_time2"))
+        test_category = TestBlarggMemTime2;
+      else if (!strcmp(s, "blargg_oam_bug"))
+        test_category = TestBlarggOamBug;
+      else if (!strcmp(s, "blargg_cgb_sound"))
+        test_category = TestBlarggCgbSound;
       else if (!strcmp(s, "bully"))
         test_category = TestBully;
       else if (!strcmp(s, "acid2"))
@@ -62,6 +72,12 @@ int main(int argc, char* argv[]) {
         test_category = TestMooneye;
       else if (!strcmp(s, "same"))
         test_category = TestSame;
+      else if (!strcmp(s, "rtc3_basic"))
+        test_category = TestRtc3Basic;
+      else if (!strcmp(s, "rtc3_range"))
+        test_category = TestRtc3Range;
+      else if (!strcmp(s, "rtc3_sub"))
+        test_category = TestRtc3Sub;
       else if (!strcmp(s, "scribble"))
         test_category = TestScribble;
       else if (!strcmp(s, "strike"))
