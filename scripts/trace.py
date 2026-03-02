@@ -20,7 +20,8 @@ def main():
     grep_pat = None
     last_n = None
     limit = None
-    around_addr = None
+    around_addrs = []
+    max_hits = 5
     watch_addrs = []
 
     i = 0
@@ -39,7 +40,10 @@ def main():
             limit = int(args[i + 1])
             i += 2
         elif a == "--around" and i + 1 < len(args):
-            around_addr = args[i + 1].upper().lstrip("$")
+            around_addrs.append(args[i + 1].upper().lstrip("$"))
+            i += 2
+        elif a == "--max-hits" and i + 1 < len(args):
+            max_hits = int(args[i + 1])
             i += 2
         elif a == "--watch" and i + 1 < len(args):
             watch_addrs.append(args[i + 1].upper().lstrip("$"))
@@ -55,32 +59,48 @@ def main():
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
     )
 
+    around_state = {
+        addr: {
+            "buf": deque(maxlen=20),
+            "hits": [],
+            "after_remaining": 0,
+            "hit_count": 0,
+        }
+        for addr in around_addrs
+    }
+
     lines = []
-    around_buf = deque(maxlen=20)  # lines before hit
-    around_hits = []
-    after_remaining = 0
     count = 0
 
     try:
         for line in iter(p.stdout.readline, ""):
             is_instr = line.startswith("$")
 
-            if around_addr and is_instr and around_addr in line.split()[0].upper():
-                around_hits.append((list(around_buf), line, []))
-                after_remaining = 20
+            if around_addrs and is_instr:
+                tok = line.split()[0].upper().lstrip("$")
+                for addr, st in around_state.items():
+                    if tok == addr:
+                        if st["hit_count"] < max_hits:
+                            st["hits"].append((list(st["buf"]), line, []))
+                            st["after_remaining"] = 20
+                            st["hit_count"] += 1
+
+            if around_addrs:
+                for addr, st in around_state.items():
+                    if st["after_remaining"] > 0 and st["hits"]:
+                        st["hits"][-1][2].append(line)
+                        st["after_remaining"] -= 1
+
+            if around_addrs:
+                for st in around_state.values():
+                    st["buf"].append(line)
 
             if last_n is not None:
                 lines.append(line)
             elif grep_pat:
                 if grep_pat.search(line):
                     print(line, end="")
-            elif around_addr:
-                if after_remaining > 0 and around_hits:
-                    around_hits[-1][2].append(line)
-                    after_remaining -= 1
-                else:
-                    around_buf.append(line)
-            else:
+            elif not around_addrs:
                 print(line, end="")
 
             if is_instr:
@@ -89,10 +109,10 @@ def main():
                     p.terminate()
                     break
 
-            if category == "blargg" or category == "blargg_audio":
-                if "Passed" in line or "Failed" in line:
-                    p.terminate()
-                    break
+            if "Passed" in line or "Failed" in line:
+                p.terminate()
+                break
+
     finally:
         p.wait(timeout=5)
 
@@ -100,16 +120,25 @@ def main():
         for line in lines[-last_n:]:
             print(line, end="")
 
-    if around_addr:
-        if not around_hits:
-            print(f"Address ${around_addr} never reached.", file=sys.stderr)
-        for before, hit, after in around_hits:
-            print(f"--- hit ${around_addr} ---")
-            for l in before:
-                print(l, end="")
-            print(hit, end="")
-            for l in after:
-                print(l, end="")
+    if around_addrs:
+        for addr in around_addrs:
+            st = around_state[addr]
+            if not st["hits"]:
+                print(f"Address ${addr} never reached.", file=sys.stderr)
+            else:
+                for before, hit, after in st["hits"]:
+                    print(f"--- hit ${addr} ---")
+                    for l in before:
+                        print(l, end="")
+                    print(hit, end="")
+                    for l in after:
+                        print(l, end="")
+                if st["hit_count"] >= max_hits:
+                    print(
+                        f"  (${addr}: stopped after {max_hits} hits; "
+                        f"use --max-hits to change)",
+                        file=sys.stderr,
+                    )
 
 
 if __name__ == "__main__":

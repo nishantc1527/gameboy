@@ -57,8 +57,8 @@ impl Mmu {
         let rom_size: u8 = rom[0x0148];
         let ram_size: u8 = rom[0x0149];
         match cart_type {
-            0x00 | 0x01 | 0x02 | 0x03 | 0x05 | 0x06 | 0x11 | 0x13
-            | 0x19 | 0x1A | 0x1B | 0x1C | 0x1D | 0x1E => (),
+            0x00 | 0x01 | 0x02 | 0x03 | 0x05 | 0x06 | 0x11 | 0x13 | 0x19 | 0x1A | 0x1B | 0x1C
+            | 0x1D | 0x1E => (),
             _ => {
                 eprintln!("UNIMPLEMENTED MAPPER ${:02X}\n", cart_type);
                 return None;
@@ -249,6 +249,8 @@ impl Mmu {
                         self.mem[0xFF4C] |= 0x04;
                     }
                 } else if loc == 0xFF04 {
+                    self.mem[0xFF4E] = self.mem[0xFF04];
+                    self.mem[0xFF4F] = 1;
                     self.mem[loc as usize] = 0x00;
                 } else if loc == 0xFF02 && val & 0x81 == 0x81 {
                     self.mem[loc as usize] = val & 0x7F;

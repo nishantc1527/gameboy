@@ -4,6 +4,7 @@
 #include "gbemu/cpu.h"
 #include "gbemu/mmu.h"
 #include "gbemu/util.h"
+#include "internal.h"
 
 const uint32_t CPU_FREQ = 4194304;
 const uint32_t DIV_FREQ = 16384;
@@ -19,6 +20,7 @@ struct Cpu* init_cpu(void) {
   cpu->bIME = 0;
   cpu->bIME_pending = 0;
   cpu->bHALT_BUG = 0;
+  cpu->tima_overflow_pending = 0;
   cpu->div_cnt = 0;
   cpu->tim_cnt = 0;
   cpu->cyc_ext = 0;
@@ -31,6 +33,51 @@ struct Cpu* init_cpu(void) {
 }
 
 void update_timer(struct Cpu* cpu, Mmu* mmu, struct Apu* apu, uint8_t cycles) {
+  if (cpu->tima_overflow_pending) {
+    cpu->tima_overflow_pending = 0;
+    if (mmu_r_mem_raw(mmu, TIMA) == 0x00) {
+      mmu_w_mem_raw(mmu, TIMA, mmu_r_mem_raw(mmu, TMA));
+      req_intr(mmu, INTR_TIMER);
+    }
+  }
+
+  if (mmu_r_mem_raw(mmu, 0xFF4F)) {
+    mmu_w_mem_raw(mmu, 0xFF4F, 0);
+    uint8_t old_div = mmu_r_mem_raw(mmu, 0xFF4E);
+    uint32_t sys_ctr = ((uint32_t)old_div << 8) | (cpu->div_cnt & 0xFF);
+    uint8_t tac = mmu_r_mem_raw(mmu, TAC);
+    if (tac & 0x04) {
+      uint8_t bit;
+      switch (tac & 0x03) {
+        case 0:
+          bit = (uint8_t)((sys_ctr >> 9) & 1);
+          break;
+        case 1:
+          bit = (uint8_t)((sys_ctr >> 3) & 1);
+          break;
+        case 2:
+          bit = (uint8_t)((sys_ctr >> 5) & 1);
+          break;
+        case 3:
+          bit = (uint8_t)((sys_ctr >> 7) & 1);
+          break;
+        default:
+          bit = 0;
+      }
+      if (bit) {
+        uint8_t tima = mmu_r_mem_raw(mmu, TIMA);
+        if (tima == 0xFF) {
+          mmu_w_mem_raw(mmu, TIMA, 0x00);
+          cpu->tima_overflow_pending = 1;
+        } else {
+          mmu_w_mem_raw(mmu, TIMA, tima + 1);
+        }
+      }
+    }
+    cpu->div_cnt = 0;
+    cpu->tim_cnt = 0;
+  }
+
   uint8_t val = mmu_r_mem(mmu, TAC);
   switch (val & 0b11) {
     case 0b00:
@@ -63,13 +110,15 @@ void update_timer(struct Cpu* cpu, Mmu* mmu, struct Apu* apu, uint8_t cycles) {
   if (get_bit(mmu_r_mem(mmu, TAC), 2)) {
     cpu->tim_cnt = (uint32_t)(cpu->tim_cnt + cycles);
     while (cpu->tim_cnt >= cpu->tim_thresh) {
-      uint8_t tima = mmu_r_mem(mmu, TIMA);
-      check_interrupt_timer(mmu, tima);
-      if (tima == 0xFF)
-        tima = mmu_r_mem(mmu, TMA);
-      else
-        tima++;
-      mmu_w_mem(mmu, 0xFF05, tima);
+      uint8_t tima = mmu_r_mem_raw(mmu, TIMA);
+      if (tima == 0xFF) {
+        mmu_w_mem_raw(mmu, TIMA, 0x00);
+        cpu->tima_overflow_pending = 1;
+        cpu->tim_cnt -= cpu->tim_thresh;
+        break;
+      }
+      tima++;
+      mmu_w_mem_raw(mmu, TIMA, tima);
       cpu->tim_cnt -= cpu->tim_thresh;
     }
   }

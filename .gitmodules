@@ -4,3 +4,6 @@
 [submodule "pandocs"]
 	path = pandocs
 	url = https://github.com/gbdev/pandocs.git
+[submodule "mooneye"]
+	path = mooneye
+	url = https://github.com/Gekkio/mooneye-test-suite.git

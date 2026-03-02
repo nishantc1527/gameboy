@@ -15,7 +15,7 @@ extern const uint32_t TIM_FREQ_4;
 struct Cpu {
   uint8_t A, B, C, D, E, F, H, L;
   uint16_t PC, SP;
-  uint8_t bHALT, bIME, bIME_pending, bHALT_BUG;
+  uint8_t bHALT, bIME, bIME_pending, bHALT_BUG, tima_overflow_pending;
   uint32_t tim_cnt, tim_thresh, div_cnt;
   uint16_t intr_loc[5];
   uint8_t cyc_ext;

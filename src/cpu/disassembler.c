@@ -5,11 +5,105 @@
 #include "gbemu/mmu.h"
 #include "internal.h"
 
+static const char* io_reg_name(uint8_t n) {
+  switch (n) {
+    case 0x00:
+      return "P1";
+    case 0x01:
+      return "SB";
+    case 0x02:
+      return "SC";
+    case 0x04:
+      return "DIV";
+    case 0x05:
+      return "TIMA";
+    case 0x06:
+      return "TMA";
+    case 0x07:
+      return "TAC";
+    case 0x0F:
+      return "IF";
+    case 0x10:
+      return "NR10";
+    case 0x11:
+      return "NR11";
+    case 0x12:
+      return "NR12";
+    case 0x13:
+      return "NR13";
+    case 0x14:
+      return "NR14";
+    case 0x16:
+      return "NR21";
+    case 0x17:
+      return "NR22";
+    case 0x18:
+      return "NR23";
+    case 0x19:
+      return "NR24";
+    case 0x1A:
+      return "NR30";
+    case 0x1B:
+      return "NR31";
+    case 0x1C:
+      return "NR32";
+    case 0x1D:
+      return "NR33";
+    case 0x1E:
+      return "NR34";
+    case 0x20:
+      return "NR41";
+    case 0x21:
+      return "NR42";
+    case 0x22:
+      return "NR43";
+    case 0x23:
+      return "NR44";
+    case 0x24:
+      return "NR50";
+    case 0x25:
+      return "NR51";
+    case 0x26:
+      return "NR52";
+    case 0x40:
+      return "LCDC";
+    case 0x41:
+      return "STAT";
+    case 0x42:
+      return "SCY";
+    case 0x43:
+      return "SCX";
+    case 0x44:
+      return "LY";
+    case 0x45:
+      return "LYC";
+    case 0x46:
+      return "DMA";
+    case 0x47:
+      return "BGP";
+    case 0x48:
+      return "OBP0";
+    case 0x49:
+      return "OBP1";
+    case 0x4A:
+      return "WY";
+    case 0x4B:
+      return "WX";
+    case 0x50:
+      return "BOOT";
+    case 0xFF:
+      return "IE";
+    default:
+      return NULL;
+  }
+}
+
 int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
                 const uint16_t* watch_addrs, uint8_t watch_count,
                 uint64_t total_cycles) {
   if (!mmu_r_mem(mmu, 0xFF50)) return 0;
-  printf("$%04X %02X ", cpu->PC, instr);
+  uint16_t instr_pc = (uint16_t)(cpu->PC - (instr == 0xCB ? 2 : 1));
+  printf("$%04X %02X ", instr_pc, instr);
   if (instr == 0xCB) {
     printf("%02X ", prfx);
     switch (prfx) {
@@ -865,10 +959,12 @@ int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
       case 0x17:
         printf("RLA\n");
         break;
-      case 0x18:
-        printf("JR %d\n", (signed char)rd8(cpu, mmu));
+      case 0x18: {
+        int8_t off = (int8_t)rd8(cpu, mmu);
+        printf("JR $%04X\n", (uint16_t)(cpu->PC + off));
         cpu->PC--;
         break;
+      }
       case 0x19:
         printf("ADD HL, DE\n");
         break;
@@ -891,10 +987,12 @@ int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
       case 0x1F:
         printf("RRA\n");
         break;
-      case 0x20:
-        printf("JR NZ, %d\n", (signed char)rd8(cpu, mmu));
+      case 0x20: {
+        int8_t off = (int8_t)rd8(cpu, mmu);
+        printf("JR NZ, $%04X\n", (uint16_t)(cpu->PC + off));
         cpu->PC--;
         break;
+      }
       case 0x21:
         printf("LD HL, $%04X\n", rd16(cpu, mmu));
         cpu->PC -= 2;
@@ -918,10 +1016,12 @@ int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
       case 0x27:
         printf("DAA\n");
         break;
-      case 0x28:
-        printf("JR Z, %d\n", (signed char)rd8(cpu, mmu));
+      case 0x28: {
+        int8_t off = (int8_t)rd8(cpu, mmu);
+        printf("JR Z, $%04X\n", (uint16_t)(cpu->PC + off));
         cpu->PC--;
         break;
+      }
       case 0x29:
         printf("ADD HL, HL\n");
         break;
@@ -944,10 +1044,12 @@ int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
       case 0x2F:
         printf("CPL\n");
         break;
-      case 0x30:
-        printf("JR NC, %d\n", (signed char)rd8(cpu, mmu));
+      case 0x30: {
+        int8_t off = (int8_t)rd8(cpu, mmu);
+        printf("JR NC, $%04X\n", (uint16_t)(cpu->PC + off));
         cpu->PC--;
         break;
+      }
       case 0x31:
         printf("LD SP, $%04X\n", rd16(cpu, mmu));
         cpu->PC -= 2;
@@ -971,10 +1073,12 @@ int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
       case 0x37:
         printf("SCF\n");
         break;
-      case 0x38:
-        printf("JR C, %d\n", (signed char)rd8(cpu, mmu));
+      case 0x38: {
+        int8_t off = (int8_t)rd8(cpu, mmu);
+        printf("JR C, $%04X\n", (uint16_t)(cpu->PC + off));
         cpu->PC--;
         break;
+      }
       case 0x39:
         printf("ADD HL, SP\n");
         break;
@@ -1479,10 +1583,16 @@ int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
       case 0xDF:
         printf("RST $18\n");
         break;
-      case 0xE0:
-        printf("LD ($FF00+$%02X), A\n", rd8(cpu, mmu));
+      case 0xE0: {
+        uint8_t n = rd8(cpu, mmu);
+        const char* name = io_reg_name(n);
+        if (name)
+          printf("LDH (%s), A\n", name);
+        else
+          printf("LDH ($FF%02X), A\n", n);
         cpu->PC--;
         break;
+      }
       case 0xE1:
         printf("POP HL\n");
         break;
@@ -1517,10 +1627,16 @@ int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
       case 0xEF:
         printf("RST $28\n");
         break;
-      case 0xF0:
-        printf("LD A, ($FF00+$%02X)\n", rd8(cpu, mmu));
+      case 0xF0: {
+        uint8_t n = rd8(cpu, mmu);
+        const char* name = io_reg_name(n);
+        if (name)
+          printf("LDH A, (%s)\n", name);
+        else
+          printf("LDH A, ($FF%02X)\n", n);
         cpu->PC--;
         break;
+      }
       case 0xF1:
         printf("POP AF\n");
         break;
