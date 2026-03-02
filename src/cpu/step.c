@@ -968,7 +968,11 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
         mmu_w_mem(mmu, gt_HL(cpu), cpu->L);
         return 8;
       case 0x76:
-        cpu->bHALT = 1;
+        if (!cpu->bIME && (mmu_r_mem(mmu, IE) & mmu_r_mem(mmu, IF) & 0x1F)) {
+          cpu->bHALT_BUG = 1;
+        } else {
+          cpu->bHALT = 1;
+        }
         return 4;
       case 0x77:
         mem_tick(cpu, mmu, apu, 4);
