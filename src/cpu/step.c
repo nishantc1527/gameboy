@@ -1310,7 +1310,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
         return 16;
       }
       case 0xFB:
-        cpu->bIME = 1;
+        cpu->bIME_pending = 1;
         return 4;
       case 0xFE:
         c_cp(cpu, rd8(cpu, mmu));
@@ -1327,6 +1327,10 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
 int step(struct Cpu* cpu, Mmu* mmu, struct Apu* apu, uint8_t disassemble_enable,
          int test_category, uint8_t* b_done, const uint16_t* watch_addrs,
          uint8_t watch_count, uint64_t total_cycles) {
+  if (cpu->bIME_pending) {
+    cpu->bIME = 1;
+    cpu->bIME_pending = 0;
+  }
   uint16_t pc_before = cpu->PC;
   uint8_t halt_bug = cpu->bHALT_BUG;
   cpu->bHALT_BUG = 0;
