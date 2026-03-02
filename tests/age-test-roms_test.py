@@ -9,7 +9,7 @@ roms = [
     os.path.join(d, f)
     for (d, _, files) in os.walk("test_roms/age-test-roms")
     for f in files
-    if f.endswith(".gb") and "dmg" in f
+    if f.endswith(".gb")
 ]
 
 

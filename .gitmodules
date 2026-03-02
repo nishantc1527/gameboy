@@ -7,3 +7,6 @@
 [submodule "mooneye"]
 	path = mooneye
 	url = https://github.com/Gekkio/mooneye-test-suite.git
+[submodule "age"]
+	path = age
+	url = https://github.com/c-sp/age-test-roms.git
