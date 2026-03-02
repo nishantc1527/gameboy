@@ -2,6 +2,7 @@ mod apu_reg;
 mod cpu_reg;
 mod io;
 mod mbc1;
+mod mbc2;
 mod mbc3;
 mod no_mbc;
 mod ppu_reg;
@@ -54,7 +55,7 @@ impl Mmu {
         let rom_size: u8 = rom[0x0148];
         let ram_size: u8 = rom[0x0149];
         match cart_type {
-            0x00 | 0x01 | 0x02 | 0x03 | 0x11 | 0x13 => (),
+            0x00 | 0x01 | 0x02 | 0x03 | 0x05 | 0x06 | 0x11 | 0x13 => (),
             _ => {
                 eprintln!("UNIMPLEMENTED MAPPER ${:02X}\n", cart_type);
                 return None;
@@ -62,7 +63,7 @@ impl Mmu {
         }
         // println!("USING MAPPER: ${:02X}\n", cart_type);
         match rom_size {
-            0x00 | 0x01 | 0x03 | 0x04 | 0x05 | 0x07 => (),
+            0x00 | 0x01 | 0x02 | 0x03 | 0x04 | 0x05 | 0x07 => (),
             _ => {
                 eprintln!("UNIMPLEMENTED ROM SIZE: ${:02X}\n", rom_size);
                 return None;
@@ -89,6 +90,12 @@ impl Mmu {
                 }
                 if ram_size > 0x03 {
                     eprintln!("RAM SIZE NOT AVAILABLE\n");
+                    return None;
+                }
+            }
+            0x05 | 0x06 => {
+                if rom_size > 0x03 {
+                    eprintln!("ROM SIZE NOT AVAILABLE\n");
                     return None;
                 }
             }
@@ -130,12 +137,14 @@ impl Mmu {
             ..0x8000 => match self.cart_type {
                 0x00 => self.no_mbc_read_rom(loc),
                 0x01 | 0x02 | 0x03 => self.mbc1_read_rom(loc),
+                0x05 | 0x06 => self.mbc2_read_rom(loc),
                 0x11 | 0x12 | 0x13 => self.mbc3_read_rom(loc),
                 _ => 0xFF,
             },
             0xA000..0xC000 => match self.cart_type {
                 0x00 => self.no_mbc_read_ram(loc),
                 0x01 | 0x02 | 0x03 => self.mbc1_read_ram(loc),
+                0x05 | 0x06 => self.mbc2_read_ram(loc),
                 0x11 | 0x12 | 0x13 => self.mbc3_read_ram(loc),
                 _ => 0xFF,
             },
@@ -187,12 +196,14 @@ impl Mmu {
             ..0x8000 => match self.cart_type {
                 0x00 => self.no_mbc_write_rom(loc, val),
                 0x01 | 0x02 | 0x03 => self.mbc1_write_rom(loc, val),
+                0x05 | 0x06 => self.mbc2_write_rom(loc, val),
                 0x11 | 0x12 | 0x13 => self.mbc3_write_rom(loc, val),
                 _ => (),
             },
             0xA000..0xC000 => match self.cart_type {
                 0x00 => self.no_mbc_write_ram(loc, val),
                 0x01 | 0x02 | 0x03 => self.mbc1_write_ram(loc, val),
+                0x05 | 0x06 => self.mbc2_write_ram(loc, val),
                 0x11 | 0x12 | 0x13 => self.mbc3_write_ram(loc, val),
                 _ => (),
             },

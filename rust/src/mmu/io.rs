@@ -16,7 +16,11 @@ impl Mmu {
     }
 
     pub fn save(&self) -> Result<(), std::io::Error> {
-        if matches!(self.cart_type, 0x03 | 0x13)
+        if matches!(self.cart_type, 0x06) {
+            let file_name = format!("{}.sav", self.rom_title);
+            let mut file = File::create(Path::new(file_name.as_str()))?;
+            file.write_all(&self.extern_ram[..0x200])?;
+        } else if matches!(self.cart_type, 0x03 | 0x13)
             && let Some(len) = self.ram_size()
         {
             let file_name = format!("{}.sav", self.rom_title);
@@ -28,7 +32,11 @@ impl Mmu {
     }
 
     pub fn load(&mut self) -> Result<(), std::io::Error> {
-        if matches!(self.cart_type, 0x03 | 0x13)
+        if matches!(self.cart_type, 0x06) {
+            let file_name = format!("{}.sav", self.rom_title);
+            let mut file = File::open(Path::new(file_name.as_str()))?;
+            let _ = file.read(&mut self.extern_ram[..0x200])?;
+        } else if matches!(self.cart_type, 0x03 | 0x13)
             && let Some(len) = self.ram_size()
         {
             let file_name = format!("{}.sav", self.rom_title);

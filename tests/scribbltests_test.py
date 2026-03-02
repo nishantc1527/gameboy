@@ -26,7 +26,6 @@ roms = [
 ]
 
 
-@pytest.mark.skip()
 @pytest.mark.parametrize("rom, expected", roms)
 @pytest.mark.timeout(30)
 def test_scribble(rom, expected):

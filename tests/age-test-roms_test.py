@@ -13,7 +13,6 @@ roms = [
 ]
 
 
-@pytest.mark.skip()
 @pytest.mark.timeout(30)
 @pytest.mark.parametrize("rom", roms)
 def test_age(rom):

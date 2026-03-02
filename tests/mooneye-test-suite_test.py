@@ -19,7 +19,6 @@ roms = [
 ]
 
 
-@pytest.mark.skip()
 @pytest.mark.timeout(20)
 @pytest.mark.parametrize("rom_path", roms)
 def test_mooneye_rom(rom_path):

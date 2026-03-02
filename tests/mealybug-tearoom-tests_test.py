@@ -3,7 +3,6 @@ import pytest
 from core import check_screenshot
 
 
-@pytest.mark.skip()
 @pytest.mark.timeout(30)
 def test_mealybug():
     check_screenshot(

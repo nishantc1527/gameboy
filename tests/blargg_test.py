@@ -36,7 +36,6 @@ def test_blargg_cpu(rom_path):
     check_stream(rom_path, "blargg_cpu")
 
 
-@pytest.mark.skip()
 @pytest.mark.timeout(60)
 @pytest.mark.parametrize("rom_path", audio_roms)
 def test_blargg_audio(rom_path):

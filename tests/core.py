@@ -34,6 +34,7 @@ def check_stream(rom_path, test_category):
         process.wait(timeout=5)
     assert status == "PASSED", f"ROM {rom_path} {status}:\n{''.join(full_output)}"
 
+
 def check_screenshot(rom_path, ref_path, test_category):
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
         tmp = f.name
