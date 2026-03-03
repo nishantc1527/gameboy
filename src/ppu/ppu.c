@@ -21,10 +21,10 @@ void update_lcd(struct Ppu* ppu, Mmu* mmu) {
   uint8_t stat = mmu_r_mem(mmu, LCD_STAT);
   int prev_mode = stat & 0b11;
   uint8_t curr_mode;
-  if (ppu->scn <= 80)
+  if (ppu->scn < 80)
     curr_mode = 2;
-  else if (ppu->scn <= 172)
-    curr_mode = 3;  // TODO length of mode 3 can change
+  else if (ppu->scn < 252)
+    curr_mode = 3;
   else
     curr_mode = 0;
   if (mmu_r_mem(mmu, LY) >= SCRN_HEIGHT) curr_mode = 1;

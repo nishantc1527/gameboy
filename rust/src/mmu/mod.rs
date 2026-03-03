@@ -173,6 +173,21 @@ impl Mmu {
                 if (0xE000..=0xFDFF).contains(&loc) {
                     loc -= 0x2000;
                 }
+                if (0x8000..0xA000).contains(&loc) {
+                    let lcdc = self.mem[0xFF40];
+                    if lcdc & 0x80 != 0 && self.mem[0xFF41] & 0x03 == 3 {
+                        return 0xFF;
+                    }
+                }
+                if (0xFE00..0xFEA0).contains(&loc) {
+                    let lcdc = self.mem[0xFF40];
+                    if lcdc & 0x80 != 0 {
+                        let mode = self.mem[0xFF41] & 0x03;
+                        if mode == 2 || mode == 3 {
+                            return 0xFF;
+                        }
+                    }
+                }
                 match loc {
                     apu_reg::NR10 => self.mem[loc as usize] | 0x80,
                     apu_reg::NR11 => self.mem[loc as usize] | 0x3F,
@@ -233,6 +248,21 @@ impl Mmu {
             mut loc => {
                 if (0xE000..=0xFDFF).contains(&loc) {
                     loc -= 0x2000;
+                }
+                if (0x8000..0xA000).contains(&loc) {
+                    let lcdc = self.mem[0xFF40];
+                    if lcdc & 0x80 != 0 && self.mem[0xFF41] & 0x03 == 3 {
+                        return;
+                    }
+                }
+                if (0xFE00..0xFEA0).contains(&loc) {
+                    let lcdc = self.mem[0xFF40];
+                    if lcdc & 0x80 != 0 {
+                        let mode = self.mem[0xFF41] & 0x03;
+                        if mode == 2 || mode == 3 {
+                            return;
+                        }
+                    }
                 }
                 if (self.test_category == TestCategory::TestBlarggCpu as i8
                     || self.test_category == TestCategory::TestBlarggAudio as i8

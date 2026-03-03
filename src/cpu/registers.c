@@ -128,7 +128,7 @@ void check_dma(Mmu* mmu) {
   if (mmu_r_mem(mmu, DMA) <= 0xDF) {
     uint16_t src = mmu_r_mem(mmu, DMA) * 0x100;
     for (uint16_t t = 0; t < 0xA0; t++) {
-      mmu_w_mem(mmu, 0xFE00 + t, mmu_r_mem(mmu, src + t));
+      mmu_w_mem_raw(mmu, 0xFE00 + t, mmu_r_mem(mmu, src + t));
     }
     mmu_w_mem(mmu, 0xFF46, 0xFF);
   }
