@@ -2,47 +2,28 @@
 #include <SDL3/SDL_log.h>
 #include <SDL3/SDL_render.h>
 
-#include "colors.h"
-#include "display.h"
 #include "gbemu/ppu.h"
 #include "gbemu/sdl.h"
 #include "internal.h"
 
 uint32_t buf[SCRN_HEIGHT][SCRN_WIDTH];
 
-const uint32_t pal_lut[] = {
-    [0] = ((uint32_t)(HEX_WHT >> 16) << 24) |
-          ((uint32_t)((HEX_WHT >> 8) & 0xFF) << 16) |
-          ((uint32_t)(HEX_WHT & 0xFF) << 8) | (uint32_t)SDL_ALPHA_OPAQUE,
-    [1] = ((uint32_t)(HEX_L_GREY >> 16) << 24) |
-          ((uint32_t)((HEX_L_GREY >> 8) & 0xFF) << 16) |
-          ((uint32_t)(HEX_L_GREY & 0xFF) << 8) | (uint32_t)SDL_ALPHA_OPAQUE,
-    [2] = ((uint32_t)(HEX_R_GREY >> 16) << 24) |
-          ((uint32_t)((HEX_R_GREY >> 8) & 0xFF) << 16) |
-          ((uint32_t)(HEX_R_GREY & 0xFF) << 8) | (uint32_t)SDL_ALPHA_OPAQUE,
-    [3] = ((uint32_t)(HEX_BLK >> 16) << 24) |
-          ((uint32_t)((HEX_BLK >> 8) & 0xFF) << 16) |
-          ((uint32_t)(HEX_BLK & 0xFF) << 8) | (uint32_t)SDL_ALPHA_OPAQUE,
-    [4] = ((uint32_t)(HEX_BLK >> 16) << 24) |
-          ((uint32_t)((HEX_BLK >> 8) & 0xFF) << 16) |
-          ((uint32_t)(HEX_BLK & 0xFF) << 8) | (uint32_t)SDL_ALPHA_OPAQUE,
-};
-
 void render(struct Ppu* ppu) {
-  for (int i = 0; i < SCRN_HEIGHT; i++) {
-    for (int j = 0; j < SCRN_WIDTH; j++) {
-      uint8_t clr = ppu->dsp[i][j];
-      buf[i][j] = pal_lut[clr];
-    }
-  }
+  uint32_t pal[4];
+  for (int i = 0; i < 4; i++)
+    pal[i] = (g_settings.dmg_palette[i] << 8) | (uint32_t)SDL_ALPHA_OPAQUE;
+
+  for (int i = 0; i < SCRN_HEIGHT; i++)
+    for (int j = 0; j < SCRN_WIDTH; j++) buf[i][j] = pal[ppu->dsp[i][j]];
+
   SDL_UpdateTexture(txt, NULL, buf, SCRN_WIDTH * sizeof(uint32_t));
-  SDL_RenderTexture(
-      rnd, txt, NULL,
-      &(SDL_FRect){0, 0, SCRN_WIDTH * SCALE_X, SCRN_HEIGHT * SCALE_Y});
+  SDL_RenderTexture(rnd, txt, NULL,
+                    &(SDL_FRect){0, 0, SCRN_WIDTH * g_settings.scale,
+                                 SCRN_HEIGHT * g_settings.scale});
 }
 
 void draw_ui(void) {
-  if (nk_begin(ctx, "Show", nk_rect(0, 0, SCRN_WIDTH * SCALE_X, 35),
+  if (nk_begin(ctx, "Show", nk_rect(0, 0, SCRN_WIDTH * g_settings.scale, 35),
                NK_WINDOW_BORDER | NK_WINDOW_NO_SCROLLBAR)) {
     nk_layout_row_dynamic(ctx, 35, 1);
     if (nk_button_label(ctx, "File")) {

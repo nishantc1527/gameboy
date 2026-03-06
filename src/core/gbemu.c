@@ -8,10 +8,10 @@
 #include "gbemu/mmu.h"
 #include "gbemu/ppu.h"
 #include "gbemu/util.h"
-#include "rom_locs.h"
 
-gbemu* gbemu_init(char* rom_name, int test_category, uint8_t disassemble_enable,
-                  const uint16_t* watch_addrs, uint8_t watch_count) {
+gbemu* gbemu_init(char* rom_name, const char* boot_rom, int test_category,
+                  uint8_t disassemble_enable, const uint16_t* watch_addrs,
+                  uint8_t watch_count) {
   gbemu* gb = malloc(sizeof(gbemu));
   gb->rom_name = rom_name;
   gb->test_category = test_category;
@@ -21,7 +21,7 @@ gbemu* gbemu_init(char* rom_name, int test_category, uint8_t disassemble_enable,
   for (uint8_t i = 0; i < gb->watch_count; i++)
     gb->watch_addrs[i] = watch_addrs[i];
   gb->cpu = init_cpu();
-  gb->mmu = mmu_init(rom_name, BOOT_ROM_FILE, (int8_t)test_category);
+  gb->mmu = mmu_init(rom_name, boot_rom, (int8_t)test_category);
   gb->apu = init_apu();
   gb->ppu = init_ppu();
   gb->total_cycles = 0;

@@ -3,10 +3,12 @@
 
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL_timer.h>
+#include <stdio.h>
 
 #include "gbemu/gbemu.h"
 #include "gbemu/mmu.h"
 #include "gbemu/pokemon.h"
+#include "gbemu/settings.h"
 
 static SDL_AppResult usage() {
   SDL_LogError(SDL_LOG_CATEGORY_ERROR,
@@ -34,12 +36,17 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc,
     SDL_LogError(SDL_LOG_CATEGORY_ERROR, "MUST PROVIDE ROM FILE\n");
     return SDL_APP_FAILURE;
   }
+  settings_load(&g_settings);
   // SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "INITIALIZING\n");
-  gbemu* gb = gbemu_init(rom_name, -1, disassemble_enable, NULL, 0);
+  gbemu* gb = gbemu_init(rom_name, g_settings.boot_rom, -1, disassemble_enable,
+                         NULL, 0);
   if (init_window(mmu_get_rom_title(gb->mmu))) {
     gbemu_free(gb);
     return SDL_APP_FAILURE;
   }
+  snprintf(g_settings.last_rom, sizeof(g_settings.last_rom), "%s", rom_name);
+  settings_add_recent_rom(&g_settings, rom_name);
+  settings_save(&g_settings);
   if (pokemon_enabled) p_init_data(gb->mmu);
   *appstate = gb;
   return SDL_APP_CONTINUE;
@@ -88,6 +95,7 @@ void SDL_AppQuit(void* appstate, SDL_AppResult result) {
       // SDL_LogError(SDL_LOG_CATEGORY_ERROR, "FAILURE\n");
       break;
   }
+  settings_save(&g_settings);
   gbemu_free(appstate);
   // SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "DONE\n");
 }

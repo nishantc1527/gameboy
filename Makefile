@@ -32,7 +32,7 @@ RUST_CRATE    := rust
 BUILD_DIR     := build
 SRC_DIR       := src
 
-INC_DIRS      := config include
+INC_DIRS      := include
 LIB_DIR       := vendor
 SDL_DIR       := sdl
 HEADLESS_DIR  := headless
@@ -43,7 +43,7 @@ SDL_CFLAGS    := $(shell pkg-config --cflags sdl3)
 SDL_LDLIBS    := $(shell pkg-config --libs sdl3)
 VERIFY_FLAGS  := -Wall -Wextra -Wpedantic -Werror
 
-CORE_SRCS     := $(wildcard $(SRC_DIR)/*.c $(SRC_DIR)/*/*.c)
+CORE_SRCS     := $(wildcard $(SRC_DIR)/*.c $(SRC_DIR)/*/*.c $(LIB_DIR)/*.c)
 SDL_SRCS      := $(wildcard $(SDL_DIR)/*.c)
 HEADLESS_SRC  := $(HEADLESS_DIR)/main.c
 

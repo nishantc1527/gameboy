@@ -22,7 +22,8 @@ typedef struct {
   uint64_t total_frames;
 } gbemu;
 
-gbemu* gbemu_init(char* rom_name, int test_category, uint8_t disassemble_enable,
-                  const uint16_t* watch_addrs, uint8_t watch_count);
+gbemu* gbemu_init(char* rom_name, const char* boot_rom, int test_category,
+                  uint8_t disassemble_enable, const uint16_t* watch_addrs,
+                  uint8_t watch_count);
 int gbemu_step_frame(gbemu* gb);
 void gbemu_free(gbemu* gb);

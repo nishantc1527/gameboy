@@ -4,6 +4,7 @@
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "gbemu/gbemu.h"
+#include "gbemu/settings.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
@@ -108,8 +109,9 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "MUST PROVIDE ROM FILE\n");
     return 1;
   }
-  gbemu* gb = gbemu_init(rom_name, test_category, (uint8_t)disassemble_enable,
-                         watch_addrs, watch_count);
+  settings_load(&g_settings);
+  gbemu* gb = gbemu_init(rom_name, g_settings.boot_rom, test_category,
+                         (uint8_t)disassemble_enable, watch_addrs, watch_count);
   if (!gb) return 1;
   while (!gb->bdone) {
     if (gbemu_step_frame(gb) == -1) {

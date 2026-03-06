@@ -3,6 +3,23 @@
 #include <SDL3/SDL.h>
 
 #include "gbemu/ppu.h"
+#include "gbemu/settings.h"
+
+enum {
+  CTRL_A = 0,
+  CTRL_B,
+  CTRL_START,
+  CTRL_SELECT,
+  CTRL_UP,
+  CTRL_DOWN,
+  CTRL_LEFT,
+  CTRL_RIGHT,
+  CTRL_PAUSE,
+  CTRL_SCREENSHOT,
+  CTRL_COUNT
+};
+
+extern SDL_Keycode g_controls[CTRL_COUNT];
 
 #define NK_INCLUDE_COMMAND_USERDATA
 #define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
