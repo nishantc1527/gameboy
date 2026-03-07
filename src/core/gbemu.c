@@ -62,6 +62,7 @@ void gbemu_reset(gbemu* gb) {
 int gbemu_step_frame(gbemu* gb) {
   gb->ppu->frame = 0;
   while (!gb->ppu->frame) {
+    uint8_t prev_lcdc_bit7 = mmu_r_mem(gb->mmu, 0xFF40) & 0x80;
     const int cyc = step(gb->cpu, gb->mmu, gb->apu, gb->disassemble_enable,
                          gb->test_category, &gb->bdone, gb->watch_addrs,
                          gb->watch_count, gb->total_cycles);
@@ -72,6 +73,10 @@ int gbemu_step_frame(gbemu* gb) {
     if (gb->ppu->scn >= SCANLINE_LEN) {
       do_scanline(gb->ppu, gb->mmu);
       gb->ppu->scn -= SCANLINE_LEN;
+    }
+    if (!prev_lcdc_bit7 && (mmu_r_mem(gb->mmu, 0xFF40) & 0x80)) {
+      gb->ppu->scn = 4;
+      mmu_w_mem(gb->mmu, 0xFF44, 0);
     }
     update_lcd(gb->ppu, gb->mmu);
     uint8_t cyc_left = (uint8_t)(cyc - gb->cpu->cyc_ext);
