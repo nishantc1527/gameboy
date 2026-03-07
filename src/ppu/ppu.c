@@ -16,18 +16,21 @@ struct Ppu* init_ppu(void) {
   for (int i = 0; i < 8; i++) ppu->in[i] = 0;
   ppu->cgb_mode = 0;
   for (int y = 0; y < SCRN_HEIGHT; y++)
-    for (int x = 0; x < SCRN_WIDTH; x++)
-      ppu->cgb_dsp[y][x] = 0;
+    for (int x = 0; x < SCRN_WIDTH; x++) ppu->cgb_dsp[y][x] = 0;
   return ppu;
 }
+
+static const uint16_t scx_mode3_penalty[8] = {0, 0, 0, 0, 4, 4, 4, 8};
 
 void update_lcd(struct Ppu* ppu, Mmu* mmu) {
   uint8_t stat = mmu_r_mem(mmu, LCD_STAT);
   int prev_mode = stat & 0b11;
   uint8_t curr_mode;
+  uint16_t mode3_end =
+      (uint16_t)(252 + scx_mode3_penalty[mmu_r_mem(mmu, SCX) & 7]);
   if (ppu->scn < 80)
     curr_mode = 2;
-  else if (ppu->scn < 252)
+  else if (ppu->scn < mode3_end)
     curr_mode = 3;
   else
     curr_mode = 0;
