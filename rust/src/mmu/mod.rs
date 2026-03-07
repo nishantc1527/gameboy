@@ -47,6 +47,7 @@ pub struct Mmu {
     wram_bank: u8,
     bg_pal_ram: [u8; 64],
     obj_pal_ram: [u8; 64],
+    boot_skipped: bool,
 }
 
 #[allow(clippy::manual_range_patterns)]
@@ -83,24 +84,26 @@ impl Mmu {
         } else {
             boot_rom_file_name.to_owned()
         };
-        let mut boot_rom_file = match File::open(Path::new(&actual_boot_rom)) {
-            Ok(f) => f,
+        let boot_skipped = match File::open(Path::new(&actual_boot_rom)) {
+            Ok(mut f) => {
+                let brom_bytes = f.read(&mut brom).ok()?;
+                if cgb_mode && brom_bytes != 0x900 {
+                    eprintln!("CGB boot ROM must be 0x900 bytes (got {})", brom_bytes);
+                    return None;
+                } else if !cgb_mode && brom_bytes != 0x100 {
+                    eprintln!("COULD NOT READ FULL BOOT ROM");
+                    return None;
+                }
+                false
+            }
             Err(_) => {
                 eprintln!(
-                    "Boot ROM not found: \"{}\". Set paths.boot_rom in settings or place boot.rom / cgb_boot.bin in the working directory.",
+                    "Boot ROM not found: \"{}\". Running without boot ROM.",
                     actual_boot_rom
                 );
-                return None;
+                true
             }
         };
-        let brom_bytes = boot_rom_file.read(&mut brom).ok()?;
-        if cgb_mode && brom_bytes != 0x900 {
-            eprintln!("CGB boot ROM must be 0x900 bytes (got {})", brom_bytes);
-            return None;
-        } else if !cgb_mode && brom_bytes != 0x100 {
-            eprintln!("COULD NOT READ FULL BOOT ROM");
-            return None;
-        }
         let mut checksum: u8 = 0u8;
         for i in 0x0134usize..=0x014C {
             checksum = checksum.wrapping_sub(rom[i]).wrapping_sub(1);
@@ -225,6 +228,7 @@ impl Mmu {
             wram_bank: 1,
             bg_pal_ram: [0u8; 64],
             obj_pal_ram: [0u8; 64],
+            boot_skipped,
         };
         if cgb_mode {
             mmu.mem[0xFF4D] = 0;
@@ -232,6 +236,9 @@ impl Mmu {
                 mmu.bg_pal_ram[i * 2] = 0xFF;
                 mmu.bg_pal_ram[i * 2 + 1] = 0x7F;
             }
+        }
+        if boot_skipped {
+            mmu.post_boot_init();
         }
         Some(mmu)
     }
@@ -502,5 +509,68 @@ impl Mmu {
 
     pub fn get_obj_pal_byte(&self, idx: u8) -> u8 {
         self.obj_pal_ram[idx as usize]
+    }
+
+    pub fn boot_skipped(&self) -> bool {
+        self.boot_skipped
+    }
+
+    fn post_boot_init(&mut self) {
+        self.mem[0xFF50] = 1;
+        self.mem[0xFF01] = 0x00;
+        self.mem[0xFF05] = 0x00;
+        self.mem[0xFF06] = 0x00;
+        self.mem[0xFF07] = 0xF8;
+        self.mem[0xFF0F] = 0xE1;
+        self.mem[0xFF10] = 0x80;
+        self.mem[0xFF11] = 0xBF;
+        self.mem[0xFF12] = 0xF3;
+        self.mem[0xFF13] = 0xFF;
+        self.mem[0xFF14] = 0xBF;
+        self.mem[0xFF16] = 0x3F;
+        self.mem[0xFF17] = 0x00;
+        self.mem[0xFF18] = 0xFF;
+        self.mem[0xFF19] = 0xBF;
+        self.mem[0xFF1A] = 0x7F;
+        self.mem[0xFF1B] = 0xFF;
+        self.mem[0xFF1C] = 0x9F;
+        self.mem[0xFF1D] = 0xFF;
+        self.mem[0xFF1E] = 0xBF;
+        self.mem[0xFF20] = 0xFF;
+        self.mem[0xFF21] = 0x00;
+        self.mem[0xFF22] = 0x00;
+        self.mem[0xFF23] = 0xBF;
+        self.mem[0xFF24] = 0x77;
+        self.mem[0xFF25] = 0xF3;
+        self.mem[0xFF26] = 0xF1;
+        self.mem[0xFF40] = 0x91;
+        self.mem[0xFF42] = 0x00;
+        self.mem[0xFF43] = 0x00;
+        self.mem[0xFF44] = 0x00;
+        self.mem[0xFF45] = 0x00;
+        self.mem[0xFF47] = 0xFC;
+        self.mem[0xFF4A] = 0x00;
+        self.mem[0xFF4B] = 0x00;
+        self.mem[0xFFFF] = 0x00;
+        if self.cgb_mode {
+            self.mem[0xFF00] = 0xCF;
+            self.mem[0xFF02] = 0x7F;
+            self.mem[0xFF41] = 0x85;
+            self.mem[0xFF46] = 0x00;
+            self.mem[0xFF4D] = 0x7E;
+            self.mem[0xFF51] = 0xFF;
+            self.mem[0xFF52] = 0xFF;
+            self.mem[0xFF53] = 0xFF;
+            self.mem[0xFF54] = 0xFF;
+            self.mem[0xFF55] = 0xFF;
+            self.mem[0xFF56] = 0x3E;
+            self.mem[0xFF70] = 0x01;
+        } else {
+            self.mem[0xFF00] = 0xCF;
+            self.mem[0xFF02] = 0x7E;
+            self.mem[0xFF04] = 0xAB;
+            self.mem[0xFF41] = 0x85;
+            self.mem[0xFF46] = 0xFF;
+        }
     }
 }

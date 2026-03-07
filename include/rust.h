@@ -141,6 +141,8 @@ void mmu_load(struct Mmu *mmu);
 
 bool mmu_is_cgb(const struct Mmu *mmu);
 
+bool mmu_boot_skipped(const struct Mmu *mmu);
+
 bool mmu_take_div_reset(struct Mmu *mmu);
 
 uint8_t mmu_get_vram_bank1_byte(const struct Mmu *mmu, uint16_t addr);

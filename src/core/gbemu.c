@@ -37,6 +37,10 @@ gbemu* gbemu_init(char* rom_name, const char* boot_rom, int test_category,
   gb->total_cycles = 0;
   gb->total_frames = 0;
   mmu_load(gb->mmu);
+  if (mmu_boot_skipped(gb->mmu)) {
+    uint8_t checksum = mmu_r_mem(gb->mmu, 0x014D);
+    post_boot_cpu(gb->cpu, gb->cpu->cgb_mode, checksum);
+  }
   return gb;
 }
 
@@ -57,6 +61,10 @@ void gbemu_reset(gbemu* gb) {
   gb->bdone = 0;
   gb->paused = 0;
   mmu_load(gb->mmu);
+  if (mmu_boot_skipped(gb->mmu)) {
+    uint8_t checksum = mmu_r_mem(gb->mmu, 0x014D);
+    post_boot_cpu(gb->cpu, gb->cpu->cgb_mode, checksum);
+  }
 }
 
 int gbemu_step_frame(gbemu* gb) {

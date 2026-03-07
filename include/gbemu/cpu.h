@@ -23,6 +23,7 @@ struct Cpu {
 };
 
 struct Cpu* init_cpu(void);
+void post_boot_cpu(struct Cpu* cpu, int cgb_mode, uint8_t header_checksum);
 int step(struct Cpu* cpu, Mmu* mmu, struct Apu* apu, uint8_t disassemble_enable,
          int test_category, uint8_t* b_done, const uint16_t* watch_addrs,
          uint8_t watch_count, uint64_t total_cycles);

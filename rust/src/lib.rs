@@ -118,6 +118,11 @@ extern "C" fn mmu_is_cgb(mmu: *const Mmu) -> bool {
 }
 
 #[unsafe(no_mangle)]
+extern "C" fn mmu_boot_skipped(mmu: *const Mmu) -> bool {
+    unsafe { (*mmu).boot_skipped() }
+}
+
+#[unsafe(no_mangle)]
 extern "C" fn mmu_take_div_reset(mmu: *mut Mmu) -> bool {
     unsafe { (*mmu).take_div_reset() }
 }
