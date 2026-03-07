@@ -29,6 +29,7 @@ struct Cpu* init_cpu(void) {
   cpu->intr_loc[2] = 0x0050;
   cpu->intr_loc[3] = 0x0058;
   cpu->intr_loc[4] = 0x0060;
+  cpu->cgb_mode = 0;
   return cpu;
 }
 
@@ -41,8 +42,7 @@ void update_timer(struct Cpu* cpu, Mmu* mmu, struct Apu* apu, uint8_t cycles) {
     }
   }
 
-  if (mmu_r_mem_raw(mmu, 0xFF4F)) {
-    mmu_w_mem_raw(mmu, 0xFF4F, 0);
+  if (mmu_take_div_reset(mmu)) {
     uint8_t old_div = mmu_r_mem_raw(mmu, 0xFF4E);
     uint32_t sys_ctr = ((uint32_t)old_div << 8) | (cpu->div_cnt & 0xFF);
     uint8_t tac = mmu_r_mem_raw(mmu, TAC);

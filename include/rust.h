@@ -139,6 +139,16 @@ void mmu_save(const struct Mmu *mmu);
 
 void mmu_load(struct Mmu *mmu);
 
+bool mmu_is_cgb(const struct Mmu *mmu);
+
+bool mmu_take_div_reset(struct Mmu *mmu);
+
+uint8_t mmu_get_vram_bank1_byte(const struct Mmu *mmu, uint16_t addr);
+
+uint8_t mmu_get_bg_pal_byte(const struct Mmu *mmu, uint8_t idx);
+
+uint8_t mmu_get_obj_pal_byte(const struct Mmu *mmu, uint8_t idx);
+
 void mmu_set_joypad(struct Mmu *mmu, uint8_t btns, uint8_t dirs);
 
 void mmu_advance_rtc(struct Mmu *mmu, uint64_t cycles);

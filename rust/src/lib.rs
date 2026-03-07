@@ -113,6 +113,31 @@ extern "C" fn mmu_load(mmu: *mut Mmu) {
 }
 
 #[unsafe(no_mangle)]
+extern "C" fn mmu_is_cgb(mmu: *const Mmu) -> bool {
+    unsafe { (*mmu).is_cgb() }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn mmu_take_div_reset(mmu: *mut Mmu) -> bool {
+    unsafe { (*mmu).take_div_reset() }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn mmu_get_vram_bank1_byte(mmu: *const Mmu, addr: u16) -> u8 {
+    unsafe { (*mmu).get_vram_bank1_byte(addr) }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn mmu_get_bg_pal_byte(mmu: *const Mmu, idx: u8) -> u8 {
+    unsafe { (*mmu).get_bg_pal_byte(idx) }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn mmu_get_obj_pal_byte(mmu: *const Mmu, idx: u8) -> u8 {
+    unsafe { (*mmu).get_obj_pal_byte(idx) }
+}
+
+#[unsafe(no_mangle)]
 extern "C" fn mmu_set_joypad(mmu: *mut Mmu, btns: u8, dirs: u8) {
     unsafe { (*mmu).set_joypad(btns, dirs) }
 }

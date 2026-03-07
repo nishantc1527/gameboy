@@ -26,11 +26,13 @@ extern const uint16_t SCANLINE_LEN, SCANLINES;
 
 struct Ppu {
   uint8_t dsp[SCRN_HEIGHT][SCRN_WIDTH];
+  uint16_t cgb_dsp[SCRN_HEIGHT][SCRN_WIDTH];
   uint8_t WIN_CNT;
   uint16_t scn;
   uint8_t frame;
   uint8_t off_scn;
   int in[8];
+  uint8_t cgb_mode;
 };
 
 struct Ppu* init_ppu(void);

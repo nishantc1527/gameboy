@@ -39,6 +39,14 @@ pub struct Mmu {
     rtc_carry: bool,
     joypad_btns: u8,
     joypad_dirs: u8,
+    cgb_mode: bool,
+    div_reset_pending: bool,
+    vram_bank1: Vec<u8>,
+    vram_bank_sel: u8,
+    wram_banks: Vec<u8>,
+    wram_bank: u8,
+    bg_pal_ram: [u8; 64],
+    obj_pal_ram: [u8; 64],
 }
 
 #[allow(clippy::manual_range_patterns)]
@@ -46,26 +54,12 @@ impl Mmu {
     pub fn new(rom_file_name: &str, boot_rom_file_name: &str, test_category: i8) -> Option<Mmu> {
         let mut rom_title = String::new();
         let mem = vec![0u8; 0x800000];
-        let mut brom = vec![0u8; 0x100];
+        let mut brom = vec![0u8; 0x900];
         let mut rom = vec![0u8; 0x800000];
         let extern_ram = vec![0u8; 0x20000];
         let ram_bank: u8 = 0;
         let mut mbc1_1mb_mode = false;
         let mut mbc1_multicart = false;
-        let mut boot_rom_file = match File::open(Path::new(boot_rom_file_name)) {
-            Ok(f) => f,
-            Err(_) => {
-                eprintln!(
-                    "Boot ROM not found: \"{}\". Set paths.boot_rom in settings or place boot.rom in the working directory.",
-                    boot_rom_file_name
-                );
-                return None;
-            }
-        };
-        if boot_rom_file.read(&mut brom).ok()? != 0x100 {
-            eprintln!("COULD NOT READ FULL BOOT ROM");
-            return None;
-        }
         let mut rom_file = match File::open(Path::new(rom_file_name)) {
             Ok(f) => f,
             Err(_) => {
@@ -81,7 +75,32 @@ impl Mmu {
             );
             return None;
         }
-
+        let cgb_mode = matches!(rom[0x0143], 0x80 | 0xC0);
+        let actual_boot_rom = if cgb_mode {
+            let p = Path::new(boot_rom_file_name);
+            let dir = p.parent().unwrap_or(Path::new("."));
+            dir.join("cgb_boot.bin").to_string_lossy().into_owned()
+        } else {
+            boot_rom_file_name.to_owned()
+        };
+        let mut boot_rom_file = match File::open(Path::new(&actual_boot_rom)) {
+            Ok(f) => f,
+            Err(_) => {
+                eprintln!(
+                    "Boot ROM not found: \"{}\". Set paths.boot_rom in settings or place boot.rom / cgb_boot.bin in the working directory.",
+                    actual_boot_rom
+                );
+                return None;
+            }
+        };
+        let brom_bytes = boot_rom_file.read(&mut brom).ok()?;
+        if cgb_mode && brom_bytes != 0x900 {
+            eprintln!("CGB boot ROM must be 0x900 bytes (got {})", brom_bytes);
+            return None;
+        } else if !cgb_mode && brom_bytes != 0x100 {
+            eprintln!("COULD NOT READ FULL BOOT ROM");
+            return None;
+        }
         let mut checksum: u8 = 0u8;
         for i in 0x0134usize..=0x014C {
             checksum = checksum.wrapping_sub(rom[i]).wrapping_sub(1);
@@ -170,7 +189,7 @@ impl Mmu {
             }
             _ => (),
         }
-        Some(Mmu {
+        let mut mmu = Mmu {
             rom_title,
             cart_type,
             rom_size,
@@ -198,13 +217,34 @@ impl Mmu {
             rtc_carry: false,
             joypad_btns: 0,
             joypad_dirs: 0,
-        })
+            cgb_mode,
+            div_reset_pending: false,
+            vram_bank1: vec![0u8; 0x2000],
+            vram_bank_sel: 0,
+            wram_banks: vec![0u8; 0x8000],
+            wram_bank: 1,
+            bg_pal_ram: [0u8; 64],
+            obj_pal_ram: [0u8; 64],
+        };
+        if cgb_mode {
+            mmu.mem[0xFF4D] = 0;
+            for i in 0..32usize {
+                mmu.bg_pal_ram[i * 2] = 0xFF;
+                mmu.bg_pal_ram[i * 2 + 1] = 0x7F;
+            }
+        }
+        Some(mmu)
     }
 
     #[allow(clippy::identity_op)]
     pub fn r_mem(&self, loc: u16) -> u8 {
-        if self.mem[0xFF50] == 0 && loc < 0x100 {
-            return self.brom[loc as usize];
+        if self.mem[0xFF50] == 0 {
+            if loc < 0x100 {
+                return self.brom[loc as usize];
+            }
+            if self.cgb_mode && (0x0200..0x0A00).contains(&loc) {
+                return self.brom[loc as usize];
+            }
         }
         match loc {
             ..0x8000 => match self.cart_type {
@@ -232,6 +272,13 @@ impl Mmu {
                     if lcdc & 0x80 != 0 && self.mem[0xFF41] & 0x03 == 3 {
                         return 0xFF;
                     }
+                    if self.cgb_mode && self.vram_bank_sel & 1 == 1 {
+                        return self.vram_bank1[loc as usize - 0x8000];
+                    }
+                }
+                if self.cgb_mode && (0xD000..0xE000).contains(&loc) {
+                    return self.wram_banks
+                        [self.wram_bank as usize * 0x1000 + loc as usize - 0xD000];
                 }
                 if (0xFE00..0xFEA0).contains(&loc) {
                     let lcdc = self.mem[0xFF40];
@@ -243,6 +290,10 @@ impl Mmu {
                     }
                 }
                 match loc {
+                    0xFF4F if self.cgb_mode => (self.vram_bank_sel & 1) | 0xFE,
+                    0xFF69 if self.cgb_mode => self.bg_pal_ram[(self.mem[0xFF68] & 0x3F) as usize],
+                    0xFF6B if self.cgb_mode => self.obj_pal_ram[(self.mem[0xFF6A] & 0x3F) as usize],
+                    0xFF70 if self.cgb_mode => self.wram_bank | 0xF8,
                     apu_reg::NR10 => self.mem[loc as usize] | 0x80,
                     apu_reg::NR11 => self.mem[loc as usize] | 0x3F,
                     apu_reg::NR12 => self.mem[loc as usize] | 0x00,
@@ -341,6 +392,14 @@ impl Mmu {
                     if lcdc & 0x80 != 0 && self.mem[0xFF41] & 0x03 == 3 {
                         return;
                     }
+                    if self.cgb_mode && self.vram_bank_sel & 1 == 1 {
+                        self.vram_bank1[loc as usize - 0x8000] = val;
+                        return;
+                    }
+                }
+                if self.cgb_mode && (0xD000..0xE000).contains(&loc) {
+                    self.wram_banks[self.wram_bank as usize * 0x1000 + loc as usize - 0xD000] = val;
+                    return;
                 }
                 if (0xFE00..0xFEA0).contains(&loc) {
                     let lcdc = self.mem[0xFF40];
@@ -371,11 +430,32 @@ impl Mmu {
                     }
                 } else if loc == 0xFF04 {
                     self.mem[0xFF4E] = self.mem[0xFF04];
-                    self.mem[0xFF4F] = 1;
+                    self.div_reset_pending = true;
                     self.mem[loc as usize] = 0x00;
                 } else if loc == 0xFF02 && val & 0x81 == 0x81 {
                     self.mem[loc as usize] = val & 0x7F;
                     self.mem[0xFF0F] |= 0x08;
+                } else if self.cgb_mode && loc == 0xFF4F {
+                    self.vram_bank_sel = val & 1;
+                } else if self.cgb_mode && loc == 0xFF68 {
+                    self.mem[0xFF68] = val;
+                } else if self.cgb_mode && loc == 0xFF69 {
+                    let idx = (self.mem[0xFF68] & 0x3F) as usize;
+                    self.bg_pal_ram[idx] = val;
+                    if self.mem[0xFF68] & 0x80 != 0 {
+                        self.mem[0xFF68] = (self.mem[0xFF68] & 0x80) | ((idx as u8 + 1) & 0x3F);
+                    }
+                } else if self.cgb_mode && loc == 0xFF6A {
+                    self.mem[0xFF6A] = val;
+                } else if self.cgb_mode && loc == 0xFF6B {
+                    let idx = (self.mem[0xFF6A] & 0x3F) as usize;
+                    self.obj_pal_ram[idx] = val;
+                    if self.mem[0xFF6A] & 0x80 != 0 {
+                        self.mem[0xFF6A] = (self.mem[0xFF6A] & 0x80) | ((idx as u8 + 1) & 0x3F);
+                    }
+                } else if self.cgb_mode && loc == 0xFF70 {
+                    self.wram_bank = if val & 7 == 0 { 1 } else { val & 7 };
+                    self.mem[0xFF70] = self.wram_bank;
                 } else {
                     match loc {
                         0xFF11 => self.mem[0xFF4C] |= 0x01,
@@ -400,5 +480,27 @@ impl Mmu {
 
     pub fn get_rom_title(&self) -> &String {
         &self.rom_title
+    }
+
+    pub fn is_cgb(&self) -> bool {
+        self.cgb_mode
+    }
+
+    pub fn take_div_reset(&mut self) -> bool {
+        let pending = self.div_reset_pending;
+        self.div_reset_pending = false;
+        pending
+    }
+
+    pub fn get_vram_bank1_byte(&self, addr: u16) -> u8 {
+        self.vram_bank1[(addr - 0x8000) as usize]
+    }
+
+    pub fn get_bg_pal_byte(&self, idx: u8) -> u8 {
+        self.bg_pal_ram[idx as usize]
+    }
+
+    pub fn get_obj_pal_byte(&self, idx: u8) -> u8 {
+        self.obj_pal_ram[idx as usize]
     }
 }

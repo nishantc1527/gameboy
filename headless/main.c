@@ -12,12 +12,30 @@
 static const uint8_t ACID_COLORS[5] = {0xFF, 0xAA, 0x55, 0x00, 0x00};
 
 static int write_screenshot(struct Ppu* ppu, const char* path) {
-  uint8_t buf[144][160];
-  for (int y = 0; y < 144; y++)
-    for (int x = 0; x < 160; x++) buf[y][x] = ACID_COLORS[ppu->dsp[y][x]];
-  if (!stbi_write_png(path, 160, 144, 1, buf, 160)) {
-    fprintf(stderr, "Failed to write screenshot: %s\n", path);
-    return -1;
+  if (ppu->cgb_mode) {
+    uint8_t buf[144][160][3];
+    for (int y = 0; y < 144; y++)
+      for (int x = 0; x < 160; x++) {
+        uint16_t rgb555 = ppu->cgb_dsp[y][x];
+        uint8_t r5 = rgb555 & 0x1F;
+        uint8_t g5 = (rgb555 >> 5) & 0x1F;
+        uint8_t b5 = (rgb555 >> 10) & 0x1F;
+        buf[y][x][0] = (r5 << 3) | (r5 >> 2);
+        buf[y][x][1] = (g5 << 3) | (g5 >> 2);
+        buf[y][x][2] = (b5 << 3) | (b5 >> 2);
+      }
+    if (!stbi_write_png(path, 160, 144, 3, buf, 160 * 3)) {
+      fprintf(stderr, "Failed to write screenshot: %s\n", path);
+      return -1;
+    }
+  } else {
+    uint8_t buf[144][160];
+    for (int y = 0; y < 144; y++)
+      for (int x = 0; x < 160; x++) buf[y][x] = ACID_COLORS[ppu->dsp[y][x]];
+    if (!stbi_write_png(path, 160, 144, 1, buf, 160)) {
+      fprintf(stderr, "Failed to write screenshot: %s\n", path);
+      return -1;
+    }
   }
   return 0;
 }

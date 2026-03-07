@@ -19,6 +19,7 @@ struct Cpu {
   uint32_t tim_cnt, tim_thresh, div_cnt;
   uint16_t intr_loc[5];
   uint8_t cyc_ext;
+  uint8_t cgb_mode;
 };
 
 struct Cpu* init_cpu(void);
