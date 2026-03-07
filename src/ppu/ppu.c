@@ -39,21 +39,12 @@ void update_lcd(struct Ppu* ppu, Mmu* mmu) {
 }
 
 int update_input(struct Ppu* ppu, Mmu* mmu) {
-  uint8_t curr_joyp = mmu_r_mem(mmu, JOYP);
-  curr_joyp |= 0xF;
-  if (!get_bit(curr_joyp, 4)) {
-    if (ppu->in[BTN_RIGHT]) clear_bit(&curr_joyp, 0);
-    if (ppu->in[BTN_LEFT]) clear_bit(&curr_joyp, 1);
-    if (ppu->in[BTN_UP]) clear_bit(&curr_joyp, 2);
-    if (ppu->in[BTN_DOWN]) clear_bit(&curr_joyp, 3);
-  }
-  if (!get_bit(curr_joyp, 5)) {
-    if (ppu->in[BTN_A]) clear_bit(&curr_joyp, 0);
-    if (ppu->in[BTN_B]) clear_bit(&curr_joyp, 1);
-    if (ppu->in[BTN_SELECT]) clear_bit(&curr_joyp, 2);
-    if (ppu->in[BTN_START]) clear_bit(&curr_joyp, 3);
-  }
-  check_interrupt_joypad(mmu, mmu_r_mem(mmu, JOYP), curr_joyp);
-  mmu_w_mem(mmu, 0xFF00, curr_joyp);
+  uint8_t btns = (ppu->in[BTN_A] ? 0x01 : 0) | (ppu->in[BTN_B] ? 0x02 : 0) |
+                 (ppu->in[BTN_SELECT] ? 0x04 : 0) |
+                 (ppu->in[BTN_START] ? 0x08 : 0);
+  uint8_t dirs = (ppu->in[BTN_RIGHT] ? 0x01 : 0) |
+                 (ppu->in[BTN_LEFT] ? 0x02 : 0) | (ppu->in[BTN_UP] ? 0x04 : 0) |
+                 (ppu->in[BTN_DOWN] ? 0x08 : 0);
+  mmu_set_joypad(mmu, btns, dirs);
   return 0;
 }

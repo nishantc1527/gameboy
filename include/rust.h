@@ -139,4 +139,8 @@ void mmu_save(const struct Mmu *mmu);
 
 void mmu_load(struct Mmu *mmu);
 
+void mmu_set_joypad(struct Mmu *mmu, uint8_t btns, uint8_t dirs);
+
+void mmu_advance_rtc(struct Mmu *mmu, uint64_t cycles);
+
 void mmu_free(struct Mmu *mmu);

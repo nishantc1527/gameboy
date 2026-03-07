@@ -27,6 +27,18 @@ pub struct Mmu {
     mbc1_1mb_mode: bool,
     mbc1_multicart: bool,
     test_category: i8,
+    rtc_latched: [u8; 5],
+    rtc_latch_state: u8,
+    rtc_s: u8,
+    rtc_m: u8,
+    rtc_h: u8,
+    rtc_dl: u8,
+    rtc_dh_bit: u8,
+    rtc_frac_cycles: u64,
+    rtc_halted: bool,
+    rtc_carry: bool,
+    joypad_btns: u8,
+    joypad_dirs: u8,
 }
 
 #[allow(clippy::manual_range_patterns)]
@@ -59,8 +71,8 @@ impl Mmu {
         let rom_size: u8 = rom[0x0148];
         let ram_size: u8 = rom[0x0149];
         match cart_type {
-            0x00 | 0x01 | 0x02 | 0x03 | 0x05 | 0x06 | 0x11 | 0x13 | 0x19 | 0x1A | 0x1B | 0x1C
-            | 0x1D | 0x1E => (),
+            0x00 | 0x01 | 0x02 | 0x03 | 0x05 | 0x06 | 0x0F | 0x10 | 0x11 | 0x12 | 0x13 | 0x19
+            | 0x1A | 0x1B | 0x1C | 0x1D | 0x1E => (),
             _ => {
                 eprintln!("UNIMPLEMENTED MAPPER ${:02X}\n", cart_type);
                 return None;
@@ -106,7 +118,7 @@ impl Mmu {
                     return None;
                 }
             }
-            0x11 | 0x12 | 0x13 => {
+            0x0F | 0x10 | 0x11 | 0x12 | 0x13 => {
                 if rom_size > 0x07 {
                     eprintln!("ROM SIZE NOT AVAILABLE\n");
                     return None;
@@ -144,6 +156,18 @@ impl Mmu {
             mbc1_1mb_mode,
             mbc1_multicart,
             test_category,
+            rtc_latched: [0u8; 5],
+            rtc_latch_state: 0,
+            rtc_s: 0,
+            rtc_m: 0,
+            rtc_h: 0,
+            rtc_dl: 0,
+            rtc_dh_bit: 0,
+            rtc_frac_cycles: 0,
+            rtc_halted: false,
+            rtc_carry: false,
+            joypad_btns: 0,
+            joypad_dirs: 0,
         })
     }
 
@@ -157,7 +181,7 @@ impl Mmu {
                 0x00 => self.no_mbc_read_rom(loc),
                 0x01 | 0x02 | 0x03 => self.mbc1_read_rom(loc),
                 0x05 | 0x06 => self.mbc2_read_rom(loc),
-                0x11 | 0x12 | 0x13 => self.mbc3_read_rom(loc),
+                0x0F | 0x10 | 0x11 | 0x12 | 0x13 => self.mbc3_read_rom(loc),
                 0x19 | 0x1A | 0x1B | 0x1C | 0x1D | 0x1E => self.mbc5_read_rom(loc),
                 _ => 0xFF,
             },
@@ -165,7 +189,7 @@ impl Mmu {
                 0x00 => self.no_mbc_read_ram(loc),
                 0x01 | 0x02 | 0x03 => self.mbc1_read_ram(loc),
                 0x05 | 0x06 => self.mbc2_read_ram(loc),
-                0x11 | 0x12 | 0x13 => self.mbc3_read_ram(loc),
+                0x0F | 0x10 | 0x11 | 0x12 | 0x13 => self.mbc3_read_ram(loc),
                 0x19 | 0x1A | 0x1B | 0x1C | 0x1D | 0x1E => self.mbc5_read_ram(loc),
                 _ => 0xFF,
             },
@@ -213,6 +237,39 @@ impl Mmu {
                     apu_reg::NR51 => self.mem[loc as usize] | 0x00,
                     apu_reg::NR52 => self.mem[loc as usize] | 0x70,
                     0xFF27..0xFF30 => 0xFF,
+                    0xFF00 => {
+                        let sel = self.mem[0xFF00];
+                        let mut result = (sel & 0x30) | 0xCF;
+                        if sel & 0x10 == 0 {
+                            if self.joypad_dirs & 0x01 != 0 {
+                                result &= 0xFE;
+                            }
+                            if self.joypad_dirs & 0x02 != 0 {
+                                result &= 0xFD;
+                            }
+                            if self.joypad_dirs & 0x04 != 0 {
+                                result &= 0xFB;
+                            }
+                            if self.joypad_dirs & 0x08 != 0 {
+                                result &= 0xF7;
+                            }
+                        }
+                        if sel & 0x20 == 0 {
+                            if self.joypad_btns & 0x01 != 0 {
+                                result &= 0xFE;
+                            }
+                            if self.joypad_btns & 0x02 != 0 {
+                                result &= 0xFD;
+                            }
+                            if self.joypad_btns & 0x04 != 0 {
+                                result &= 0xFB;
+                            }
+                            if self.joypad_btns & 0x08 != 0 {
+                                result &= 0xF7;
+                            }
+                        }
+                        result
+                    }
                     loc => self.mem[loc as usize],
                 }
             }
@@ -233,7 +290,7 @@ impl Mmu {
                 0x00 => self.no_mbc_write_rom(loc, val),
                 0x01 | 0x02 | 0x03 => self.mbc1_write_rom(loc, val),
                 0x05 | 0x06 => self.mbc2_write_rom(loc, val),
-                0x11 | 0x12 | 0x13 => self.mbc3_write_rom(loc, val),
+                0x0F | 0x10 | 0x11 | 0x12 | 0x13 => self.mbc3_write_rom(loc, val),
                 0x19 | 0x1A | 0x1B | 0x1C | 0x1D | 0x1E => self.mbc5_write_rom(loc, val),
                 _ => (),
             },
@@ -241,7 +298,7 @@ impl Mmu {
                 0x00 => self.no_mbc_write_ram(loc, val),
                 0x01 | 0x02 | 0x03 => self.mbc1_write_ram(loc, val),
                 0x05 | 0x06 => self.mbc2_write_ram(loc, val),
-                0x11 | 0x12 | 0x13 => self.mbc3_write_ram(loc, val),
+                0x0F | 0x10 | 0x11 | 0x12 | 0x13 => self.mbc3_write_ram(loc, val),
                 0x19 | 0x1A | 0x1B | 0x1C | 0x1D | 0x1E => self.mbc5_write_ram(loc, val),
                 _ => (),
             },

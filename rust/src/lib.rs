@@ -113,6 +113,16 @@ extern "C" fn mmu_load(mmu: *mut Mmu) {
 }
 
 #[unsafe(no_mangle)]
+extern "C" fn mmu_set_joypad(mmu: *mut Mmu, btns: u8, dirs: u8) {
+    unsafe { (*mmu).set_joypad(btns, dirs) }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn mmu_advance_rtc(mmu: *mut Mmu, cycles: u64) {
+    unsafe { (*mmu).advance_rtc(cycles) }
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn mmu_free(mmu: *mut Mmu) {
     if !mmu.is_null() {
         let raw = mmu;

@@ -37,6 +37,7 @@ int gbemu_step_frame(gbemu* gb) {
                          gb->test_category, &gb->bdone, gb->watch_addrs,
                          gb->watch_count, gb->total_cycles);
     if (cyc == -1) return -1;
+    mmu_advance_rtc(gb->mmu, (uint64_t)cyc);
     gb->total_cycles += (uint64_t)cyc;
     gb->ppu->scn = (uint16_t)(gb->ppu->scn + cyc);
     if (gb->ppu->scn >= SCANLINE_LEN) {
@@ -105,35 +106,28 @@ int gbemu_step_frame(gbemu* gb) {
     gb->bdone = 1;
   if (gb->test_category == TestMbc3 && gb->total_frames >= BROM_FRAMES + 60)
     gb->bdone = 1;
-  /* rtc3test: emulate button presses to select each subtest after the boot
-   * ROM ends, then wait the emulated duration from the how-to table.
-   *   basic tests : A               → 13 s = 780 frames
-   *   range tests : down, A         → 8 s  = 480 frames
-   *   sub-second  : down, down, A   → 26 s = 1560 frames
-   * Each button is held for 10 frames; sequential presses have 10-frame gaps. */
   if (gb->test_category == TestRtc3Basic ||
-      gb->test_category == TestRtc3Range ||
-      gb->test_category == TestRtc3Sub) {
+      gb->test_category == TestRtc3Range || gb->test_category == TestRtc3Sub) {
     uint64_t f = gb->total_frames - BROM_FRAMES;
     int btn_down = 0, btn_a = 0;
     if (gb->test_category == TestRtc3Basic) {
-      btn_a = (f < 10) ? 1 : 0;
+      btn_a = (f >= 12 && f < 22) ? 1 : 0;
     } else if (gb->test_category == TestRtc3Range) {
-      btn_down = (f < 10) ? 1 : 0;
-      btn_a = (f >= 20 && f < 30) ? 1 : 0;
+      btn_down = (f >= 12 && f < 22) ? 1 : 0;
+      btn_a = (f >= 32 && f < 42) ? 1 : 0;
     } else {
-      btn_down = (f < 10 || (f >= 20 && f < 30)) ? 1 : 0;
-      btn_a = (f >= 40 && f < 50) ? 1 : 0;
+      btn_down = ((f >= 12 && f < 22) || (f >= 32 && f < 42)) ? 1 : 0;
+      btn_a = (f >= 52 && f < 62) ? 1 : 0;
     }
     gb->ppu->in[BTN_DOWN] = btn_down;
     gb->ppu->in[BTN_A] = btn_a;
     update_input(gb->ppu, gb->mmu);
     if ((gb->test_category == TestRtc3Basic &&
-         gb->total_frames >= BROM_FRAMES + 10 + 13 * 60) ||
+         gb->total_frames >= BROM_FRAMES + 22 + 13 * 60) ||
         (gb->test_category == TestRtc3Range &&
-         gb->total_frames >= BROM_FRAMES + 30 + 8 * 60) ||
+         gb->total_frames >= BROM_FRAMES + 42 + 8 * 60) ||
         (gb->test_category == TestRtc3Sub &&
-         gb->total_frames >= BROM_FRAMES + 50 + 26 * 60))
+         gb->total_frames >= BROM_FRAMES + 62 + 26 * 60))
       gb->bdone = 1;
   }
   if (gb->test_category == TestScribble && gb->total_frames >= BROM_FRAMES + 10)
