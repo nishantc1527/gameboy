@@ -27,7 +27,7 @@ int step(struct Cpu* cpu, Mmu* mmu, struct Apu* apu, uint8_t disassemble_enable,
          int test_category, uint8_t* b_done, const uint16_t* watch_addrs,
          uint8_t watch_count, uint64_t total_cycles);
 
-void check_interrupt(struct Cpu* cpu, Mmu* mmu);
+int check_interrupt(struct Cpu* cpu, Mmu* mmu);
 void check_interrupt_vblank_lcd(Mmu* mmu, uint8_t stat, int prev_mode,
                                 int curr_mode);
 void check_interrupt_timer(Mmu* mmu, uint8_t tima);

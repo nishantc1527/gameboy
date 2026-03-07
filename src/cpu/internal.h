@@ -572,4 +572,4 @@ int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
                 const uint16_t* watch_addrs, uint8_t watch_count,
                 uint64_t total_cycles);
 
-void do_intr(struct Cpu* cpu, Mmu* mmu, uint8_t intr);
+int do_intr(struct Cpu* cpu, Mmu* mmu, uint8_t intr);

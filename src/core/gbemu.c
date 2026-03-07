@@ -84,7 +84,18 @@ int gbemu_step_frame(gbemu* gb) {
     update_timer(gb->cpu, gb->mmu, gb->apu, cyc_left);
     check_dma(gb->mmu);
     upd_apu(gb->apu, gb->mmu, cyc_left);
-    check_interrupt(gb->cpu, gb->mmu);
+    int disp_cyc = check_interrupt(gb->cpu, gb->mmu);
+    if (disp_cyc > 0) {
+      gb->total_cycles += (uint64_t)disp_cyc;
+      gb->ppu->scn = (uint16_t)(gb->ppu->scn + disp_cyc);
+      if (gb->ppu->scn >= SCANLINE_LEN) {
+        do_scanline(gb->ppu, gb->mmu);
+        gb->ppu->scn -= SCANLINE_LEN;
+      }
+      update_lcd(gb->ppu, gb->mmu);
+      update_timer(gb->cpu, gb->mmu, gb->apu, (uint8_t)disp_cyc);
+      upd_apu(gb->apu, gb->mmu, (uint8_t)disp_cyc);
+    }
   }
   if ((gb->test_category == TestBlarggAudio ||
        gb->test_category == TestBlarggCgbSound) &&

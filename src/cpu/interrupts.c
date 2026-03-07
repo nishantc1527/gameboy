@@ -3,7 +3,8 @@
 #include "gbemu/util.h"
 #include "internal.h"
 
-void do_intr(struct Cpu* cpu, Mmu* mmu, uint8_t intr) {
+int do_intr(struct Cpu* cpu, Mmu* mmu, uint8_t intr) {
+  cpu->bHALT = 0;
   if (cpu->bIME) {
     uint8_t val = mmu_r_mem_raw(mmu, 0xFF0F);
     clear_bit(&val, intr);
@@ -11,17 +12,19 @@ void do_intr(struct Cpu* cpu, Mmu* mmu, uint8_t intr) {
     push(cpu, mmu, cpu->PC);
     cpu->PC = cpu->intr_loc[intr];
     cpu->bIME = 0;
+    return 20;
   }
-  cpu->bHALT = 0;
+  return 0;
 }
 
-void check_interrupt(struct Cpu* cpu, Mmu* mmu) {
+int check_interrupt(struct Cpu* cpu, Mmu* mmu) {
   for (uint8_t intr = 0; intr < 5; intr++) {
     if (get_bit(mmu_r_mem(mmu, IF), intr) &&
         get_bit(mmu_r_mem(mmu, IE), intr)) {
-      do_intr(cpu, mmu, intr);
+      return do_intr(cpu, mmu, intr);
     }
   }
+  return 0;
 }
 
 void check_interrupt_vblank_lcd(Mmu* mmu, uint8_t stat, int prev_mode,
