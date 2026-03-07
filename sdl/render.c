@@ -17,9 +17,7 @@ void render(struct Ppu* ppu) {
     for (int j = 0; j < SCRN_WIDTH; j++) buf[i][j] = pal[ppu->dsp[i][j]];
 
   SDL_UpdateTexture(txt, NULL, buf, SCRN_WIDTH * sizeof(uint32_t));
-  SDL_RenderTexture(rnd, txt, NULL,
-                    &(SDL_FRect){0, 0, SCRN_WIDTH * g_settings.scale,
-                                 SCRN_HEIGHT * g_settings.scale});
+  SDL_RenderTexture(rnd, txt, NULL, NULL);
 }
 
 void draw_ui(void) {

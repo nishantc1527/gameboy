@@ -33,7 +33,8 @@ void populate_controls(void) {
 
 int init_window(const char* rom_title) {
   populate_controls();
-  if (!SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
+  if (!SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_AUDIO |
+                SDL_INIT_GAMEPAD)) {
     SDL_LogError(SDL_LOG_CATEGORY_SYSTEM, "ERROR INITIALIZING SDL: %s\n",
                  SDL_GetError());
     return 1;
@@ -46,6 +47,8 @@ int init_window(const char* rom_title) {
     return 1;
   }
   SDL_SetRenderVSync(rnd, 0);
+  SDL_SetRenderLogicalPresentation(rnd, SCRN_WIDTH, SCRN_HEIGHT,
+                                   SDL_LOGICAL_PRESENTATION_LETTERBOX);
   SDL_GetWindowSize(win, &win_width, &win_height);
   txt = SDL_CreateTexture(rnd, SDL_PIXELFORMAT_RGBA8888,
                           SDL_TEXTUREACCESS_STREAMING, SCRN_WIDTH, SCRN_HEIGHT);

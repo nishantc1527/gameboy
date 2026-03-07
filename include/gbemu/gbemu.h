@@ -13,9 +13,12 @@ typedef struct {
   Mmu* mmu;
   struct Ppu* ppu;
   char* rom_name;
+  const char* boot_rom;
   int test_category;
   uint8_t disassemble_enable;
   uint8_t bdone;
+  uint8_t paused;
+  uint8_t fast_forward;
   uint16_t watch_addrs[8];
   uint8_t watch_count;
   uint64_t total_cycles;
@@ -27,3 +30,4 @@ gbemu* gbemu_init(char* rom_name, const char* boot_rom, int test_category,
                   uint8_t watch_count);
 int gbemu_step_frame(gbemu* gb);
 void gbemu_free(gbemu* gb);
+void gbemu_reset(gbemu* gb);

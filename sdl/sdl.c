@@ -37,10 +37,13 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc,
     return SDL_APP_FAILURE;
   }
   settings_load(&g_settings);
-  // SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "INITIALIZING\n");
   gbemu* gb = gbemu_init(rom_name, g_settings.boot_rom, -1, disassemble_enable,
                          NULL, 0);
-  if (init_window(mmu_get_rom_title(gb->mmu))) {
+  if (!gb) return SDL_APP_FAILURE;
+  char win_title[128];
+  snprintf(win_title, sizeof(win_title), "gbemu \xe2\x80\x94 %s",
+           mmu_get_rom_title(gb->mmu));
+  if (init_window(win_title)) {
     gbemu_free(gb);
     return SDL_APP_FAILURE;
   }
@@ -64,12 +67,17 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
   Uint64 frame_ticks = (frame_cyc * perf_freq) / CPU_FREQ;
   if (tot_ticks >= frame_ticks * 2) tot_ticks = frame_ticks;
   if (tot_ticks >= frame_ticks) {
-    if (gbemu_step_frame(gb) == -1) return SDL_APP_FAILURE;
-    push_audio(gb->apu);
+    if (!gb->paused) {
+      int frames = gb->fast_forward ? 4 : 1;
+      for (int i = 0; i < frames; i++) {
+        if (gbemu_step_frame(gb) == -1) return SDL_APP_FAILURE;
+      }
+      push_audio(gb->apu);
+    }
     tot_ticks -= frame_ticks;
     update_input(gb->ppu, gb->mmu);
     render(gb->ppu);
-    // draw_ui();
+    draw_ui();
     SDL_RenderPresent(rnd);
   } else {
     Uint64 remaining = frame_ticks - tot_ticks;
@@ -81,7 +89,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
 SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event) {
   gbemu* gb = appstate;
-  if (handle_input(gb->ppu, event)) return SDL_APP_SUCCESS;
+  if (handle_input(gb, event)) return SDL_APP_SUCCESS;
   return SDL_APP_CONTINUE;
 }
 

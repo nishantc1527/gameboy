@@ -48,10 +48,10 @@ extern "C" fn mmu_init(
             .to_str()
             .expect("Could not read boot rom file name")
     };
-    Box::into_raw(Box::new(
-        Mmu::new(rom_str, boot_rom_str, test_category)
-            .expect("Something went wrong opening the boot rom or rom file"),
-    ))
+    match Mmu::new(rom_str, boot_rom_str, test_category) {
+        Some(mmu) => Box::into_raw(Box::new(mmu)),
+        None => std::ptr::null_mut(),
+    }
 }
 
 #[unsafe(no_mangle)]

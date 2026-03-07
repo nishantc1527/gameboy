@@ -2,6 +2,7 @@
 
 #include <SDL3/SDL.h>
 
+#include "gbemu/gbemu.h"
 #include "gbemu/ppu.h"
 #include "gbemu/settings.h"
 
@@ -38,7 +39,7 @@ extern Uint64 perf_freq;
 
 int init_window(const char* rom_title);
 
-int handle_input(struct Ppu* ppu, SDL_Event* event);
+int handle_input(gbemu* gb, SDL_Event* event);
 void render(struct Ppu* ppu);
 void draw_ui(void);
 

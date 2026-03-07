@@ -52,16 +52,46 @@ impl Mmu {
         let ram_bank: u8 = 0;
         let mut mbc1_1mb_mode = false;
         let mut mbc1_multicart = false;
-        // println!("OPENING BOOT ROM FILE\n");
-        let mut boot_rom_file = File::open(Path::new(boot_rom_file_name)).ok()?;
+        let mut boot_rom_file = match File::open(Path::new(boot_rom_file_name)) {
+            Ok(f) => f,
+            Err(_) => {
+                eprintln!(
+                    "Boot ROM not found: \"{}\". Set paths.boot_rom in settings or place boot.rom in the working directory.",
+                    boot_rom_file_name
+                );
+                return None;
+            }
+        };
         if boot_rom_file.read(&mut brom).ok()? != 0x100 {
             eprintln!("COULD NOT READ FULL BOOT ROM");
             return None;
         }
-        // println!("OPENING ROM FILE\n");
-        let mut rom_file = File::open(Path::new(rom_file_name)).ok()?;
-        let _ = rom_file.read(&mut rom).ok()?;
-        // println!("SUCCESSFULLY READ FILES\n");
+        let mut rom_file = match File::open(Path::new(rom_file_name)) {
+            Ok(f) => f,
+            Err(_) => {
+                eprintln!("ROM not found: \"{}\"", rom_file_name);
+                return None;
+            }
+        };
+        let rom_bytes_read = rom_file.read(&mut rom).unwrap_or(0);
+        if rom_bytes_read < 0x150 {
+            eprintln!(
+                "ROM is too small or corrupted ({} bytes, need at least 0x150)",
+                rom_bytes_read
+            );
+            return None;
+        }
+
+        let mut checksum: u8 = 0u8;
+        for i in 0x0134usize..=0x014C {
+            checksum = checksum.wrapping_sub(rom[i]).wrapping_sub(1);
+        }
+        if checksum != rom[0x014D] {
+            eprintln!(
+                "WARNING: ROM header checksum mismatch (computed 0x{:02X}, header has 0x{:02X})",
+                checksum, rom[0x014D]
+            );
+        }
 
         (0x0134usize..=0x0142usize).for_each(|i| {
             rom_title.push(rom[i] as char);
@@ -74,7 +104,7 @@ impl Mmu {
             0x00 | 0x01 | 0x02 | 0x03 | 0x05 | 0x06 | 0x0F | 0x10 | 0x11 | 0x12 | 0x13 | 0x19
             | 0x1A | 0x1B | 0x1C | 0x1D | 0x1E => (),
             _ => {
-                eprintln!("UNIMPLEMENTED MAPPER ${:02X}\n", cart_type);
+                eprintln!("Unsupported cartridge type: 0x{:02X}", cart_type);
                 return None;
             }
         }

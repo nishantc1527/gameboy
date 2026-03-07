@@ -14,20 +14,45 @@ gbemu* gbemu_init(char* rom_name, const char* boot_rom, int test_category,
                   uint8_t watch_count) {
   gbemu* gb = malloc(sizeof(gbemu));
   gb->rom_name = rom_name;
+  gb->boot_rom = boot_rom;
   gb->test_category = test_category;
   gb->disassemble_enable = disassemble_enable;
   gb->bdone = 0;
+  gb->paused = 0;
+  gb->fast_forward = 0;
   gb->watch_count = watch_addrs ? (watch_count < 8 ? watch_count : 8) : 0;
   for (uint8_t i = 0; i < gb->watch_count; i++)
     gb->watch_addrs[i] = watch_addrs[i];
   gb->cpu = init_cpu();
   gb->mmu = mmu_init(rom_name, boot_rom, (int8_t)test_category);
+  if (!gb->mmu) {
+    free(gb->cpu);
+    free(gb);
+    return NULL;
+  }
   gb->apu = init_apu();
   gb->ppu = init_ppu();
   gb->total_cycles = 0;
   gb->total_frames = 0;
   mmu_load(gb->mmu);
   return gb;
+}
+
+void gbemu_reset(gbemu* gb) {
+  free(gb->cpu);
+  free(gb->ppu);
+  free(gb->apu);
+  mmu_save(gb->mmu);
+  mmu_free(gb->mmu);
+  gb->cpu = init_cpu();
+  gb->mmu = mmu_init(gb->rom_name, gb->boot_rom, (int8_t)gb->test_category);
+  gb->apu = init_apu();
+  gb->ppu = init_ppu();
+  gb->total_cycles = 0;
+  gb->total_frames = 0;
+  gb->bdone = 0;
+  gb->paused = 0;
+  mmu_load(gb->mmu);
 }
 
 int gbemu_step_frame(gbemu* gb) {
