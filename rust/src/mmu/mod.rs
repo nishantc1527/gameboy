@@ -84,24 +84,28 @@ impl Mmu {
         } else {
             boot_rom_file_name.to_owned()
         };
-        let boot_skipped = match File::open(Path::new(&actual_boot_rom)) {
-            Ok(mut f) => {
-                let brom_bytes = f.read(&mut brom).ok()?;
-                if cgb_mode && brom_bytes != 0x900 {
-                    eprintln!("CGB boot ROM must be 0x900 bytes (got {})", brom_bytes);
-                    return None;
-                } else if !cgb_mode && brom_bytes != 0x100 {
-                    eprintln!("COULD NOT READ FULL BOOT ROM");
-                    return None;
+        let boot_skipped = if boot_rom_file_name.is_empty() {
+            true
+        } else {
+            match File::open(Path::new(&actual_boot_rom)) {
+                Ok(mut f) => {
+                    let brom_bytes = f.read(&mut brom).ok()?;
+                    if cgb_mode && brom_bytes != 0x900 {
+                        eprintln!("CGB boot ROM must be 0x900 bytes (got {})", brom_bytes);
+                        return None;
+                    } else if !cgb_mode && brom_bytes != 0x100 {
+                        eprintln!("COULD NOT READ FULL BOOT ROM");
+                        return None;
+                    }
+                    false
                 }
-                false
-            }
-            Err(_) => {
-                eprintln!(
-                    "Boot ROM not found: \"{}\". Running without boot ROM.",
-                    actual_boot_rom
-                );
-                true
+                Err(_) => {
+                    eprintln!(
+                        "Boot ROM not found: \"{}\". Running without boot ROM.",
+                        actual_boot_rom
+                    );
+                    true
+                }
             }
         };
         let mut checksum: u8 = 0u8;
