@@ -64,3 +64,9 @@ int init_window(const char* rom_title) {
   init_audio();
   return 0;
 }
+
+void set_window_title_rom(const char* rom_title) {
+  char buf[160];
+  SDL_snprintf(buf, sizeof(buf), "gbemu \xe2\x80\x94 %s", rom_title);
+  SDL_SetWindowTitle(win, buf);
+}

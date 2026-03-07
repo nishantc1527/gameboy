@@ -37,11 +37,19 @@ extern Uint64 tot_ticks;
 extern Uint64 prev_time;
 extern Uint64 perf_freq;
 
-int init_window(const char* rom_title);
+typedef struct {
+  gbemu* gb;
+  char pending_rom[512];
+  int dialog_open;
+} AppState;
 
-int handle_input(gbemu* gb, SDL_Event* event);
+int init_window(const char* title);
+void set_window_title_rom(const char* rom_title);
+
+int handle_input(AppState* state, SDL_Event* event);
+void open_rom_dialog(AppState* state);
 void render(struct Ppu* ppu);
-void draw_ui(void);
+void draw_ui(AppState* state);
 
 struct Apu;
 int init_audio(void);

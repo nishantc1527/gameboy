@@ -1,9 +1,10 @@
 #include <SDL3/SDL.h>
-#include <SDL3/SDL_log.h>
 #include <SDL3/SDL_render.h>
+#include <string.h>
 
 #include "gbemu/ppu.h"
 #include "gbemu/sdl.h"
+#include "gbemu/settings.h"
 #include "internal.h"
 
 uint32_t buf[SCRN_HEIGHT][SCRN_WIDTH];
@@ -28,18 +29,54 @@ void render(struct Ppu* ppu) {
     for (int i = 0; i < SCRN_HEIGHT; i++)
       for (int j = 0; j < SCRN_WIDTH; j++) buf[i][j] = pal[ppu->dsp[i][j]];
   }
-
   SDL_UpdateTexture(txt, NULL, buf, SCRN_WIDTH * sizeof(uint32_t));
   SDL_RenderTexture(rnd, txt, NULL, NULL);
 }
 
-void draw_ui(void) {
-  if (nk_begin(ctx, "Show", nk_rect(0, 0, SCRN_WIDTH * g_settings.scale, 35),
-               NK_WINDOW_BORDER | NK_WINDOW_NO_SCROLLBAR)) {
-    nk_layout_row_dynamic(ctx, 35, 1);
-    if (nk_button_label(ctx, "File")) {
+static void draw_ui_idle(AppState* state) {
+  int pw = 300;
+  int row_h = 30;
+  int recent = g_settings.recent_rom_count;
+  int ph = 60 + (recent > 0 ? 25 + recent * (row_h + 2) : 0);
+  int px = (win_width - pw) / 2;
+  int py = (win_height - ph) / 2;
+
+  if (nk_begin(ctx, "gbemu",
+               nk_rect((float)px, (float)py, (float)pw, (float)ph),
+               NK_WINDOW_TITLE | NK_WINDOW_BORDER | NK_WINDOW_NO_SCROLLBAR)) {
+    nk_layout_row_dynamic(ctx, row_h, 1);
+    if (nk_button_label(ctx, "Open ROM...")) open_rom_dialog(state);
+
+    if (recent > 0) {
+      nk_layout_row_dynamic(ctx, 16, 1);
+      nk_label(ctx, "Recent:", NK_TEXT_LEFT);
+      for (int i = 0; i < recent; i++) {
+        const char* path = g_settings.recent_roms[i];
+        const char* name = strrchr(path, '/');
+        name = name ? name + 1 : path;
+        nk_layout_row_dynamic(ctx, row_h, 1);
+        if (nk_button_label(ctx, name))
+          SDL_snprintf(state->pending_rom, sizeof(state->pending_rom), "%s",
+                       path);
+      }
     }
   }
   nk_end(ctx);
+}
+
+static void draw_ui_playing(AppState* state) { (void)state; }
+
+void draw_ui(AppState* state) {
+  SDL_SetRenderLogicalPresentation(rnd, win_width, win_height,
+                                   SDL_LOGICAL_PRESENTATION_DISABLED);
+
+  if (!state->gb)
+    draw_ui_idle(state);
+  else
+    draw_ui_playing(state);
+
   nk_sdl_render(ctx, NK_ANTI_ALIASING_ON);
+
+  SDL_SetRenderLogicalPresentation(rnd, SCRN_WIDTH, SCRN_HEIGHT,
+                                   SDL_LOGICAL_PRESENTATION_LETTERBOX);
 }

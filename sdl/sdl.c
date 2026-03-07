@@ -4,6 +4,8 @@
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL_timer.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "gbemu/gbemu.h"
 #include "gbemu/mmu.h"
@@ -16,8 +18,18 @@ static SDL_AppResult usage() {
   return SDL_APP_FAILURE;
 }
 
-SDL_AppResult SDL_AppInit(void** appstate, int argc,
-                          char* argv[] __attribute__((unused))) {
+static int load_rom(AppState* state, const char* path, uint8_t dis) {
+  gbemu_free(state->gb);
+  state->gb = gbemu_init((char*)path, g_settings.boot_rom, -1, dis, NULL, 0);
+  if (!state->gb) return 1;
+  set_window_title_rom(mmu_get_rom_title(state->gb->mmu));
+  settings_add_recent_rom(&g_settings, path);
+  settings_save(&g_settings);
+  if (pokemon_enabled) p_init_data(state->gb->mmu);
+  return 0;
+}
+
+SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
   if (argc < 1) return usage();
   char* rom_name = NULL;
   uint8_t disassemble_enable = 0;
@@ -27,83 +39,90 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc,
     else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--disassembly"))
       disassemble_enable = 1;
     else {
-      SDL_LogError(SDL_LOG_CATEGORY_ERROR, "UNKNOWN COMMAND LINE OPTION %s\n",
-                   argv[i]);
+      SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Unknown option: %s\n", argv[i]);
       return usage();
     }
   }
-  if (!rom_name) {
-    SDL_LogError(SDL_LOG_CATEGORY_ERROR, "MUST PROVIDE ROM FILE\n");
-    return SDL_APP_FAILURE;
-  }
+
   settings_load(&g_settings);
-  gbemu* gb = gbemu_init(rom_name, g_settings.boot_rom, -1, disassemble_enable,
-                         NULL, 0);
-  if (!gb) return SDL_APP_FAILURE;
-  char win_title[128];
-  snprintf(win_title, sizeof(win_title), "gbemu \xe2\x80\x94 %s",
-           mmu_get_rom_title(gb->mmu));
-  if (init_window(win_title)) {
-    gbemu_free(gb);
+
+  AppState* state = calloc(1, sizeof(AppState));
+  if (!state) return SDL_APP_FAILURE;
+  *appstate = state;
+
+  if (init_window("gbemu")) {
+    free(state);
     return SDL_APP_FAILURE;
   }
-  snprintf(g_settings.last_rom, sizeof(g_settings.last_rom), "%s", rom_name);
-  settings_add_recent_rom(&g_settings, rom_name);
-  settings_save(&g_settings);
-  if (pokemon_enabled) p_init_data(gb->mmu);
-  *appstate = gb;
+
+  if (rom_name) {
+    if (load_rom(state, rom_name, disassemble_enable)) return SDL_APP_FAILURE;
+    snprintf(g_settings.last_rom, sizeof(g_settings.last_rom), "%s", rom_name);
+    settings_save(&g_settings);
+  }
+
   return SDL_APP_CONTINUE;
 }
 
 SDL_AppResult SDL_AppIterate(void* appstate) {
-  gbemu* gb = appstate;
-  if (gb->bdone) return SDL_APP_SUCCESS;
+  AppState* state = appstate;
+
+  if (state->pending_rom[0]) {
+    load_rom(state, state->pending_rom, 0);
+    state->pending_rom[0] = '\0';
+  }
+
+  if (state->gb && state->gb->bdone) return SDL_APP_SUCCESS;
+
   Uint64 curr = SDL_GetPerformanceCounter();
   Uint64 elapsed = curr - prev_time;
   prev_time = curr;
   tot_ticks += elapsed;
-  gb->ppu->scn = 0;
+
   Uint64 frame_cyc = (Uint64)SCANLINE_LEN * (Uint64)SCANLINES;
   Uint64 frame_ticks = (frame_cyc * perf_freq) / CPU_FREQ;
   if (tot_ticks >= frame_ticks * 2) tot_ticks = frame_ticks;
+
   if (tot_ticks >= frame_ticks) {
-    if (!gb->paused) {
-      int frames = gb->fast_forward ? 4 : 1;
-      for (int i = 0; i < frames; i++) {
-        if (gbemu_step_frame(gb) == -1) return SDL_APP_FAILURE;
-      }
-      push_audio(gb->apu);
-    }
     tot_ticks -= frame_ticks;
-    update_input(gb->ppu, gb->mmu);
-    render(gb->ppu);
-    draw_ui();
+
+    SDL_SetRenderDrawColor(rnd, 20, 20, 20, 255);
+    SDL_RenderClear(rnd);
+
+    if (state->gb) {
+      if (!state->gb->paused) {
+        int frames = state->gb->fast_forward ? 4 : 1;
+        for (int i = 0; i < frames; i++) {
+          if (gbemu_step_frame(state->gb) == -1) return SDL_APP_FAILURE;
+        }
+        push_audio(state->gb->apu);
+      }
+      update_input(state->gb->ppu, state->gb->mmu);
+      render(state->gb->ppu);
+    }
+
+    draw_ui(state);
     SDL_RenderPresent(rnd);
   } else {
     Uint64 remaining = frame_ticks - tot_ticks;
     Uint64 sleep_ms = (remaining * 1000) / perf_freq;
     if (sleep_ms > 1) SDL_Delay((Uint32)(sleep_ms - 1));
   }
+
   return SDL_APP_CONTINUE;
 }
 
 SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event) {
-  gbemu* gb = appstate;
-  if (handle_input(gb, event)) return SDL_APP_SUCCESS;
+  AppState* state = appstate;
+  if (handle_input(state, event)) return SDL_APP_SUCCESS;
   return SDL_APP_CONTINUE;
 }
 
 void SDL_AppQuit(void* appstate, SDL_AppResult result) {
-  switch (result) {
-    case SDL_APP_SUCCESS:
-    case SDL_APP_CONTINUE:
-      // SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "SUCCESS\n");
-      break;
-    case SDL_APP_FAILURE:
-      // SDL_LogError(SDL_LOG_CATEGORY_ERROR, "FAILURE\n");
-      break;
-  }
+  (void)result;
+  AppState* state = appstate;
+  if (!state) return;
   settings_save(&g_settings);
-  gbemu_free(appstate);
-  // SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "DONE\n");
+  gbemu_free(state->gb);
+  free(state);
 }
