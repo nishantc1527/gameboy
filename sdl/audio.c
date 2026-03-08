@@ -23,12 +23,14 @@ int init_audio(void) {
   return 0;
 }
 
+int audio_queued_bytes(void) {
+  if (!audio_stream) return 0;
+  return (int)SDL_GetAudioStreamQueued(audio_stream);
+}
+
 void push_audio(struct Apu* apu) {
   if (!audio_stream || apu->sample_count == 0) return;
-  int max_queued = APU_SAMPLE_RATE / 10 * 2 * (int)sizeof(float);
-  if (SDL_GetAudioStreamQueued(audio_stream) < max_queued) {
-    SDL_PutAudioStreamData(audio_stream, apu->sample_buf,
-                           (int)(apu->sample_count * 2u * sizeof(float)));
-  }
+  SDL_PutAudioStreamData(audio_stream, apu->sample_buf,
+                         (int)(apu->sample_count * 2u * sizeof(float)));
   apu->sample_count = 0;
 }

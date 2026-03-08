@@ -51,11 +51,12 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
     else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--disassembly"))
       disassemble_enable = 1;
     else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
-      SDL_Log("Usage: gbemu [-r <rom.gb>] [-d]\n\n"
-              "Options:\n"
-              "  -r, --rom <file>    ROM file to load on startup\n"
-              "  -d, --disassembly   Print per-instruction disassembly\n"
-              "  -h, --help          Show this help\n");
+      SDL_Log(
+          "Usage: gbemu [-r <rom.gb>] [-d]\n\n"
+          "Options:\n"
+          "  -r, --rom <file>    ROM file to load on startup\n"
+          "  -d, --disassembly   Print per-instruction disassembly\n"
+          "  -h, --help          Show this help\n");
       return SDL_APP_SUCCESS;
     } else {
       SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Unknown option: %s\n", argv[i]);
@@ -95,39 +96,47 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
   if (state->gb && state->gb->bdone) return SDL_APP_SUCCESS;
 
-  Uint64 curr = SDL_GetPerformanceCounter();
-  Uint64 elapsed = curr - prev_time;
-  prev_time = curr;
-  tot_ticks += elapsed;
+  static const int MAX_QUEUED = APU_SAMPLE_RATE / 10 * 2 * (int)sizeof(float);
 
-  Uint64 frame_cyc = (Uint64)SCANLINE_LEN * (Uint64)SCANLINES;
-  Uint64 frame_ticks = (frame_cyc * perf_freq) / CPU_FREQ;
-  if (tot_ticks >= frame_ticks * 2) tot_ticks = frame_ticks;
-
-  if (tot_ticks >= frame_ticks) {
-    tot_ticks -= frame_ticks;
+  if (state->gb && !state->gb->paused) {
+    if (state->gb->fast_forward) {
+      for (int i = 0; i < 4; i++) {
+        if (gbemu_step_frame(state->gb) == -1) return SDL_APP_FAILURE;
+      }
+      state->gb->apu->sample_count = 0;
+    } else if (audio_queued_bytes() < MAX_QUEUED) {
+      if (gbemu_step_frame(state->gb) == -1) return SDL_APP_FAILURE;
+      push_audio(state->gb->apu);
+    } else {
+      SDL_Delay(1);
+      return SDL_APP_CONTINUE;
+    }
 
     SDL_SetRenderDrawColor(rnd, 20, 20, 20, 255);
     SDL_RenderClear(rnd);
-
-    if (state->gb) {
-      if (!state->gb->paused) {
-        int frames = state->gb->fast_forward ? 4 : 1;
-        for (int i = 0; i < frames; i++) {
-          if (gbemu_step_frame(state->gb) == -1) return SDL_APP_FAILURE;
-        }
-        push_audio(state->gb->apu);
-      }
-      update_input(state->gb->ppu, state->gb->mmu);
-      render(state->gb->ppu);
-    }
-
+    update_input(state->gb->ppu, state->gb->mmu);
+    render(state->gb->ppu);
     draw_ui(state);
     SDL_RenderPresent(rnd);
   } else {
-    Uint64 remaining = frame_ticks - tot_ticks;
-    Uint64 sleep_ms = (remaining * 1000) / perf_freq;
-    if (sleep_ms > 1) SDL_Delay((Uint32)(sleep_ms - 1));
+    Uint64 curr = SDL_GetPerformanceCounter();
+    Uint64 elapsed = curr - prev_time;
+    Uint64 frame_cyc = (Uint64)SCANLINE_LEN * (Uint64)SCANLINES;
+    Uint64 frame_ticks = (frame_cyc * perf_freq) / CPU_FREQ;
+    if (elapsed < frame_ticks) {
+      SDL_Delay(1);
+      return SDL_APP_CONTINUE;
+    }
+    prev_time = curr;
+
+    SDL_SetRenderDrawColor(rnd, 20, 20, 20, 255);
+    SDL_RenderClear(rnd);
+    if (state->gb) {
+      update_input(state->gb->ppu, state->gb->mmu);
+      render(state->gb->ppu);
+    }
+    draw_ui(state);
+    SDL_RenderPresent(rnd);
   }
 
   return SDL_APP_CONTINUE;

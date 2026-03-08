@@ -54,6 +54,7 @@ void draw_ui(AppState* state);
 
 struct Apu;
 int init_audio(void);
+int audio_queued_bytes(void);
 void push_audio(struct Apu* apu);
 
 void take_screenshot(struct Ppu* ppu);
