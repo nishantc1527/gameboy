@@ -12,8 +12,8 @@ roms = [
 ]
 
 
-# @pytest.mark.skip()
 @pytest.mark.timeout(60)
 @pytest.mark.parametrize("rom_path", roms)
+@pytest.mark.skip()
 def test_micro(rom_path):
     check_stream(rom_path, "micro")

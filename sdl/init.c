@@ -1,6 +1,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_timer.h>
 
+#include "gbemu/gbemu.h"
 #include "gbemu/ppu.h"
 #include "gbemu/sdl.h"
 
@@ -67,6 +68,7 @@ int init_window(const char* rom_title) {
 
 void set_window_title_rom(const char* rom_title) {
   char buf[160];
-  SDL_snprintf(buf, sizeof(buf), "gbemu \xe2\x80\x94 %s", rom_title);
+  SDL_snprintf(buf, sizeof(buf), "gbemu " GBEMU_VERSION " \xe2\x80\x94 %s",
+               rom_title);
   SDL_SetWindowTitle(win, buf);
 }

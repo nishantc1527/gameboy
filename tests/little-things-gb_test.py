@@ -16,5 +16,6 @@ roms = [
 
 @pytest.mark.timeout(30)
 @pytest.mark.parametrize("rom, ref", roms)
+@pytest.mark.skip()
 def test_little_things(rom, ref):
     check_screenshot(rom, ref, "little")

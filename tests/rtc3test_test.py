@@ -7,7 +7,7 @@ from core import check_screenshot
 def test_rtc3_basic():
     check_screenshot(
         "test_roms/rtc3test/rtc3test.gb",
-        "test_roms/rtc3test/rtc3test-basic-tests-dmg.png",
+        "test_roms/rtc3test/rtc3test-basic-tests-cgb.png",
         "rtc3_basic",
     )
 
@@ -16,7 +16,7 @@ def test_rtc3_basic():
 def test_rtc3_range():
     check_screenshot(
         "test_roms/rtc3test/rtc3test.gb",
-        "test_roms/rtc3test/rtc3test-range-tests-dmg.png",
+        "test_roms/rtc3test/rtc3test-range-tests-cgb.png",
         "rtc3_range",
     )
 
@@ -25,6 +25,6 @@ def test_rtc3_range():
 def test_rtc3_subsecond():
     check_screenshot(
         "test_roms/rtc3test/rtc3test.gb",
-        "test_roms/rtc3test/rtc3test-sub-second-writes-dmg.png",
+        "test_roms/rtc3test/rtc3test-sub-second-writes-cgb.png",
         "rtc3_sub",
     )

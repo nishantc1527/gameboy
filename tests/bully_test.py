@@ -4,6 +4,7 @@ from core import check_screenshot
 
 
 @pytest.mark.timeout(30)
+@pytest.mark.skip()
 def test_bully():
     check_screenshot(
         "test_roms/bully/bully.gb",

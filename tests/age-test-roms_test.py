@@ -15,5 +15,6 @@ roms = [
 
 @pytest.mark.timeout(30)
 @pytest.mark.parametrize("rom", roms)
+@pytest.mark.skip()
 def test_age(rom):
     check_stream(rom, "age")

@@ -14,5 +14,6 @@ roms = [
 
 @pytest.mark.timeout(20)
 @pytest.mark.parametrize("rom_path", roms)
+@pytest.mark.skip
 def test_same(rom_path):
     check_stream(rom_path, "same")

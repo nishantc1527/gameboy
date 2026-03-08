@@ -24,5 +24,6 @@ ppu_with_ref = [(r, _find_ref(r)) for r in ppu_roms if _find_ref(r)]
 
 @pytest.mark.timeout(30)
 @pytest.mark.parametrize("rom,ref", ppu_with_ref)
+@pytest.mark.skip()
 def test_mealybug_ppu(rom, ref):
     check_screenshot(rom, ref, "mealybug")

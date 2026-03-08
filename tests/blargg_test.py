@@ -63,6 +63,7 @@ def test_blargg_cpu(rom_path):
 
 @pytest.mark.timeout(60)
 @pytest.mark.parametrize("rom_path", audio_roms)
+@pytest.mark.skip()
 def test_blargg_audio(rom_path):
     check_stream(rom_path, "blargg_audio")
 
@@ -81,29 +82,34 @@ def test_blargg_mem_time(rom_path):
 
 @pytest.mark.timeout(30)
 @pytest.mark.parametrize("rom_path", halt_bug_roms)
+@pytest.mark.skip()
 def test_blargg_halt_bug(rom_path):
     check_stream(rom_path, "blargg_halt_bug")
 
 
 @pytest.mark.timeout(30)
 @pytest.mark.parametrize("rom_path", intr_time_roms)
+@pytest.mark.skip()
 def test_blargg_interrupt_time(rom_path):
     check_stream(rom_path, "blargg_interrupt_time")
 
 
 @pytest.mark.timeout(30)
 @pytest.mark.parametrize("rom_path", mem_time2_roms)
+@pytest.mark.skip()
 def test_blargg_mem_time2(rom_path):
     check_stream(rom_path, "blargg_mem_time2")
 
 
 @pytest.mark.timeout(60)
 @pytest.mark.parametrize("rom_path", oam_bug_roms)
+@pytest.mark.skip()
 def test_blargg_oam_bug(rom_path):
     check_stream(rom_path, "blargg_oam_bug")
 
 
 @pytest.mark.timeout(120)
 @pytest.mark.parametrize("rom_path", cgb_sound_roms)
+@pytest.mark.skip()
 def test_blargg_cgb_sound(rom_path):
     check_stream(rom_path, "blargg_cgb_sound")

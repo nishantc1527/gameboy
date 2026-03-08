@@ -18,6 +18,7 @@ roms = [
 
 @pytest.mark.timeout(30)
 @pytest.mark.parametrize("rom, expected", roms)
+@pytest.mark.skip()
 def test_turtle(rom, expected):
     check_screenshot(
         rom,

@@ -46,7 +46,11 @@ int main(int argc, char* argv[]) {
   uint16_t watch_addrs[8];
   uint8_t watch_count = 0;
   for (int i = 1; i < argc; i++) {
-    if ((!strcmp(argv[i], "-r") || !strcmp(argv[i], "--rom")) && i + 1 < argc)
+    if (!strcmp(argv[i], "--version")) {
+      printf("gbemu " GBEMU_VERSION "\n");
+      return 0;
+    } else if ((!strcmp(argv[i], "-r") || !strcmp(argv[i], "--rom")) &&
+               i + 1 < argc)
       rom_name = argv[++i];
     else if ((!strcmp(argv[i], "-b") || !strcmp(argv[i], "--boot-rom")) &&
              i + 1 < argc)

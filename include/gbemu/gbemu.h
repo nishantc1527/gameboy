@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#define GBEMU_VERSION "1.0.0"
+
 #include "gbemu/apu.h"
 #include "gbemu/cpu.h"
 #include "gbemu/mmu.h"
