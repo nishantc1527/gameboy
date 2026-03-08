@@ -76,7 +76,11 @@ impl Mmu {
             );
             return None;
         }
-        let cgb_mode = matches!(rom[0x0143], 0x80 | 0xC0);
+        let cgb_flag = rom[0x0143] & 0x80 != 0;
+        let old_licensee_nintendo = rom[0x014B] == 0x01;
+        let new_licensee_nintendo =
+            rom[0x014B] == 0x33 && rom[0x0144] == b'0' && rom[0x0145] == b'1';
+        let cgb_mode = cgb_flag || old_licensee_nintendo || new_licensee_nintendo;
         let actual_boot_rom = if cgb_mode {
             let p = Path::new(boot_rom_file_name);
             let dir = p.parent().unwrap_or(Path::new("."));

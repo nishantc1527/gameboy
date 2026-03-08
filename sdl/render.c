@@ -34,10 +34,15 @@ void render(struct Ppu* ppu) {
 }
 
 static void draw_ui_idle(AppState* state) {
-  int pw = 300;
-  int row_h = 30;
+  float scale = (float)win_width / (SCRN_WIDTH * 3);
+  if (scale < 1.0f) scale = 1.0f;
+  int pw = (int)(300 * scale);
+  int row_h = (int)(30 * scale);
+  int label_h = (int)(16 * scale);
   int recent = g_settings.recent_rom_count;
-  int ph = 60 + (recent > 0 ? 25 + recent * (row_h + 2) : 0);
+  int has_error = state->rom_error[0] != '\0';
+  int ph = row_h + 30 + (has_error ? label_h + 4 : 0) +
+           (recent > 0 ? label_h + 4 + recent * (row_h + 2) : 0);
   int px = (win_width - pw) / 2;
   int py = (win_height - ph) / 2;
 
@@ -47,8 +52,14 @@ static void draw_ui_idle(AppState* state) {
     nk_layout_row_dynamic(ctx, row_h, 1);
     if (nk_button_label(ctx, "Open ROM...")) open_rom_dialog(state);
 
+    if (has_error) {
+      nk_layout_row_dynamic(ctx, label_h, 1);
+      nk_label_colored(ctx, state->rom_error, NK_TEXT_LEFT,
+                        nk_rgb(220, 80, 80));
+    }
+
     if (recent > 0) {
-      nk_layout_row_dynamic(ctx, 16, 1);
+      nk_layout_row_dynamic(ctx, label_h, 1);
       nk_label(ctx, "Recent:", NK_TEXT_LEFT);
       for (int i = 0; i < recent; i++) {
         const char* path = g_settings.recent_roms[i];

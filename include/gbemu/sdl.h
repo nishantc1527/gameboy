@@ -41,6 +41,7 @@ typedef struct {
   gbemu* gb;
   char pending_rom[512];
   int dialog_open;
+  char rom_error[512];
 } AppState;
 
 int init_window(const char* title);
@@ -54,3 +55,5 @@ void draw_ui(AppState* state);
 struct Apu;
 int init_audio(void);
 void push_audio(struct Apu* apu);
+
+void take_screenshot(struct Ppu* ppu);

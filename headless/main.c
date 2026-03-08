@@ -49,6 +49,24 @@ int main(int argc, char* argv[]) {
     if (!strcmp(argv[i], "--version")) {
       printf("gbemu " GBEMU_VERSION "\n");
       return 0;
+    } else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
+      printf("Usage: gbemu_headless -r <rom.gb> [options]\n\n");
+      printf("Options:\n");
+      printf("  -r, --rom <file>        ROM file to run\n");
+      printf("  -b, --boot-rom <file>   Boot ROM file (default: boot.rom)\n");
+      printf("  -t, --test <category>   Test category for automated testing\n");
+      printf("  -s, --screenshot <file> Save screenshot to PNG file\n");
+      printf("  -d, --disassembly       Print per-instruction disassembly\n");
+      printf("  -w, --watch <hex addr>  Watch memory address (up to 8)\n");
+      printf("      --version           Print version and exit\n");
+      printf("  -h, --help              Show this help\n\n");
+      printf("Test categories: blargg_cpu, blargg_cpu_time, blargg_mem_time,\n");
+      printf("  blargg_audio, blargg_halt_bug, blargg_interrupt_time,\n");
+      printf("  blargg_mem_time2, blargg_oam_bug, blargg_cgb_sound,\n");
+      printf("  acid2, mbc3, rtc3_basic, rtc3_range, rtc3_sub, gambatte,\n");
+      printf("  micro, little, mealybug, mooneye, same, age, bully,\n");
+      printf("  scribble, strike, turtle\n");
+      return 0;
     } else if ((!strcmp(argv[i], "-r") || !strcmp(argv[i], "--rom")) &&
                i + 1 < argc)
       rom_name = argv[++i];

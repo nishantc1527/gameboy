@@ -19,9 +19,21 @@ static SDL_AppResult usage() {
 }
 
 static int load_rom(AppState* state, const char* path, uint8_t dis) {
+  FILE* f = fopen(path, "r");
+  if (!f) {
+    SDL_snprintf(state->rom_error, sizeof(state->rom_error),
+                 "ROM not found: %s", path);
+    return 1;
+  }
+  fclose(f);
+  state->rom_error[0] = '\0';
   gbemu_free(state->gb);
   state->gb = gbemu_init((char*)path, g_settings.boot_rom, -1, dis, NULL, 0);
-  if (!state->gb) return 1;
+  if (!state->gb) {
+    SDL_snprintf(state->rom_error, sizeof(state->rom_error),
+                 "Failed to load ROM: %s", path);
+    return 1;
+  }
   set_window_title_rom(mmu_get_rom_title(state->gb->mmu));
   settings_add_recent_rom(&g_settings, path);
   settings_save(&g_settings);
@@ -38,7 +50,14 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
       rom_name = argv[++i];
     else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--disassembly"))
       disassemble_enable = 1;
-    else {
+    else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
+      SDL_Log("Usage: gbemu [-r <rom.gb>] [-d]\n\n"
+              "Options:\n"
+              "  -r, --rom <file>    ROM file to load on startup\n"
+              "  -d, --disassembly   Print per-instruction disassembly\n"
+              "  -h, --help          Show this help\n");
+      return SDL_APP_SUCCESS;
+    } else {
       SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Unknown option: %s\n", argv[i]);
       return usage();
     }
@@ -68,8 +87,10 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
   AppState* state = appstate;
 
   if (state->pending_rom[0]) {
-    load_rom(state, state->pending_rom, 0);
+    char path[512];
+    SDL_snprintf(path, sizeof(path), "%s", state->pending_rom);
     state->pending_rom[0] = '\0';
+    load_rom(state, path, 0);
   }
 
   if (state->gb && state->gb->bdone) return SDL_APP_SUCCESS;

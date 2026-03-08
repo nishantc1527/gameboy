@@ -33,7 +33,7 @@ static void do_scanline_cgb(struct Ppu* ppu, Mmu* mmu) {
       uint16_t tile_map_addr =
           (uint16_t)((uint16_t)tiley * 32 + (uint16_t)tilex);
       tile_map_addr += (uint16_t)(mp_area ? 0x9C00 : 0x9800);
-      uint8_t tile_idx_raw = mmu_r_mem(mmu, tile_map_addr);
+      uint8_t tile_idx_raw = mmu_r_mem_raw(mmu, tile_map_addr);
       uint8_t attr = mmu_get_vram_bank1_byte(mmu, tile_map_addr);
       uint8_t pal_num = attr & 7;
       uint8_t vram_bank = (attr >> 3) & 1;
@@ -48,8 +48,8 @@ static void do_scanline_cgb(struct Ppu* ppu, Mmu* mmu) {
       idx += (uint16_t)(dat_area ? 0x8000 : 0x8800);
       uint8_t ls, ms;
       if (vram_bank == 0) {
-        ls = mmu_r_mem(mmu, (uint16_t)(idx + ty));
-        ms = mmu_r_mem(mmu, (uint16_t)(idx + ty + 1));
+        ls = mmu_r_mem_raw(mmu, (uint16_t)(idx + ty));
+        ms = mmu_r_mem_raw(mmu, (uint16_t)(idx + ty + 1));
       } else {
         ls = mmu_get_vram_bank1_byte(mmu, (uint16_t)(idx + ty));
         ms = mmu_get_vram_bank1_byte(mmu, (uint16_t)(idx + ty + 1));
@@ -79,7 +79,7 @@ static void do_scanline_cgb(struct Ppu* ppu, Mmu* mmu) {
           uint16_t tile_map_addr =
               (uint16_t)((uint16_t)tiley * 32 + (uint16_t)tilex);
           tile_map_addr += (uint16_t)(win_mp ? 0x9C00 : 0x9800);
-          uint8_t tile_idx_raw = mmu_r_mem(mmu, tile_map_addr);
+          uint8_t tile_idx_raw = mmu_r_mem_raw(mmu, tile_map_addr);
           uint8_t attr = mmu_get_vram_bank1_byte(mmu, tile_map_addr);
           uint8_t pal_num = attr & 7;
           uint8_t vram_bank = (attr >> 3) & 1;
@@ -94,8 +94,8 @@ static void do_scanline_cgb(struct Ppu* ppu, Mmu* mmu) {
           idx += (uint16_t)(dat_area ? 0x8000 : 0x8800);
           uint8_t ls, ms;
           if (vram_bank == 0) {
-            ls = mmu_r_mem(mmu, (uint16_t)(idx + ty));
-            ms = mmu_r_mem(mmu, (uint16_t)(idx + ty + 1));
+            ls = mmu_r_mem_raw(mmu, (uint16_t)(idx + ty));
+            ms = mmu_r_mem_raw(mmu, (uint16_t)(idx + ty + 1));
           } else {
             ls = mmu_get_vram_bank1_byte(mmu, (uint16_t)(idx + ty));
             ms = mmu_get_vram_bank1_byte(mmu, (uint16_t)(idx + ty + 1));
@@ -153,8 +153,8 @@ static void do_scanline_cgb(struct Ppu* ppu, Mmu* mmu) {
       line = (uint8_t)(line << 1);
       uint8_t ls, ms;
       if (vram_bank == 0) {
-        ls = mmu_r_mem(mmu, (uint16_t)(idx + line));
-        ms = mmu_r_mem(mmu, (uint16_t)(idx + line + 1));
+        ls = mmu_r_mem_raw(mmu, (uint16_t)(idx + line));
+        ms = mmu_r_mem_raw(mmu, (uint16_t)(idx + line + 1));
       } else {
         ls = mmu_get_vram_bank1_byte(mmu, (uint16_t)(idx + line));
         ms = mmu_get_vram_bank1_byte(mmu, (uint16_t)(idx + line + 1));

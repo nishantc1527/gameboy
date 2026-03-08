@@ -47,6 +47,7 @@ int init_window(const char* rom_title) {
                  "ERROR CREATING WINDOW & RENDERER: %s\n", SDL_GetError());
     return 1;
   }
+  if (g_settings.fullscreen) SDL_SetWindowFullscreen(win, true);
   SDL_SetRenderVSync(rnd, 0);
   SDL_SetRenderLogicalPresentation(rnd, SCRN_WIDTH, SCRN_HEIGHT,
                                    SDL_LOGICAL_PRESENTATION_LETTERBOX);

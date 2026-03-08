@@ -1,6 +1,7 @@
 #include <SDL3/SDL.h>
 
 #include "gbemu/apu.h"
+#include "gbemu/settings.h"
 
 static SDL_AudioStream* audio_stream = NULL;
 
@@ -17,6 +18,7 @@ int init_audio(void) {
                  SDL_GetError());
     return 1;
   }
+  SDL_SetAudioStreamGain(audio_stream, g_settings.volume);
   SDL_ResumeAudioStreamDevice(audio_stream);
   return 0;
 }

@@ -82,6 +82,8 @@ int handle_input(AppState* state, SDL_Event* event) {
         set_btn(ppu, BTN_RIGHT, 1);
       else if (k == g_controls[CTRL_PAUSE])
         state->gb->paused ^= 1;
+      else if (k == g_controls[CTRL_SCREENSHOT])
+        take_screenshot(ppu);
       else if (k == SDLK_TAB)
         state->gb->fast_forward = 1;
       else if (k == SDLK_R && (event->key.mod & SDL_KMOD_CTRL))
