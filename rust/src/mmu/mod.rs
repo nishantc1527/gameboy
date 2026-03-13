@@ -48,6 +48,10 @@ pub struct Mmu {
     bg_pal_ram: [u8; 64],
     obj_pal_ram: [u8; 64],
     boot_skipped: bool,
+    hdma_active: bool,
+    hdma_remaining: u8,
+    hdma_src: u16,
+    hdma_dst: u16,
 }
 
 #[allow(clippy::manual_range_patterns)]
@@ -237,6 +241,10 @@ impl Mmu {
             bg_pal_ram: [0u8; 64],
             obj_pal_ram: [0u8; 64],
             boot_skipped,
+            hdma_active: false,
+            hdma_remaining: 0,
+            hdma_src: 0,
+            hdma_dst: 0x8000,
         };
         if cgb_mode {
             mmu.mem[0xFF4D] = 0;
@@ -468,6 +476,37 @@ impl Mmu {
                     if self.mem[0xFF6A] & 0x80 != 0 {
                         self.mem[0xFF6A] = (self.mem[0xFF6A] & 0x80) | ((idx as u8 + 1) & 0x3F);
                     }
+                } else if self.cgb_mode && loc == 0xFF55 {
+                    if self.hdma_active && val & 0x80 == 0 {
+                        self.hdma_active = false;
+                        self.mem[0xFF55] = 0x80 | self.hdma_remaining;
+                    } else if val & 0x80 == 0 {
+                        let src = ((self.mem[0xFF51] as u16) << 8)
+                            | (self.mem[0xFF52] as u16 & 0xF0);
+                        let dst = 0x8000u16
+                            | ((self.mem[0xFF53] as u16 & 0x1F) << 8)
+                            | (self.mem[0xFF54] as u16 & 0xF0);
+                        let blocks = (val & 0x7F) as u16 + 1;
+                        for i in 0..blocks * 0x10 {
+                            let byte = self.r_mem(src.wrapping_add(i));
+                            let addr = dst.wrapping_add(i);
+                            if self.vram_bank_sel & 1 == 0 {
+                                self.mem[addr as usize] = byte;
+                            } else {
+                                self.vram_bank1[(addr - 0x8000) as usize] = byte;
+                            }
+                        }
+                        self.mem[0xFF55] = 0xFF;
+                    } else {
+                        self.hdma_src = ((self.mem[0xFF51] as u16) << 8)
+                            | (self.mem[0xFF52] as u16 & 0xF0);
+                        self.hdma_dst = 0x8000u16
+                            | ((self.mem[0xFF53] as u16 & 0x1F) << 8)
+                            | (self.mem[0xFF54] as u16 & 0xF0);
+                        self.hdma_remaining = val & 0x7F;
+                        self.hdma_active = true;
+                        self.mem[0xFF55] = val & 0x7F;
+                    }
                 } else if self.cgb_mode && loc == 0xFF70 {
                     self.wram_bank = if val & 7 == 0 { 1 } else { val & 7 };
                     self.mem[0xFF70] = self.wram_bank;
@@ -521,6 +560,34 @@ impl Mmu {
 
     pub fn boot_skipped(&self) -> bool {
         self.boot_skipped
+    }
+
+    pub fn do_hdma_block(&mut self) {
+        if !self.hdma_active {
+            return;
+        }
+        let ly = self.mem[0xFF44];
+        if ly >= 144 {
+            return;
+        }
+        for i in 0..0x10u16 {
+            let byte = self.r_mem(self.hdma_src.wrapping_add(i));
+            let addr = self.hdma_dst.wrapping_add(i);
+            if self.vram_bank_sel & 1 == 0 {
+                self.mem[addr as usize] = byte;
+            } else {
+                self.vram_bank1[(addr - 0x8000) as usize] = byte;
+            }
+        }
+        self.hdma_src = self.hdma_src.wrapping_add(0x10);
+        self.hdma_dst = 0x8000 | (self.hdma_dst.wrapping_add(0x10) & 0x1FFF);
+        if self.hdma_remaining == 0 {
+            self.hdma_active = false;
+            self.mem[0xFF55] = 0xFF;
+        } else {
+            self.hdma_remaining -= 1;
+            self.mem[0xFF55] = self.hdma_remaining;
+        }
     }
 
     fn post_boot_init(&mut self) {

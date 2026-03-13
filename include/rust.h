@@ -151,6 +151,8 @@ uint8_t mmu_get_bg_pal_byte(const struct Mmu *mmu, uint8_t idx);
 
 uint8_t mmu_get_obj_pal_byte(const struct Mmu *mmu, uint8_t idx);
 
+void mmu_do_hdma_block(struct Mmu *mmu);
+
 void mmu_set_joypad(struct Mmu *mmu, uint8_t btns, uint8_t dirs);
 
 void mmu_advance_rtc(struct Mmu *mmu, uint64_t cycles);

@@ -36,6 +36,7 @@ void update_lcd(struct Ppu* ppu, Mmu* mmu) {
     curr_mode = 0;
   if (mmu_r_mem(mmu, LY) >= SCRN_HEIGHT) curr_mode = 1;
   check_interrupt_vblank_lcd(mmu, stat, prev_mode, curr_mode);
+  if (prev_mode != 0 && curr_mode == 0) mmu_do_hdma_block(mmu);
   stat &= (uint8_t)~(0b11);
   stat |= curr_mode;
   if (mmu_r_mem(mmu, LY) == mmu_r_mem(mmu, LYC))
