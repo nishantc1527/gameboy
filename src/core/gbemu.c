@@ -91,7 +91,7 @@ int gbemu_step_frame(gbemu* gb) {
     gb->cpu->cyc_ext = 0;
     update_timer(gb->cpu, gb->mmu, gb->apu, cyc_left);
     check_dma(gb->mmu);
-    upd_apu(gb->apu, gb->mmu, cyc_left);
+    upd_apu(gb->apu, gb->mmu, (uint8_t)cyc);
     int disp_cyc = check_interrupt(gb->cpu, gb->mmu);
     if (disp_cyc > 0) {
       gb->total_cycles += (uint64_t)disp_cyc;

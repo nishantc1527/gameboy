@@ -13,9 +13,6 @@ SDL_Window* win;
 SDL_Renderer* rnd;
 struct nk_context* ctx;
 
-Uint64 perf_freq;
-Uint64 prev_time;
-Uint64 tot_ticks = 0;
 
 SDL_Keycode g_controls[CTRL_COUNT];
 
@@ -61,8 +58,6 @@ int init_window(const char* rom_title) {
   }
   ctx = nk_sdl_init(win, rnd, nk_sdl_allocator());
   nk_sdl_style_set_debug_font(ctx);
-  perf_freq = SDL_GetPerformanceFrequency();
-  prev_time = SDL_GetPerformanceCounter();
   init_audio();
   return 0;
 }

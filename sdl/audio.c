@@ -20,6 +20,8 @@ int init_audio(void) {
   }
   SDL_SetAudioStreamGain(audio_stream, g_settings.volume);
   SDL_ResumeAudioStreamDevice(audio_stream);
+  float silence[APU_BUF_SIZE * 2] = {0};
+  SDL_PutAudioStreamData(audio_stream, silence, (int)sizeof(silence));
   return 0;
 }
 

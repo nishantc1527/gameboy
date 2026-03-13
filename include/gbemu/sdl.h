@@ -33,10 +33,6 @@ extern SDL_Window* win;
 extern SDL_Renderer* rnd;
 extern struct nk_context* ctx;
 
-extern Uint64 tot_ticks;
-extern Uint64 prev_time;
-extern Uint64 perf_freq;
-
 typedef struct {
   gbemu* gb;
   char pending_rom[512];

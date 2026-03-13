@@ -135,8 +135,8 @@ void upd_apu(struct Apu* apu, struct Mmu* mmu, uint8_t cycles) {
     }
     apu->length_clock = 0;
     apu->sweep_clock = 0;
-    apu->sample_acc += cycles;
-    const uint32_t cps = CPU_FREQ / APU_SAMPLE_RATE;
+    apu->sample_acc += (uint32_t)cycles * 375u;
+    const uint32_t cps = 32768u;
     while (apu->sample_acc >= cps && apu->sample_count < APU_BUF_SIZE) {
       apu->sample_acc -= cps;
       apu->sample_buf[apu->sample_count][0] = 0.0f;
@@ -395,8 +395,8 @@ void upd_apu(struct Apu* apu, struct Mmu* mmu, uint8_t cycles) {
   mmu_w_mem(mmu, NR52, ctrl);
   apu->length_clock = 0;
   apu->sweep_clock = 0;
-  apu->sample_acc += cycles;
-  const uint32_t cps = CPU_FREQ / APU_SAMPLE_RATE;
+  apu->sample_acc += (uint32_t)cycles * 375u;
+  const uint32_t cps = 32768u;
   uint8_t nr51 = mmu_r_mem_raw(mmu, NR51);
   uint8_t nr50 = mmu_r_mem_raw(mmu, NR50);
   uint8_t dac1_on = (nr12 & 0xF8) != 0;
