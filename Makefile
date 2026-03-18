@@ -103,6 +103,6 @@ verify: clean $(RUST_HDR) $(PYTHON)
 # $(CPPCHECK) --enable=all --inconclusive --error-exitcode=1 $(SRC_DIR) include/
 	$(MAKE) gbemu_headless CFLAGS="$(CFLAGS) $(VERIFY_FLAGS)"
 	$(PYTHON) scripts/check_coverage.py
-	$(MAKE) test all
+	$(MAKE) test
 
 -include $(DEPS)
