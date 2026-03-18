@@ -32,7 +32,7 @@ static void do_scanline_cgb(struct Ppu* ppu, Mmu* mmu) {
       uint8_t offx = bx % 8;
       uint16_t tile_map_addr =
           (uint16_t)((uint16_t)tiley * 32 + (uint16_t)tilex);
-      tile_map_addr += (uint16_t)(mp_area ? 0x9C00 : 0x9800);
+      tile_map_addr = (uint16_t)(tile_map_addr + (mp_area ? 0x9C00 : 0x9800));
       uint8_t tile_idx_raw = mmu_r_mem_raw(mmu, tile_map_addr);
       uint8_t attr = mmu_get_vram_bank1_byte(mmu, tile_map_addr);
       uint8_t pal_num = attr & 7;
@@ -44,8 +44,8 @@ static void do_scanline_cgb(struct Ppu* ppu, Mmu* mmu) {
       int ty = tile_offy << 1;
       uint16_t idx = tile_idx_raw;
       if (dat_area == 0) idx = (uint16_t)((int8_t)idx + 128);
-      idx *= 16;
-      idx += (uint16_t)(dat_area ? 0x8000 : 0x8800);
+      idx = (uint16_t)(idx * 16);
+      idx = (uint16_t)(idx + (dat_area ? 0x8000 : 0x8800));
       uint8_t ls, ms;
       if (vram_bank == 0) {
         ls = mmu_r_mem_raw(mmu, (uint16_t)(idx + ty));
@@ -78,7 +78,8 @@ static void do_scanline_cgb(struct Ppu* ppu, Mmu* mmu) {
           uint8_t offx = _wx % 8;
           uint16_t tile_map_addr =
               (uint16_t)((uint16_t)tiley * 32 + (uint16_t)tilex);
-          tile_map_addr += (uint16_t)(win_mp ? 0x9C00 : 0x9800);
+          tile_map_addr =
+              (uint16_t)(tile_map_addr + (win_mp ? 0x9C00 : 0x9800));
           uint8_t tile_idx_raw = mmu_r_mem_raw(mmu, tile_map_addr);
           uint8_t attr = mmu_get_vram_bank1_byte(mmu, tile_map_addr);
           uint8_t pal_num = attr & 7;
@@ -90,8 +91,8 @@ static void do_scanline_cgb(struct Ppu* ppu, Mmu* mmu) {
           int ty = tile_offy << 1;
           uint16_t idx = tile_idx_raw;
           if (dat_area == 0) idx = (uint16_t)((int8_t)idx + 128);
-          idx *= 16;
-          idx += (uint16_t)(dat_area ? 0x8000 : 0x8800);
+          idx = (uint16_t)(idx * 16);
+          idx = (uint16_t)(idx + (dat_area ? 0x8000 : 0x8800));
           uint8_t ls, ms;
           if (vram_bank == 0) {
             ls = mmu_r_mem_raw(mmu, (uint16_t)(idx + ty));
@@ -143,7 +144,7 @@ static void do_scanline_cgb(struct Ppu* ppu, Mmu* mmu) {
       uint8_t flipx = get_bit(flg, 5);
       uint8_t flipy = get_bit(flg, 6);
       uint8_t obj_prio = get_bit(flg, 7);
-      uint16_t idx = tile_idx * 16 + 0x8000;
+      uint16_t idx = (uint16_t)(tile_idx * 16 + 0x8000);
       uint8_t line = (uint8_t)(ly - y);
       if (sz) {
         if (flipy) line = 15 - line;

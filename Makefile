@@ -25,13 +25,25 @@ LIB_DIR       := vendor
 SDL_DIR       := sdl
 HEADLESS_DIR  := headless
 
+VERSION       := 1.0.0
+
 CFLAGS        := -O2 -std=c2x
 CPPFLAGS      := $(foreach d, $(INC_DIRS), -I$(d)) $(foreach d, $(LIB_DIR), -isystem $(d))
 SDL_CFLAGS    := $(shell pkg-config --cflags sdl3)
 SDL_LDLIBS    := $(shell pkg-config --libs sdl3)
-VERIFY_FLAGS  := -Wall -Wextra -Wpedantic -Werror
+LDFLAGS       :=
+VERIFY_FLAGS  := -Wall -Wextra -Wpedantic -Werror -Wshadow -Wconversion \
+                 -Wno-unused-parameter -Wno-sign-conversion
 
-CORE_SRCS     := $(wildcard $(SRC_DIR)/*.c $(SRC_DIR)/*/*.c)
+ifdef DEBUG
+  CFLAGS += -O0 -g -DDEBUG
+endif
+ifdef ASAN
+  CFLAGS  += -fsanitize=address,undefined
+  LDFLAGS += -fsanitize=address,undefined
+endif
+
+CORE_SRCS     := $(wildcard $(SRC_DIR)/*.c $(SRC_DIR)/*/*.c $(SRC_DIR)/*/*/*.c)
 VENDOR_SRCS   := $(wildcard $(LIB_DIR)/*.c)
 SDL_SRCS      := $(wildcard $(SDL_DIR)/*.c)
 HEADLESS_SRC  := $(HEADLESS_DIR)/main.c
@@ -47,7 +59,7 @@ HEADLESS_OBJ  := $(HEADLESS_SRC:%.c=$(BUILD_DIR)/%.o)
 ALL_OBJS      := $(CORE_OBJS) $(VENDOR_OBJS) $(SDL_OBJS) $(HEADLESS_OBJ)
 DEPS          := $(ALL_OBJS:.o=.d)
 
-.PHONY: all gbemu gbemu_headless clean format test verify
+.PHONY: all gbemu gbemu_headless clean format test verify compile_commands
 
 all: gbemu gbemu_headless $(PYTHON)
 
@@ -55,10 +67,10 @@ gbemu: $(BUILD_DIR)/gbemu
 gbemu_headless: $(BUILD_DIR)/gbemu_headless
 
 $(BUILD_DIR)/gbemu: $(RUST_LIB) $(CORE_OBJS) $(VENDOR_OBJS) $(SDL_OBJS)
-	$(CC) $(CORE_OBJS) $(VENDOR_OBJS) $(SDL_OBJS) $(RUST_LIB) -o $@ $(SDL_LDLIBS)
+	$(CC) $(CORE_OBJS) $(VENDOR_OBJS) $(SDL_OBJS) $(RUST_LIB) $(LDFLAGS) -o $@ $(SDL_LDLIBS)
 
 $(BUILD_DIR)/gbemu_headless: $(RUST_LIB) $(CORE_OBJS) $(VENDOR_OBJS) $(HEADLESS_OBJ)
-	$(CC) $(CORE_OBJS) $(VENDOR_OBJS) $(HEADLESS_OBJ) $(RUST_LIB) -o $@
+	$(CC) $(CORE_OBJS) $(VENDOR_OBJS) $(HEADLESS_OBJ) $(RUST_LIB) $(LDFLAGS) -o $@
 
 $(CORE_OBJS) $(VENDOR_OBJS) $(HEADLESS_OBJ): $(RUST_HDR)
 $(SDL_OBJS): $(RUST_HDR)
@@ -102,7 +114,10 @@ verify: clean $(RUST_HDR) $(PYTHON)
 # $(TIDY) $(CORE_SRCS) -header-filter='.*' --checks='*' --warnings-as-errors='*' -- $(CFLAGS) $(BASE_CPPFLAGS)
 # $(CPPCHECK) --enable=all --inconclusive --error-exitcode=1 $(SRC_DIR) include/
 	$(MAKE) gbemu_headless CFLAGS="$(CFLAGS) $(VERIFY_FLAGS)"
-	$(PYTHON) scripts/check_coverage.py
+	$(PYTHON) tests/check_coverage.py
 	$(MAKE) test
+
+compile_commands:
+	bear -- $(MAKE) all
 
 -include $(DEPS)
