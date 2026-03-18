@@ -33,6 +33,7 @@ struct Ppu {
   uint8_t off_scn;
   int in[8];
   uint8_t cgb_mode;
+  uint8_t cgb_compat;
 };
 
 struct Ppu* init_ppu(void);

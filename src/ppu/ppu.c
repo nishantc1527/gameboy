@@ -15,6 +15,7 @@ struct Ppu* init_ppu(void) {
   ppu->off_scn = 0;
   for (int i = 0; i < 8; i++) ppu->in[i] = 0;
   ppu->cgb_mode = 0;
+  ppu->cgb_compat = 0;
   for (int y = 0; y < SCRN_HEIGHT; y++)
     for (int x = 0; x < SCRN_WIDTH; x++) ppu->cgb_dsp[y][x] = 0;
   return ppu;

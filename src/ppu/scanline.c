@@ -139,7 +139,7 @@ static void do_scanline_cgb(struct Ppu* ppu, Mmu* mmu) {
       x -= 8;
       if (sz) tile_idx &= 0xFE;
       uint8_t vram_bank = (flg >> 3) & 1;
-      uint8_t pal_num = flg & 7;
+      uint8_t pal_num = ppu->cgb_compat ? ((flg >> 4) & 1) : (flg & 7);
       uint8_t flipx = get_bit(flg, 5);
       uint8_t flipy = get_bit(flg, 6);
       uint8_t obj_prio = get_bit(flg, 7);

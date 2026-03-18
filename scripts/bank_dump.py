@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import argparse
-import sys
 
 BANK_SIZE = 0x4000
 

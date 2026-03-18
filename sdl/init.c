@@ -13,7 +13,6 @@ SDL_Window* win;
 SDL_Renderer* rnd;
 struct nk_context* ctx;
 
-
 SDL_Keycode g_controls[CTRL_COUNT];
 
 void populate_controls(void) {

@@ -40,6 +40,7 @@ pub struct Mmu {
     joypad_btns: u8,
     joypad_dirs: u8,
     cgb_mode: bool,
+    cgb_compat: bool,
     div_reset_pending: bool,
     vram_bank1: Vec<u8>,
     vram_bank_sel: u8,
@@ -117,8 +118,8 @@ impl Mmu {
             }
         };
         let mut checksum: u8 = 0u8;
-        for i in 0x0134usize..=0x014C {
-            checksum = checksum.wrapping_sub(rom[i]).wrapping_sub(1);
+        for byte in rom.iter().take(0x014C + 1).skip(0x0134usize) {
+            checksum = checksum.wrapping_sub(*byte).wrapping_sub(1);
         }
         if checksum != rom[0x014D] {
             eprintln!(
@@ -233,6 +234,7 @@ impl Mmu {
             joypad_btns: 0,
             joypad_dirs: 0,
             cgb_mode,
+            cgb_compat: cgb_mode && !cgb_flag,
             div_reset_pending: false,
             vram_bank1: vec![0u8; 0x2000],
             vram_bank_sel: 0,
@@ -481,8 +483,8 @@ impl Mmu {
                         self.hdma_active = false;
                         self.mem[0xFF55] = 0x80 | self.hdma_remaining;
                     } else if val & 0x80 == 0 {
-                        let src = ((self.mem[0xFF51] as u16) << 8)
-                            | (self.mem[0xFF52] as u16 & 0xF0);
+                        let src =
+                            ((self.mem[0xFF51] as u16) << 8) | (self.mem[0xFF52] as u16 & 0xF0);
                         let dst = 0x8000u16
                             | ((self.mem[0xFF53] as u16 & 0x1F) << 8)
                             | (self.mem[0xFF54] as u16 & 0xF0);
@@ -498,8 +500,8 @@ impl Mmu {
                         }
                         self.mem[0xFF55] = 0xFF;
                     } else {
-                        self.hdma_src = ((self.mem[0xFF51] as u16) << 8)
-                            | (self.mem[0xFF52] as u16 & 0xF0);
+                        self.hdma_src =
+                            ((self.mem[0xFF51] as u16) << 8) | (self.mem[0xFF52] as u16 & 0xF0);
                         self.hdma_dst = 0x8000u16
                             | ((self.mem[0xFF53] as u16 & 0x1F) << 8)
                             | (self.mem[0xFF54] as u16 & 0xF0);
@@ -538,6 +540,10 @@ impl Mmu {
 
     pub fn is_cgb(&self) -> bool {
         self.cgb_mode
+    }
+
+    pub fn is_cgb_compat(&self) -> bool {
+        self.cgb_compat
     }
 
     pub fn take_div_reset(&mut self) -> bool {

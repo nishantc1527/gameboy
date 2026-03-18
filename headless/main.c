@@ -60,7 +60,8 @@ int main(int argc, char* argv[]) {
       printf("  -w, --watch <hex addr>  Watch memory address (up to 8)\n");
       printf("      --version           Print version and exit\n");
       printf("  -h, --help              Show this help\n\n");
-      printf("Test categories: blargg_cpu, blargg_cpu_time, blargg_mem_time,\n");
+      printf(
+          "Test categories: blargg_cpu, blargg_cpu_time, blargg_mem_time,\n");
       printf("  blargg_audio, blargg_halt_bug, blargg_interrupt_time,\n");
       printf("  blargg_mem_time2, blargg_oam_bug, blargg_cgb_sound,\n");
       printf("  acid2, mbc3, rtc3_basic, rtc3_range, rtc3_sub, gambatte,\n");

@@ -141,6 +141,8 @@ void mmu_load(struct Mmu *mmu);
 
 bool mmu_is_cgb(const struct Mmu *mmu);
 
+bool mmu_is_cgb_compat(const struct Mmu *mmu);
+
 bool mmu_boot_skipped(const struct Mmu *mmu);
 
 bool mmu_take_div_reset(struct Mmu *mmu);

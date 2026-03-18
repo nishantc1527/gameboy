@@ -34,6 +34,7 @@ gbemu* gbemu_init(char* rom_name, const char* boot_rom, int test_category,
   gb->ppu = init_ppu();
   gb->cpu->cgb_mode = mmu_is_cgb(gb->mmu) ? 1 : 0;
   gb->ppu->cgb_mode = gb->cpu->cgb_mode;
+  gb->ppu->cgb_compat = mmu_is_cgb_compat(gb->mmu) ? 1 : 0;
   gb->total_cycles = 0;
   gb->total_frames = 0;
   mmu_load(gb->mmu);
@@ -56,6 +57,7 @@ void gbemu_reset(gbemu* gb) {
   gb->ppu = init_ppu();
   gb->cpu->cgb_mode = mmu_is_cgb(gb->mmu) ? 1 : 0;
   gb->ppu->cgb_mode = gb->cpu->cgb_mode;
+  gb->ppu->cgb_compat = mmu_is_cgb_compat(gb->mmu) ? 1 : 0;
   gb->total_cycles = 0;
   gb->total_frames = 0;
   gb->bdone = 0;

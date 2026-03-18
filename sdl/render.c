@@ -55,7 +55,7 @@ static void draw_ui_idle(AppState* state) {
     if (has_error) {
       nk_layout_row_dynamic(ctx, label_h, 1);
       nk_label_colored(ctx, state->rom_error, NK_TEXT_LEFT,
-                        nk_rgb(220, 80, 80));
+                       nk_rgb(220, 80, 80));
     }
 
     if (recent > 0) {
