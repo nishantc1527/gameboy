@@ -2,9 +2,8 @@
 
 #include <SDL3/SDL.h>
 
-#include "gbemu/gbemu.h"
+#include "gbemu/core.h"
 #include "gbemu/ppu.h"
-#include "gbemu/settings.h"
 
 enum {
   CTRL_A = 0,

@@ -7,10 +7,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "gbemu/gbemu.h"
+#include "gbemu/core.h"
 #include "gbemu/mmu.h"
 #include "gbemu/pokemon.h"
-#include "gbemu/settings.h"
 
 static SDL_AppResult usage() {
   SDL_LogError(SDL_LOG_CATEGORY_ERROR,

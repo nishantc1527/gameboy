@@ -1,42 +1,13 @@
+pub mod constants;
 mod mmu;
 
 use mmu::Mmu;
 use std::ffi::{CStr, c_char};
 
-#[repr(C)]
-pub enum TestCategory {
-    TestAge,
-    TestBlarggCpu,
-    TestBlarggAudio,
-    TestBlarggCpuTime,
-    TestBlarggMemTime,
-    TestBlarggHaltBug,
-    TestBlarggInterruptTime,
-    TestBlarggMemTime2,
-    TestBlarggOamBug,
-    TestBlarggCgbSound,
-    TestBully,
-    TestAcid2,
-    TestGambatte,
-    TestMicro,
-    TestLittle,
-    TestMbc3,
-    TestMealybug,
-    TestMooneye,
-    TestSame,
-    TestRtc3Basic,
-    TestRtc3Range,
-    TestRtc3Sub,
-    TestScribble,
-    TestStrike,
-    TestTurtle,
-}
-
 #[unsafe(no_mangle)]
 extern "C" fn mmu_init(
     rom_file_name: *const c_char,
     boot_rom_file_name: *const c_char,
-    test_category: i8,
 ) -> *mut Mmu {
     let rom_str = unsafe {
         CStr::from_ptr(rom_file_name)
@@ -48,7 +19,7 @@ extern "C" fn mmu_init(
             .to_str()
             .expect("Could not read boot rom file name")
     };
-    match Mmu::new(rom_str, boot_rom_str, test_category) {
+    match Mmu::new(rom_str, boot_rom_str) {
         Some(mmu) => Box::into_raw(Box::new(mmu)),
         None => std::ptr::null_mut(),
     }
@@ -155,6 +126,21 @@ extern "C" fn mmu_do_hdma_block(mmu: *mut Mmu) {
 #[unsafe(no_mangle)]
 extern "C" fn mmu_set_joypad(mmu: *mut Mmu, btns: u8, dirs: u8) {
     unsafe { (*mmu).set_joypad(btns, dirs) }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn mmu_take_serial_byte(mmu: *mut Mmu) -> i32 {
+    unsafe {
+        match (*mmu).take_serial_byte() {
+            Some(b) => b as i32,
+            None => -1,
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn mmu_take_len_dirty(mmu: *mut Mmu) -> u8 {
+    unsafe { (*mmu).take_len_dirty() }
 }
 
 #[unsafe(no_mangle)]

@@ -3,7 +3,7 @@
 #include <string.h>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "gbemu/gbemu.h"
+#include "gbemu/core.h"
 #include "stb_image_write.h"
 
 static const uint8_t ACID_COLORS[5] = {0xFF, 0xAA, 0x55, 0x00, 0x00};

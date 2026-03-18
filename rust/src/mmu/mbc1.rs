@@ -1,10 +1,10 @@
 use super::Mmu;
 
-pub fn detect_multicart(rom: &[u8], rom_size: u8) -> bool {
+pub fn check_multicart(rom: &[u8], rom_size: u8) -> bool {
     if rom_size != 0x05 {
         return false;
     }
-    let logo: &[u8] = &[
+    let checksum: &[u8] = &[
         0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B, 0x03, 0x73, 0x00, 0x83, 0x00, 0x0C, 0x00,
         0x0D, 0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E, 0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD,
         0xD9, 0x99, 0xBB, 0xBB, 0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC, 0xDD, 0xDC, 0x99, 0x9F, 0xBB,
@@ -12,8 +12,8 @@ pub fn detect_multicart(rom: &[u8], rom_size: u8) -> bool {
     ];
     for bank in 1usize..4 {
         let offset = bank * 0x4000 + 0x0104;
-        match rom.get(offset..offset + logo.len()) {
-            Some(slice) if slice == logo => {}
+        match rom.get(offset..offset + checksum.len()) {
+            Some(slice) if slice == checksum => {}
             _ => return false,
         }
     }
@@ -29,7 +29,6 @@ impl Mmu {
         let mask = self.rom_bank_mask();
         let secondary = self.ram_bank as usize;
         let primary = self.rom_bank as usize;
-
         if self.mbc1_multicart {
             let primary4 = primary & 0x0F;
             match loc {

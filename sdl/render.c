@@ -2,9 +2,9 @@
 #include <SDL3/SDL_render.h>
 #include <string.h>
 
+#include "gbemu/core.h"
 #include "gbemu/ppu.h"
 #include "gbemu/sdl.h"
-#include "gbemu/settings.h"
 #include "internal.h"
 
 uint32_t buf[SCRN_HEIGHT][SCRN_WIDTH];

@@ -1,7 +1,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_timer.h>
 
-#include "gbemu/gbemu.h"
+#include "gbemu/core.h"
 #include "gbemu/ppu.h"
 #include "gbemu/sdl.h"
 

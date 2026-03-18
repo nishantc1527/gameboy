@@ -2,8 +2,8 @@
 #include <stdio.h>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "gbemu/core.h"
 #include "gbemu/ppu.h"
-#include "gbemu/settings.h"
 #include "stb_image_write.h"
 
 void take_screenshot(struct Ppu* ppu) {

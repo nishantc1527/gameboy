@@ -1,9 +1,8 @@
-#include "gbemu/gbemu.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "gbemu/apu.h"
+#include "gbemu/core.h"
 #include "gbemu/cpu.h"
 #include "gbemu/mmu.h"
 #include "gbemu/ppu.h"
@@ -24,7 +23,7 @@ gbemu* gbemu_init(char* rom_name, const char* boot_rom, int test_category,
   for (uint8_t i = 0; i < gb->watch_count; i++)
     gb->watch_addrs[i] = watch_addrs[i];
   gb->cpu = init_cpu();
-  gb->mmu = mmu_init(rom_name, boot_rom, (int8_t)test_category);
+  gb->mmu = mmu_init(rom_name, boot_rom);
   if (!gb->mmu) {
     free(gb->cpu);
     free(gb);
@@ -52,7 +51,7 @@ void gbemu_reset(gbemu* gb) {
   mmu_save(gb->mmu);
   mmu_free(gb->mmu);
   gb->cpu = init_cpu();
-  gb->mmu = mmu_init(gb->rom_name, gb->boot_rom, (int8_t)gb->test_category);
+  gb->mmu = mmu_init(gb->rom_name, gb->boot_rom);
   gb->apu = init_apu();
   gb->ppu = init_ppu();
   gb->cpu->cgb_mode = mmu_is_cgb(gb->mmu) ? 1 : 0;
@@ -77,6 +76,13 @@ int gbemu_step_frame(gbemu* gb) {
                          gb->test_category, &gb->bdone, gb->watch_addrs,
                          gb->watch_count, gb->total_cycles);
     if (cyc == -1) return -1;
+    if (gb->test_category == TestBlarggCpu ||
+        gb->test_category == TestBlarggAudio ||
+        gb->test_category == TestBlarggCpuTime ||
+        gb->test_category == TestBlarggMemTime) {
+      int serial = mmu_take_serial_byte(gb->mmu);
+      if (serial >= 0) printf("%c", (char)serial);
+    }
     mmu_advance_rtc(gb->mmu, (uint64_t)cyc);
     gb->total_cycles += (uint64_t)cyc;
     gb->ppu->scn = (uint16_t)(gb->ppu->scn + cyc);

@@ -6,13 +6,6 @@
 #include "gbemu/util.h"
 #include "internal.h"
 
-const uint32_t CPU_FREQ = 4194304;
-const uint32_t DIV_FREQ = 16384;
-const uint32_t TIM_FREQ_1 = 4096;
-const uint32_t TIM_FREQ_2 = 262144;
-const uint32_t TIM_FREQ_3 = 65536;
-const uint32_t TIM_FREQ_4 = 16384;
-
 struct Cpu* init_cpu(void) {
   struct Cpu* cpu = malloc(sizeof(struct Cpu));
   cpu->PC = 0x0000;

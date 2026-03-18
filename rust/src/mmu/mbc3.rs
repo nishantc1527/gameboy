@@ -1,6 +1,5 @@
 use super::Mmu;
-
-const CPU_FREQ: u64 = 4_194_304;
+use crate::constants::cpu::CPU_FREQ;
 
 impl Mmu {
     pub fn has_rtc(&self) -> bool {

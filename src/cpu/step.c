@@ -2,7 +2,6 @@
 #include <stdio.h>
 
 #include "gbemu/cpu.h"
-#include "gbemu/gbemu.h"
 #include "gbemu/mmu.h"
 #include "internal.h"
 

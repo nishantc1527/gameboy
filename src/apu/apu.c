@@ -4,7 +4,6 @@
 #include "gbemu/mmu.h"
 #include "gbemu/util.h"
 
-#define NR_LEN_DIRTY 0xFF4C
 #define HPF_CHARGE 0.99634f
 
 static const uint8_t DUTY_TABLE[4][8] = {
@@ -113,8 +112,7 @@ void upd_apu(struct Apu* apu, struct Mmu* mmu, uint8_t cycles) {
   }
   apu->apu_on = curr_apu_on;
 
-  uint8_t len_dirty = mmu_r_mem_raw(mmu, NR_LEN_DIRTY);
-  mmu_w_mem_raw(mmu, NR_LEN_DIRTY, 0x00);
+  uint8_t len_dirty = mmu_take_len_dirty(mmu);
 
   if (!curr_apu_on) {
     if (len_dirty & 0x01) {

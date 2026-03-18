@@ -5,13 +5,6 @@
 #include "gbemu/apu.h"
 #include "gbemu/mmu.h"
 
-extern const uint32_t CPU_FREQ;
-extern const uint32_t DIV_FREQ;
-extern const uint32_t TIM_FREQ_1;
-extern const uint32_t TIM_FREQ_2;
-extern const uint32_t TIM_FREQ_3;
-extern const uint32_t TIM_FREQ_4;
-
 struct Cpu {
   uint8_t A, B, C, D, E, F, H, L;
   uint16_t PC, SP;
