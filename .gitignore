@@ -6,6 +6,7 @@ rust/target/
 *.gbc
 *.sav
 !test_roms/**/*.gb
+!test_roms/**/*.gbc
 compile_commands.json
 .venv/
 **/__pycache__/

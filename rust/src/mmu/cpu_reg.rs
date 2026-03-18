@@ -1,18 +1,18 @@
-#[unsafe(no_mangle)]
-pub static JOYP: u16 = 0xFF00;
-#[unsafe(no_mangle)]
-pub static SB: u16 = 0xFF01;
-#[unsafe(no_mangle)]
-pub static SC: u16 = 0xFF02;
-#[unsafe(no_mangle)]
-pub static DIV: u16 = 0xFF04;
-#[unsafe(no_mangle)]
-pub static TIMA: u16 = 0xFF05;
-#[unsafe(no_mangle)]
-pub static TMA: u16 = 0xFF06;
-#[unsafe(no_mangle)]
-pub static TAC: u16 = 0xFF07;
-#[unsafe(no_mangle)]
-pub static IF: u16 = 0xFF0F;
-#[unsafe(no_mangle)]
-pub static IE: u16 = 0xFFFF;
+#[allow(dead_code)]
+pub const JOYP: u16 = 0xFF00;
+#[allow(dead_code)]
+pub const SB: u16 = 0xFF01;
+#[allow(dead_code)]
+pub const SC: u16 = 0xFF02;
+#[allow(dead_code)]
+pub const DIV: u16 = 0xFF04;
+#[allow(dead_code)]
+pub const TIMA: u16 = 0xFF05;
+#[allow(dead_code)]
+pub const TMA: u16 = 0xFF06;
+#[allow(dead_code)]
+pub const TAC: u16 = 0xFF07;
+#[allow(dead_code)]
+pub const IF: u16 = 0xFF0F;
+#[allow(dead_code)]
+pub const IE: u16 = 0xFFFF;
