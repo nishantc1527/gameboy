@@ -79,15 +79,6 @@ impl Mmu {
         self.rtc_dh_bit = ((new_day >> 8) & 0x01) as u8;
     }
 
-    pub fn set_joypad(&mut self, btns: u8, dirs: u8) {
-        let new_press = (!self.joypad_btns & btns) | (!self.joypad_dirs & dirs);
-        self.joypad_btns = btns;
-        self.joypad_dirs = dirs;
-        if new_press != 0 {
-            self.mem[0xFF0F] |= 0x10;
-        }
-    }
-
     pub fn rtc_latch(&mut self) {
         self.rtc_latched[0] = self.rtc_s;
         self.rtc_latched[1] = self.rtc_m;

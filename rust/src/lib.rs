@@ -155,3 +155,78 @@ pub extern "C" fn mmu_free(mmu: *mut Mmu) {
         _ = unsafe { Box::from_raw(raw) };
     }
 }
+
+#[unsafe(no_mangle)]
+extern "C" fn mmu_read_vram(mmu: *const Mmu, addr: u16) -> u8 {
+    unsafe { (*mmu).read_vram(addr) }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn mmu_write_vram(mmu: *mut Mmu, addr: u16, val: u8) {
+    unsafe { (*mmu).write_vram(addr, val) }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn mmu_set_vram_bank(mmu: *mut Mmu, bank: u8) {
+    unsafe { (*mmu).set_vram_bank(bank) }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn mmu_get_vram_bank(mmu: *const Mmu) -> u8 {
+    unsafe { (*mmu).get_vram_bank() }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn mmu_read_wram(mmu: *const Mmu, addr: u16) -> u8 {
+    unsafe { (*mmu).read_wram(addr) }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn mmu_write_wram(mmu: *mut Mmu, addr: u16, val: u8) {
+    unsafe { (*mmu).write_wram(addr, val) }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn mmu_set_wram_bank(mmu: *mut Mmu, bank: u8) {
+    unsafe { (*mmu).set_wram_bank(bank) }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn mmu_get_wram_bank(mmu: *const Mmu) -> u8 {
+    unsafe { (*mmu).get_wram_bank() }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn mmu_read_oam(mmu: *const Mmu, offset: u16) -> u8 {
+    unsafe { (*mmu).read_oam(offset) }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn mmu_write_oam(mmu: *mut Mmu, offset: u16, val: u8) {
+    unsafe { (*mmu).write_oam(offset, val) }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn mmu_read_hram(mmu: *const Mmu, offset: u16) -> u8 {
+    unsafe { (*mmu).read_hram(offset) }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn mmu_write_hram(mmu: *mut Mmu, offset: u16, val: u8) {
+    unsafe { (*mmu).write_hram(offset, val) }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn mmu_read_boot(mmu: *const Mmu, addr: u16) -> u8 {
+    unsafe { (*mmu).read_boot(addr) }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn mmu_boot_active(mmu: *const Mmu) -> bool {
+    unsafe { (*mmu).boot_active() }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn mmu_disable_boot(mmu: *mut Mmu) {
+    unsafe { (*mmu).disable_boot() }
+}

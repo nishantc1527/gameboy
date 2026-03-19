@@ -14,7 +14,15 @@ pub struct Mmu {
     cart_type: u8,
     rom_size: u8,
     ram_size: u8,
-    mem: Vec<u8>,
+    vram: Vec<u8>,
+    vram_bank1: Vec<u8>,
+    vram_bank_sel: u8,
+    wram: Vec<u8>,
+    wram_banks: Vec<u8>,
+    wram_bank: u8,
+    oam: Vec<u8>,
+    hram: Vec<u8>,
+    io_regs: [u8; 0x80],
     brom: Vec<u8>,
     rom: Vec<u8>,
     extern_ram: Vec<u8>,
@@ -41,10 +49,6 @@ pub struct Mmu {
     cgb_mode: bool,
     cgb_compat: bool,
     div_reset_pending: bool,
-    vram_bank1: Vec<u8>,
-    vram_bank_sel: u8,
-    wram_banks: Vec<u8>,
-    wram_bank: u8,
     bg_pal_ram: [u8; 64],
     obj_pal_ram: [u8; 64],
     boot_skipped: bool,
@@ -54,11 +58,68 @@ pub struct Mmu {
     hdma_dst: u16,
 }
 
+impl Mmu {
+    fn region_read_raw(&self, loc: u16) -> u8 {
+        match loc {
+            0x8000..0xA000 => {
+                if self.cgb_mode && self.vram_bank_sel & 1 == 1 {
+                    self.vram_bank1[(loc - 0x8000) as usize]
+                } else {
+                    self.vram[(loc - 0x8000) as usize]
+                }
+            }
+            0xC000..0xD000 => self.wram[(loc - 0xC000) as usize],
+            0xD000..0xE000 => {
+                if self.cgb_mode {
+                    self.wram_banks[self.wram_bank as usize * 0x1000 + (loc - 0xD000) as usize]
+                } else {
+                    self.wram_banks[(loc - 0xD000) as usize]
+                }
+            }
+            0xE000..=0xFDFF => self.region_read_raw(loc - 0x2000),
+            0xFE00..0xFEA0 => self.oam[(loc - 0xFE00) as usize],
+            0xFF00..0xFF80 => self.io_regs[(loc - 0xFF00) as usize],
+            0xFF80..=0xFFFF => self.hram[(loc - 0xFF80) as usize],
+            _ => 0xFF,
+        }
+    }
+
+    fn region_write_raw(&mut self, loc: u16, val: u8) {
+        match loc {
+            0x8000..0xA000 => {
+                if self.cgb_mode && self.vram_bank_sel & 1 == 1 {
+                    self.vram_bank1[(loc - 0x8000) as usize] = val;
+                } else {
+                    self.vram[(loc - 0x8000) as usize] = val;
+                }
+            }
+            0xC000..0xD000 => self.wram[(loc - 0xC000) as usize] = val,
+            0xD000..0xE000 => {
+                if self.cgb_mode {
+                    self.wram_banks[self.wram_bank as usize * 0x1000 + (loc - 0xD000) as usize] =
+                        val;
+                } else {
+                    self.wram_banks[(loc - 0xD000) as usize] = val;
+                }
+            }
+            0xE000..=0xFDFF => self.region_write_raw(loc - 0x2000, val),
+            0xFE00..0xFEA0 => self.oam[(loc - 0xFE00) as usize] = val,
+            0xFF00..0xFF80 => self.io_regs[(loc - 0xFF00) as usize] = val,
+            0xFF80..=0xFFFF => self.hram[(loc - 0xFF80) as usize] = val,
+            _ => {}
+        }
+    }
+}
+
 #[allow(clippy::manual_range_patterns)]
 impl Mmu {
     pub fn new(rom_file_name: &str, boot_rom_file_name: &str) -> Option<Mmu> {
         let mut rom_title = String::new();
-        let mem = vec![0u8; 0x800000];
+        let vram = vec![0u8; 0x2000];
+        let wram = vec![0u8; 0x1000];
+        let oam = vec![0u8; 0xA0];
+        let hram = vec![0u8; 0x80];
+        let io_regs = [0u8; 0x80];
         let mut brom = vec![0u8; 0x900];
         let mut rom = vec![0u8; 0x800000];
         let extern_ram = vec![0u8; 0x20000];
@@ -142,7 +203,6 @@ impl Mmu {
                 return None;
             }
         }
-        // println!("USING MAPPER: ${:02X}\n", cart_type);
         match rom_size {
             0x00 | 0x01 | 0x02 | 0x03 | 0x04 | 0x05 | 0x06 | 0x07 | 0x08 => (),
             _ => {
@@ -150,7 +210,6 @@ impl Mmu {
                 return None;
             }
         }
-        // println!("USING ROM SIZE: ${:02X}", rom_size);
         match ram_size {
             0x00 | 0x02 | 0x03 | 0x04 => (),
             _ => {
@@ -158,7 +217,6 @@ impl Mmu {
                 return None;
             }
         }
-        // println!("USING RAM SIZE: ${:02X}\n", ram_size);
         let rom_bank: u8 = 1;
         let rom_bank_hi: u8 = 0;
         let ram_enable = false;
@@ -209,7 +267,15 @@ impl Mmu {
             cart_type,
             rom_size,
             ram_size,
-            mem,
+            vram,
+            vram_bank1: vec![0u8; 0x2000],
+            vram_bank_sel: 0,
+            wram,
+            wram_banks: vec![0u8; 0x7000],
+            wram_bank: 1,
+            oam,
+            hram,
+            io_regs,
             brom,
             rom,
             extern_ram,
@@ -236,10 +302,6 @@ impl Mmu {
             cgb_mode,
             cgb_compat: cgb_mode && !cgb_flag,
             div_reset_pending: false,
-            vram_bank1: vec![0u8; 0x2000],
-            vram_bank_sel: 0,
-            wram_banks: vec![0u8; 0x8000],
-            wram_bank: 1,
             bg_pal_ram: [0u8; 64],
             obj_pal_ram: [0u8; 64],
             boot_skipped,
@@ -249,7 +311,7 @@ impl Mmu {
             hdma_dst: 0x8000,
         };
         if cgb_mode {
-            mmu.mem[0xFF4D] = 0;
+            mmu.io_regs[0x4D] = 0;
             for i in 0..32usize {
                 mmu.bg_pal_ram[i * 2] = 0xFF;
                 mmu.bg_pal_ram[i * 2 + 1] = 0x7F;
@@ -263,7 +325,7 @@ impl Mmu {
 
     #[allow(clippy::identity_op)]
     pub fn r_mem(&self, loc: u16) -> u8 {
-        if self.mem[0xFF50] == 0 {
+        if self.io_regs[0x50] == 0 {
             if loc < 0x100 {
                 return self.brom[loc as usize];
             }
@@ -293,58 +355,64 @@ impl Mmu {
                     loc -= 0x2000;
                 }
                 if (0x8000..0xA000).contains(&loc) {
-                    let lcdc = self.mem[0xFF40];
-                    if lcdc & 0x80 != 0 && self.mem[0xFF41] & 0x03 == 3 {
+                    let lcdc = self.io_regs[0x40];
+                    if lcdc & 0x80 != 0 && self.io_regs[0x41] & 0x03 == 3 {
                         return 0xFF;
                     }
                     if self.cgb_mode && self.vram_bank_sel & 1 == 1 {
                         return self.vram_bank1[loc as usize - 0x8000];
                     }
+                    return self.vram[loc as usize - 0x8000];
                 }
                 if self.cgb_mode && (0xD000..0xE000).contains(&loc) {
                     return self.wram_banks
                         [self.wram_bank as usize * 0x1000 + loc as usize - 0xD000];
                 }
                 if (0xFE00..0xFEA0).contains(&loc) {
-                    let lcdc = self.mem[0xFF40];
+                    let lcdc = self.io_regs[0x40];
                     if lcdc & 0x80 != 0 {
-                        let mode = self.mem[0xFF41] & 0x03;
+                        let mode = self.io_regs[0x41] & 0x03;
                         if mode == 2 || mode == 3 {
                             return 0xFF;
                         }
                     }
+                    return self.oam[loc as usize - 0xFE00];
                 }
                 match loc {
                     0xFF4F if self.cgb_mode => (self.vram_bank_sel & 1) | 0xFE,
-                    0xFF69 if self.cgb_mode => self.bg_pal_ram[(self.mem[0xFF68] & 0x3F) as usize],
-                    0xFF6B if self.cgb_mode => self.obj_pal_ram[(self.mem[0xFF6A] & 0x3F) as usize],
+                    0xFF69 if self.cgb_mode => {
+                        self.bg_pal_ram[(self.io_regs[0x68] & 0x3F) as usize]
+                    }
+                    0xFF6B if self.cgb_mode => {
+                        self.obj_pal_ram[(self.io_regs[0x6A] & 0x3F) as usize]
+                    }
                     0xFF70 if self.cgb_mode => self.wram_bank | 0xF8,
-                    NR10 => self.mem[loc as usize] | 0x80,
-                    NR11 => self.mem[loc as usize] | 0x3F,
-                    NR12 => self.mem[loc as usize] | 0x00,
-                    NR13 => self.mem[loc as usize] | 0xFF,
-                    NR14 => self.mem[loc as usize] | 0xBF,
+                    NR10 => self.io_regs[(NR10 - 0xFF00) as usize] | 0x80,
+                    NR11 => self.io_regs[(NR11 - 0xFF00) as usize] | 0x3F,
+                    NR12 => self.io_regs[(NR12 - 0xFF00) as usize] | 0x00,
+                    NR13 => self.io_regs[(NR13 - 0xFF00) as usize] | 0xFF,
+                    NR14 => self.io_regs[(NR14 - 0xFF00) as usize] | 0xBF,
                     0xFF15 => 0xFF,
-                    NR21 => self.mem[loc as usize] | 0x3F,
-                    NR22 => self.mem[loc as usize] | 0x00,
-                    NR23 => self.mem[loc as usize] | 0xFF,
-                    NR24 => self.mem[loc as usize] | 0xBF,
-                    NR30 => self.mem[loc as usize] | 0x7F,
-                    NR31 => self.mem[loc as usize] | 0xFF,
-                    NR32 => self.mem[loc as usize] | 0x9F,
-                    NR33 => self.mem[loc as usize] | 0xFF,
-                    NR34 => self.mem[loc as usize] | 0xBF,
+                    NR21 => self.io_regs[(NR21 - 0xFF00) as usize] | 0x3F,
+                    NR22 => self.io_regs[(NR22 - 0xFF00) as usize] | 0x00,
+                    NR23 => self.io_regs[(NR23 - 0xFF00) as usize] | 0xFF,
+                    NR24 => self.io_regs[(NR24 - 0xFF00) as usize] | 0xBF,
+                    NR30 => self.io_regs[(NR30 - 0xFF00) as usize] | 0x7F,
+                    NR31 => self.io_regs[(NR31 - 0xFF00) as usize] | 0xFF,
+                    NR32 => self.io_regs[(NR32 - 0xFF00) as usize] | 0x9F,
+                    NR33 => self.io_regs[(NR33 - 0xFF00) as usize] | 0xFF,
+                    NR34 => self.io_regs[(NR34 - 0xFF00) as usize] | 0xBF,
                     0xFF1F => 0xFF,
-                    NR41 => self.mem[loc as usize] | 0xFF,
-                    NR42 => self.mem[loc as usize] | 0x00,
-                    NR43 => self.mem[loc as usize] | 0x00,
-                    NR44 => self.mem[loc as usize] | 0xBF,
-                    NR50 => self.mem[loc as usize] | 0x00,
-                    NR51 => self.mem[loc as usize] | 0x00,
-                    NR52 => self.mem[loc as usize] | 0x70,
+                    NR41 => self.io_regs[(NR41 - 0xFF00) as usize] | 0xFF,
+                    NR42 => self.io_regs[(NR42 - 0xFF00) as usize] | 0x00,
+                    NR43 => self.io_regs[(NR43 - 0xFF00) as usize] | 0x00,
+                    NR44 => self.io_regs[(NR44 - 0xFF00) as usize] | 0xBF,
+                    NR50 => self.io_regs[(NR50 - 0xFF00) as usize] | 0x00,
+                    NR51 => self.io_regs[(NR51 - 0xFF00) as usize] | 0x00,
+                    NR52 => self.io_regs[(NR52 - 0xFF00) as usize] | 0x70,
                     0xFF27..0xFF30 => 0xFF,
                     0xFF00 => {
-                        let sel = self.mem[0xFF00];
+                        let sel = self.io_regs[0x00];
                         let mut result = (sel & 0x30) | 0xCF;
                         if sel & 0x10 == 0 {
                             if self.joypad_dirs & 0x01 != 0 {
@@ -376,14 +444,30 @@ impl Mmu {
                         }
                         result
                     }
-                    loc => self.mem[loc as usize],
+                    0xC000..0xD000 => self.wram[(loc - 0xC000) as usize],
+                    0xD000..0xE000 => self.wram_banks[(loc - 0xD000) as usize],
+                    0xFEA0..0xFF00 => 0xFF,
+                    0xFF80..=0xFFFF => self.hram[(loc - 0xFF80) as usize],
+                    loc if loc >= 0xFF00 => self.io_regs[(loc - 0xFF00) as usize],
+                    _ => 0xFF,
                 }
             }
         }
     }
 
     pub fn r_mem_raw(&self, loc: u16) -> u8 {
-        self.mem[loc as usize]
+        match loc {
+            ..0x8000 => match self.cart_type {
+                0x00 => self.no_mbc_read_rom(loc),
+                0x01 | 0x02 | 0x03 => self.mbc1_read_rom(loc),
+                0x05 | 0x06 => self.mbc2_read_rom(loc),
+                0x0F | 0x10 | 0x11 | 0x12 | 0x13 => self.mbc3_read_rom(loc),
+                0x19 | 0x1A | 0x1B | 0x1C | 0x1D | 0x1E => self.mbc5_read_rom(loc),
+                _ => 0xFF,
+            },
+            0xA000..0xC000 => self.extern_ram[(loc - 0xA000) as usize],
+            loc => self.region_read_raw(loc),
+        }
     }
 
     pub fn r_ram_raw(&self, loc: u16) -> u8 {
@@ -413,98 +497,104 @@ impl Mmu {
                     loc -= 0x2000;
                 }
                 if (0x8000..0xA000).contains(&loc) {
-                    let lcdc = self.mem[0xFF40];
-                    if lcdc & 0x80 != 0 && self.mem[0xFF41] & 0x03 == 3 {
+                    let lcdc = self.io_regs[0x40];
+                    if lcdc & 0x80 != 0 && self.io_regs[0x41] & 0x03 == 3 {
                         return;
                     }
                     if self.cgb_mode && self.vram_bank_sel & 1 == 1 {
                         self.vram_bank1[loc as usize - 0x8000] = val;
                         return;
                     }
+                    self.vram[loc as usize - 0x8000] = val;
+                    return;
                 }
                 if self.cgb_mode && (0xD000..0xE000).contains(&loc) {
                     self.wram_banks[self.wram_bank as usize * 0x1000 + loc as usize - 0xD000] = val;
                     return;
                 }
                 if (0xFE00..0xFEA0).contains(&loc) {
-                    let lcdc = self.mem[0xFF40];
+                    let lcdc = self.io_regs[0x40];
                     if lcdc & 0x80 != 0 {
-                        let mode = self.mem[0xFF41] & 0x03;
+                        let mode = self.io_regs[0x41] & 0x03;
                         if mode == 2 || mode == 3 {
                             return;
                         }
                     }
+                    self.oam[loc as usize - 0xFE00] = val;
+                    return;
                 }
-                if (0xFF10..0xFF26).contains(&loc) && loc != 0xFF20 && self.mem[0xFF26] & 0x80 == 0
+                if (0xFF10..0xFF26).contains(&loc)
+                    && loc != 0xFF20
+                    && self.io_regs[0x26] & 0x80 == 0
                 {
                     if loc == 0xFF11 || loc == 0xFF16 {
-                        self.mem[loc as usize] = val & 0x3F;
+                        self.io_regs[(loc - 0xFF00) as usize] = val & 0x3F;
                         let bit: u8 = if loc == 0xFF11 { 0x01 } else { 0x02 };
                         self.len_dirty |= bit;
                     } else if loc == 0xFF1B {
-                        self.mem[loc as usize] = val;
+                        self.io_regs[(loc - 0xFF00) as usize] = val;
                         self.len_dirty |= 0x04;
                     }
                 } else if loc == 0xFF04 {
-                    self.mem[0xFF4E] = self.mem[0xFF04];
+                    self.io_regs[0x4E] = self.io_regs[0x04];
                     self.div_reset_pending = true;
-                    self.mem[loc as usize] = 0x00;
+                    self.io_regs[0x04] = 0x00;
                 } else if loc == 0xFF02 && val & 0x81 == 0x81 {
-                    self.mem[loc as usize] = val & 0x7F;
-                    self.mem[0xFF0F] |= 0x08;
+                    self.io_regs[(loc - 0xFF00) as usize] = val & 0x7F;
+                    self.io_regs[0x0F] |= 0x08;
                     self.serial_byte_pending = true;
                 } else if self.cgb_mode && loc == 0xFF4F {
                     self.vram_bank_sel = val & 1;
                 } else if self.cgb_mode && loc == 0xFF68 {
-                    self.mem[0xFF68] = val;
+                    self.io_regs[0x68] = val;
                 } else if self.cgb_mode && loc == 0xFF69 {
-                    let idx = (self.mem[0xFF68] & 0x3F) as usize;
+                    let idx = (self.io_regs[0x68] & 0x3F) as usize;
                     self.bg_pal_ram[idx] = val;
-                    if self.mem[0xFF68] & 0x80 != 0 {
-                        self.mem[0xFF68] = (self.mem[0xFF68] & 0x80) | ((idx as u8 + 1) & 0x3F);
+                    if self.io_regs[0x68] & 0x80 != 0 {
+                        self.io_regs[0x68] = (self.io_regs[0x68] & 0x80) | ((idx as u8 + 1) & 0x3F);
                     }
                 } else if self.cgb_mode && loc == 0xFF6A {
-                    self.mem[0xFF6A] = val;
+                    self.io_regs[0x6A] = val;
                 } else if self.cgb_mode && loc == 0xFF6B {
-                    let idx = (self.mem[0xFF6A] & 0x3F) as usize;
+                    let idx = (self.io_regs[0x6A] & 0x3F) as usize;
                     self.obj_pal_ram[idx] = val;
-                    if self.mem[0xFF6A] & 0x80 != 0 {
-                        self.mem[0xFF6A] = (self.mem[0xFF6A] & 0x80) | ((idx as u8 + 1) & 0x3F);
+                    if self.io_regs[0x6A] & 0x80 != 0 {
+                        self.io_regs[0x6A] = (self.io_regs[0x6A] & 0x80) | ((idx as u8 + 1) & 0x3F);
                     }
                 } else if self.cgb_mode && loc == 0xFF55 {
                     if self.hdma_active && val & 0x80 == 0 {
                         self.hdma_active = false;
-                        self.mem[0xFF55] = 0x80 | self.hdma_remaining;
+                        self.io_regs[0x55] = 0x80 | self.hdma_remaining;
                     } else if val & 0x80 == 0 {
                         let src =
-                            ((self.mem[0xFF51] as u16) << 8) | (self.mem[0xFF52] as u16 & 0xF0);
+                            ((self.io_regs[0x51] as u16) << 8) | (self.io_regs[0x52] as u16 & 0xF0);
                         let dst = 0x8000u16
-                            | ((self.mem[0xFF53] as u16 & 0x1F) << 8)
-                            | (self.mem[0xFF54] as u16 & 0xF0);
+                            | ((self.io_regs[0x53] as u16 & 0x1F) << 8)
+                            | (self.io_regs[0x54] as u16 & 0xF0);
                         let blocks = (val & 0x7F) as u16 + 1;
                         for i in 0..blocks * 0x10 {
                             let byte = self.r_mem(src.wrapping_add(i));
                             let addr = dst.wrapping_add(i);
                             if self.vram_bank_sel & 1 == 0 {
-                                self.mem[addr as usize] = byte;
+                                self.vram[(addr - 0x8000) as usize] = byte;
                             } else {
                                 self.vram_bank1[(addr - 0x8000) as usize] = byte;
                             }
                         }
-                        self.mem[0xFF55] = 0xFF;
+                        self.io_regs[0x55] = 0xFF;
                     } else {
                         self.hdma_src =
-                            ((self.mem[0xFF51] as u16) << 8) | (self.mem[0xFF52] as u16 & 0xF0);
+                            ((self.io_regs[0x51] as u16) << 8) | (self.io_regs[0x52] as u16 & 0xF0);
                         self.hdma_dst = 0x8000u16
-                            | ((self.mem[0xFF53] as u16 & 0x1F) << 8)
-                            | (self.mem[0xFF54] as u16 & 0xF0);
+                            | ((self.io_regs[0x53] as u16 & 0x1F) << 8)
+                            | (self.io_regs[0x54] as u16 & 0xF0);
                         self.hdma_remaining = val & 0x7F;
                         self.hdma_active = true;
-                        self.mem[0xFF55] = val & 0x7F;
+                        self.io_regs[0x55] = val & 0x7F;
                     }
                 } else if self.cgb_mode && loc == 0xFF70 {
                     self.wram_bank = if val & 7 == 0 { 1 } else { val & 7 };
-                    self.mem[0xFF70] = self.wram_bank;
+                    self.io_regs[0x70] = self.wram_bank;
                 } else {
                     match loc {
                         0xFF11 => self.len_dirty |= 0x01,
@@ -513,14 +603,26 @@ impl Mmu {
                         0xFF20 => self.len_dirty |= 0x08,
                         _ => {}
                     }
-                    self.mem[loc as usize] = val;
+                    match loc {
+                        0xC000..0xD000 => self.wram[(loc - 0xC000) as usize] = val,
+                        0xD000..0xE000 => self.wram_banks[(loc - 0xD000) as usize] = val,
+                        0xFF80..=0xFFFF => self.hram[(loc - 0xFF80) as usize] = val,
+                        _ => {
+                            if loc >= 0xFF00 {
+                                self.io_regs[(loc - 0xFF00) as usize] = val;
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 
     pub fn w_mem_raw(&mut self, loc: u16, val: u8) {
-        self.mem[loc as usize] = val;
+        match loc {
+            0xA000..0xC000 => self.extern_ram[(loc - 0xA000) as usize] = val,
+            loc => self.region_write_raw(loc, val),
+        }
     }
 
     pub fn w_ram_raw(&mut self, loc: u16, val: u8) {
@@ -548,7 +650,7 @@ impl Mmu {
     pub fn take_serial_byte(&mut self) -> Option<u8> {
         if self.serial_byte_pending {
             self.serial_byte_pending = false;
-            Some(self.mem[0xFF01])
+            Some(self.io_regs[0x01])
         } else {
             None
         }
@@ -576,11 +678,92 @@ impl Mmu {
         self.boot_skipped
     }
 
+    pub fn read_vram(&self, addr: u16) -> u8 {
+        if self.cgb_mode && self.vram_bank_sel & 1 == 1 {
+            self.vram_bank1[(addr - 0x8000) as usize]
+        } else {
+            self.vram[(addr - 0x8000) as usize]
+        }
+    }
+
+    pub fn write_vram(&mut self, addr: u16, val: u8) {
+        if self.cgb_mode && self.vram_bank_sel & 1 == 1 {
+            self.vram_bank1[(addr - 0x8000) as usize] = val;
+        } else {
+            self.vram[(addr - 0x8000) as usize] = val;
+        }
+    }
+
+    pub fn set_vram_bank(&mut self, bank: u8) {
+        self.vram_bank_sel = bank & 1;
+    }
+
+    pub fn get_vram_bank(&self) -> u8 {
+        (self.vram_bank_sel & 1) | 0xFE
+    }
+
+    pub fn read_wram(&self, addr: u16) -> u8 {
+        if addr < 0xD000 {
+            self.wram[(addr - 0xC000) as usize]
+        } else if self.cgb_mode {
+            self.wram_banks[self.wram_bank as usize * 0x1000 + (addr - 0xD000) as usize]
+        } else {
+            self.wram_banks[(addr - 0xD000) as usize]
+        }
+    }
+
+    pub fn write_wram(&mut self, addr: u16, val: u8) {
+        if addr < 0xD000 {
+            self.wram[(addr - 0xC000) as usize] = val;
+        } else if self.cgb_mode {
+            self.wram_banks[self.wram_bank as usize * 0x1000 + (addr - 0xD000) as usize] = val;
+        } else {
+            self.wram_banks[(addr - 0xD000) as usize] = val;
+        }
+    }
+
+    pub fn set_wram_bank(&mut self, bank: u8) {
+        self.wram_bank = if bank & 7 == 0 { 1 } else { bank & 7 };
+        self.io_regs[0x70] = self.wram_bank;
+    }
+
+    pub fn get_wram_bank(&self) -> u8 {
+        self.wram_bank | 0xF8
+    }
+
+    pub fn read_oam(&self, offset: u16) -> u8 {
+        self.oam[offset as usize]
+    }
+
+    pub fn write_oam(&mut self, offset: u16, val: u8) {
+        self.oam[offset as usize] = val;
+    }
+
+    pub fn read_hram(&self, offset: u16) -> u8 {
+        self.hram[offset as usize]
+    }
+
+    pub fn write_hram(&mut self, offset: u16, val: u8) {
+        self.hram[offset as usize] = val;
+    }
+
+    pub fn read_boot(&self, addr: u16) -> u8 {
+        self.brom[addr as usize]
+    }
+
+    pub fn boot_active(&self) -> bool {
+        self.io_regs[0x50] == 0
+    }
+
+    pub fn disable_boot(&mut self) {
+        self.io_regs[0x50] = 1;
+    }
+
     pub fn do_hdma_block(&mut self) {
         if !self.hdma_active {
             return;
         }
-        let ly = self.mem[0xFF44];
+        let ly = self.io_regs[0x44];
         if ly >= 144 {
             return;
         }
@@ -588,7 +771,7 @@ impl Mmu {
             let byte = self.r_mem(self.hdma_src.wrapping_add(i));
             let addr = self.hdma_dst.wrapping_add(i);
             if self.vram_bank_sel & 1 == 0 {
-                self.mem[addr as usize] = byte;
+                self.vram[(addr - 0x8000) as usize] = byte;
             } else {
                 self.vram_bank1[(addr - 0x8000) as usize] = byte;
             }
@@ -597,69 +780,78 @@ impl Mmu {
         self.hdma_dst = 0x8000 | (self.hdma_dst.wrapping_add(0x10) & 0x1FFF);
         if self.hdma_remaining == 0 {
             self.hdma_active = false;
-            self.mem[0xFF55] = 0xFF;
+            self.io_regs[0x55] = 0xFF;
         } else {
             self.hdma_remaining -= 1;
-            self.mem[0xFF55] = self.hdma_remaining;
+            self.io_regs[0x55] = self.hdma_remaining;
+        }
+    }
+
+    pub fn set_joypad(&mut self, btns: u8, dirs: u8) {
+        let new_press = (!self.joypad_btns & btns) | (!self.joypad_dirs & dirs);
+        self.joypad_btns = btns;
+        self.joypad_dirs = dirs;
+        if new_press != 0 {
+            self.io_regs[0x0F] |= 0x10;
         }
     }
 
     fn post_boot_init(&mut self) {
-        self.mem[0xFF50] = 1;
-        self.mem[0xFF01] = 0x00;
-        self.mem[0xFF05] = 0x00;
-        self.mem[0xFF06] = 0x00;
-        self.mem[0xFF07] = 0xF8;
-        self.mem[0xFF0F] = 0xE1;
-        self.mem[0xFF10] = 0x80;
-        self.mem[0xFF11] = 0xBF;
-        self.mem[0xFF12] = 0xF3;
-        self.mem[0xFF13] = 0xFF;
-        self.mem[0xFF14] = 0xBF;
-        self.mem[0xFF16] = 0x3F;
-        self.mem[0xFF17] = 0x00;
-        self.mem[0xFF18] = 0xFF;
-        self.mem[0xFF19] = 0xBF;
-        self.mem[0xFF1A] = 0x7F;
-        self.mem[0xFF1B] = 0xFF;
-        self.mem[0xFF1C] = 0x9F;
-        self.mem[0xFF1D] = 0xFF;
-        self.mem[0xFF1E] = 0xBF;
-        self.mem[0xFF20] = 0xFF;
-        self.mem[0xFF21] = 0x00;
-        self.mem[0xFF22] = 0x00;
-        self.mem[0xFF23] = 0xBF;
-        self.mem[0xFF24] = 0x77;
-        self.mem[0xFF25] = 0xF3;
-        self.mem[0xFF26] = 0xF1;
-        self.mem[0xFF40] = 0x91;
-        self.mem[0xFF42] = 0x00;
-        self.mem[0xFF43] = 0x00;
-        self.mem[0xFF44] = 0x00;
-        self.mem[0xFF45] = 0x00;
-        self.mem[0xFF47] = 0xFC;
-        self.mem[0xFF4A] = 0x00;
-        self.mem[0xFF4B] = 0x00;
-        self.mem[0xFFFF] = 0x00;
+        self.io_regs[0x50] = 1;
+        self.io_regs[0x01] = 0x00;
+        self.io_regs[0x05] = 0x00;
+        self.io_regs[0x06] = 0x00;
+        self.io_regs[0x07] = 0xF8;
+        self.io_regs[0x0F] = 0xE1;
+        self.io_regs[0x10] = 0x80;
+        self.io_regs[0x11] = 0xBF;
+        self.io_regs[0x12] = 0xF3;
+        self.io_regs[0x13] = 0xFF;
+        self.io_regs[0x14] = 0xBF;
+        self.io_regs[0x16] = 0x3F;
+        self.io_regs[0x17] = 0x00;
+        self.io_regs[0x18] = 0xFF;
+        self.io_regs[0x19] = 0xBF;
+        self.io_regs[0x1A] = 0x7F;
+        self.io_regs[0x1B] = 0xFF;
+        self.io_regs[0x1C] = 0x9F;
+        self.io_regs[0x1D] = 0xFF;
+        self.io_regs[0x1E] = 0xBF;
+        self.io_regs[0x20] = 0xFF;
+        self.io_regs[0x21] = 0x00;
+        self.io_regs[0x22] = 0x00;
+        self.io_regs[0x23] = 0xBF;
+        self.io_regs[0x24] = 0x77;
+        self.io_regs[0x25] = 0xF3;
+        self.io_regs[0x26] = 0xF1;
+        self.io_regs[0x40] = 0x91;
+        self.io_regs[0x42] = 0x00;
+        self.io_regs[0x43] = 0x00;
+        self.io_regs[0x44] = 0x00;
+        self.io_regs[0x45] = 0x00;
+        self.io_regs[0x47] = 0xFC;
+        self.io_regs[0x4A] = 0x00;
+        self.io_regs[0x4B] = 0x00;
+        self.hram[0x7F] = 0x00;
         if self.cgb_mode {
-            self.mem[0xFF00] = 0xCF;
-            self.mem[0xFF02] = 0x7F;
-            self.mem[0xFF41] = 0x85;
-            self.mem[0xFF46] = 0x00;
-            self.mem[0xFF4D] = 0x7E;
-            self.mem[0xFF51] = 0xFF;
-            self.mem[0xFF52] = 0xFF;
-            self.mem[0xFF53] = 0xFF;
-            self.mem[0xFF54] = 0xFF;
-            self.mem[0xFF55] = 0xFF;
-            self.mem[0xFF56] = 0x3E;
-            self.mem[0xFF70] = 0x01;
+            self.io_regs[0x00] = 0xCF;
+            self.io_regs[0x02] = 0x7F;
+            self.io_regs[0x41] = 0x85;
+            self.io_regs[0x46] = 0x00;
+            self.io_regs[0x4D] = 0x7E;
+            self.io_regs[0x51] = 0xFF;
+            self.io_regs[0x52] = 0xFF;
+            self.io_regs[0x53] = 0xFF;
+            self.io_regs[0x54] = 0xFF;
+            self.io_regs[0x55] = 0xFF;
+            self.io_regs[0x56] = 0x3E;
+            self.io_regs[0x70] = 0x01;
         } else {
-            self.mem[0xFF00] = 0xCF;
-            self.mem[0xFF02] = 0x7E;
-            self.mem[0xFF04] = 0xAB;
-            self.mem[0xFF41] = 0x85;
-            self.mem[0xFF46] = 0xFF;
+            self.io_regs[0x00] = 0xCF;
+            self.io_regs[0x02] = 0x7E;
+            self.io_regs[0x04] = 0xAB;
+            self.io_regs[0x41] = 0x85;
+            self.io_regs[0x46] = 0xFF;
         }
     }
 }
