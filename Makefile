@@ -115,7 +115,7 @@ verify: clean $(RUST_HDR) $(PYTHON)
 # $(CPPCHECK) --enable=all --inconclusive --error-exitcode=1 $(SRC_DIR) include/
 	$(MAKE) gbemu_headless CFLAGS="$(CFLAGS) $(VERIFY_FLAGS)"
 	$(PYTHON) tests/check_coverage.py
-	$(MAKE) test
+	$(MAKE) test ASAN=1
 
 compile_commands:
 	bear -- $(MAKE) all

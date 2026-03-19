@@ -6,6 +6,4 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 RUN cargo install cbindgen
 WORKDIR /gbemu
 COPY . .
-ARG ASAN=
-ENV ASAN=${ASAN}
-CMD sh -c 'make verify ${ASAN:+ASAN=$ASAN}'
+CMD make verify
