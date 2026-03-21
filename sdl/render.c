@@ -5,6 +5,7 @@
 #include "gbemu/core.h"
 #include "gbemu/ppu.h"
 #include "gbemu/sdl.h"
+#include "gbemu/settings.h"
 #include "internal.h"
 
 uint32_t buf[SCRN_HEIGHT][SCRN_WIDTH];
@@ -33,7 +34,7 @@ void render(struct Ppu* ppu) {
   SDL_RenderTexture(rnd, txt, NULL, NULL);
 }
 
-static void draw_ui_idle(AppState* state) {
+static void draw_ui_idle(struct AppState* state) {
   float scale = (float)win_width / (SCRN_WIDTH * 3);
   if (scale < 1.0f) scale = 1.0f;
   int pw = (int)(300 * scale);
@@ -75,9 +76,9 @@ static void draw_ui_idle(AppState* state) {
   nk_end(ctx);
 }
 
-static void draw_ui_playing(AppState* state) { (void)state; }
+static void draw_ui_playing(struct AppState* state) { (void)state; }
 
-void draw_ui(AppState* state) {
+void draw_ui(struct AppState* state) {
   SDL_SetRenderLogicalPresentation(rnd, win_width, win_height,
                                    SDL_LOGICAL_PRESENTATION_DISABLED);
 

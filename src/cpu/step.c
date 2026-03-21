@@ -1,19 +1,20 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "gbemu/bus.h"
 #include "gbemu/cpu.h"
-#include "gbemu/mmu.h"
 #include "internal.h"
+#include "rust.h"
 
-static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
+static int step_inner(struct Cpu* cpu, struct Bus* bus,
                       uint8_t disassemble_enable, int test_category,
                       uint8_t* b_done, const uint16_t* watch_addrs,
                       uint8_t watch_count, uint64_t total_cycles) {
   if (cpu->bHALT) return 4;
-  uint8_t instr = rd8(cpu, mmu);
+  uint8_t instr = rd8(cpu, bus);
   if (instr == 0xCB) {
-    uint8_t prfx = rd8(cpu, mmu);
-    if (disassemble_enable && disassemble(cpu, mmu, instr, prfx, watch_addrs,
+    uint8_t prfx = rd8(cpu, bus);
+    if (disassemble_enable && disassemble(cpu, bus, instr, prfx, watch_addrs,
                                           watch_count, total_cycles)) {
     }  // return -1 when completing disassembler
     switch (prfx) {
@@ -30,7 +31,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x05:
         return c_rlc(cpu, &cpu->L);
       case 0x06:
-        return c_rlc_mem(cpu, mmu, apu, gt_HL(cpu));
+        return c_rlc_mem(cpu, bus, gt_HL(cpu));
       case 0x07:
         return c_rlc(cpu, &cpu->A);
       case 0x08:
@@ -46,7 +47,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x0D:
         return c_rrc(cpu, &cpu->L);
       case 0x0E:
-        return c_rrc_mem(cpu, mmu, apu, gt_HL(cpu));
+        return c_rrc_mem(cpu, bus, gt_HL(cpu));
       case 0x0F:
         return c_rrc(cpu, &cpu->A);
       case 0x10:
@@ -62,7 +63,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x15:
         return c_rl(cpu, &cpu->L);
       case 0x16:
-        return c_rl_mem(cpu, mmu, apu, gt_HL(cpu));
+        return c_rl_mem(cpu, bus, gt_HL(cpu));
       case 0x17:
         return c_rl(cpu, &cpu->A);
       case 0x18:
@@ -78,7 +79,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x1D:
         return c_rr(cpu, &cpu->L);
       case 0x1E:
-        return c_rr_mem(cpu, mmu, apu, gt_HL(cpu));
+        return c_rr_mem(cpu, bus, gt_HL(cpu));
       case 0x1F:
         return c_rr(cpu, &cpu->A);
       case 0x20:
@@ -94,7 +95,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x25:
         return c_sla(cpu, &cpu->L);
       case 0x26:
-        return c_sla_mem(cpu, mmu, apu, gt_HL(cpu));
+        return c_sla_mem(cpu, bus, gt_HL(cpu));
       case 0x27:
         return c_sla(cpu, &cpu->A);
       case 0x28:
@@ -110,7 +111,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x2D:
         return c_sra(cpu, &cpu->L);
       case 0x2E:
-        return c_sra_mem(cpu, mmu, apu, gt_HL(cpu));
+        return c_sra_mem(cpu, bus, gt_HL(cpu));
       case 0x2F:
         return c_sra(cpu, &cpu->A);
       case 0x30:
@@ -126,7 +127,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x35:
         return c_swp(cpu, &cpu->L);
       case 0x36:
-        return c_swp_mem(cpu, mmu, apu, gt_HL(cpu));
+        return c_swp_mem(cpu, bus, gt_HL(cpu));
       case 0x37:
         return c_swp(cpu, &cpu->A);
       case 0x38:
@@ -142,7 +143,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x3D:
         return c_srl(cpu, &cpu->L);
       case 0x3E:
-        return c_srl_mem(cpu, mmu, apu, gt_HL(cpu));
+        return c_srl_mem(cpu, bus, gt_HL(cpu));
       case 0x3F:
         return c_srl(cpu, &cpu->A);
       case 0x40:
@@ -158,8 +159,8 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x45:
         return c_bit(cpu, cpu->L, 0);
       case 0x46:
-        mem_tick(cpu, mmu, apu, 8);
-        c_bit(cpu, mmu_r_mem(mmu, gt_HL(cpu)), 0);
+        mem_tick(cpu, bus, 8);
+        c_bit(cpu, bus_read(bus, gt_HL(cpu)), 0);
         return 12;
       case 0x47:
         return c_bit(cpu, cpu->A, 0);
@@ -176,8 +177,8 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x4D:
         return c_bit(cpu, cpu->L, 1);
       case 0x4E:
-        mem_tick(cpu, mmu, apu, 8);
-        c_bit(cpu, mmu_r_mem(mmu, gt_HL(cpu)), 1);
+        mem_tick(cpu, bus, 8);
+        c_bit(cpu, bus_read(bus, gt_HL(cpu)), 1);
         return 12;
       case 0x4F:
         return c_bit(cpu, cpu->A, 1);
@@ -194,8 +195,8 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x55:
         return c_bit(cpu, cpu->L, 2);
       case 0x56:
-        mem_tick(cpu, mmu, apu, 8);
-        c_bit(cpu, mmu_r_mem(mmu, gt_HL(cpu)), 2);
+        mem_tick(cpu, bus, 8);
+        c_bit(cpu, bus_read(bus, gt_HL(cpu)), 2);
         return 12;
       case 0x57:
         return c_bit(cpu, cpu->A, 2);
@@ -212,8 +213,8 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x5D:
         return c_bit(cpu, cpu->L, 3);
       case 0x5E:
-        mem_tick(cpu, mmu, apu, 8);
-        c_bit(cpu, mmu_r_mem(mmu, gt_HL(cpu)), 3);
+        mem_tick(cpu, bus, 8);
+        c_bit(cpu, bus_read(bus, gt_HL(cpu)), 3);
         return 12;
       case 0x5F:
         return c_bit(cpu, cpu->A, 3);
@@ -230,8 +231,8 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x65:
         return c_bit(cpu, cpu->L, 4);
       case 0x66:
-        mem_tick(cpu, mmu, apu, 8);
-        c_bit(cpu, mmu_r_mem(mmu, gt_HL(cpu)), 4);
+        mem_tick(cpu, bus, 8);
+        c_bit(cpu, bus_read(bus, gt_HL(cpu)), 4);
         return 12;
       case 0x67:
         return c_bit(cpu, cpu->A, 4);
@@ -248,8 +249,8 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x6D:
         return c_bit(cpu, cpu->L, 5);
       case 0x6E:
-        mem_tick(cpu, mmu, apu, 8);
-        c_bit(cpu, mmu_r_mem(mmu, gt_HL(cpu)), 5);
+        mem_tick(cpu, bus, 8);
+        c_bit(cpu, bus_read(bus, gt_HL(cpu)), 5);
         return 12;
       case 0x6F:
         return c_bit(cpu, cpu->A, 5);
@@ -266,8 +267,8 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x75:
         return c_bit(cpu, cpu->L, 6);
       case 0x76:
-        mem_tick(cpu, mmu, apu, 8);
-        c_bit(cpu, mmu_r_mem(mmu, gt_HL(cpu)), 6);
+        mem_tick(cpu, bus, 8);
+        c_bit(cpu, bus_read(bus, gt_HL(cpu)), 6);
         return 12;
       case 0x77:
         return c_bit(cpu, cpu->A, 6);
@@ -284,8 +285,8 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x7D:
         return c_bit(cpu, cpu->L, 7);
       case 0x7E:
-        mem_tick(cpu, mmu, apu, 8);
-        c_bit(cpu, mmu_r_mem(mmu, gt_HL(cpu)), 7);
+        mem_tick(cpu, bus, 8);
+        c_bit(cpu, bus_read(bus, gt_HL(cpu)), 7);
         return 12;
       case 0x7F:
         return c_bit(cpu, cpu->A, 7);
@@ -302,7 +303,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x85:
         return c_res(&cpu->L, 0);
       case 0x86:
-        return c_res_mem(cpu, mmu, apu, gt_HL(cpu), 0);
+        return c_res_mem(cpu, bus, gt_HL(cpu), 0);
       case 0x87:
         return c_res(&cpu->A, 0);
       case 0x88:
@@ -318,7 +319,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x8D:
         return c_res(&cpu->L, 1);
       case 0x8E:
-        return c_res_mem(cpu, mmu, apu, gt_HL(cpu), 1);
+        return c_res_mem(cpu, bus, gt_HL(cpu), 1);
       case 0x8F:
         return c_res(&cpu->A, 1);
       case 0x90:
@@ -334,7 +335,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x95:
         return c_res(&cpu->L, 2);
       case 0x96:
-        return c_res_mem(cpu, mmu, apu, gt_HL(cpu), 2);
+        return c_res_mem(cpu, bus, gt_HL(cpu), 2);
       case 0x97:
         return c_res(&cpu->A, 2);
       case 0x98:
@@ -350,7 +351,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x9D:
         return c_res(&cpu->L, 3);
       case 0x9E:
-        return c_res_mem(cpu, mmu, apu, gt_HL(cpu), 3);
+        return c_res_mem(cpu, bus, gt_HL(cpu), 3);
       case 0x9F:
         return c_res(&cpu->A, 3);
       case 0xA0:
@@ -366,7 +367,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0xA5:
         return c_res(&cpu->L, 4);
       case 0xA6:
-        return c_res_mem(cpu, mmu, apu, gt_HL(cpu), 4);
+        return c_res_mem(cpu, bus, gt_HL(cpu), 4);
       case 0xA7:
         return c_res(&cpu->A, 4);
       case 0xA8:
@@ -382,7 +383,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0xAD:
         return c_res(&cpu->L, 5);
       case 0xAE:
-        return c_res_mem(cpu, mmu, apu, gt_HL(cpu), 5);
+        return c_res_mem(cpu, bus, gt_HL(cpu), 5);
       case 0xAF:
         return c_res(&cpu->A, 5);
       case 0xB0:
@@ -398,7 +399,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0xB5:
         return c_res(&cpu->L, 6);
       case 0xB6:
-        return c_res_mem(cpu, mmu, apu, gt_HL(cpu), 6);
+        return c_res_mem(cpu, bus, gt_HL(cpu), 6);
       case 0xB7:
         return c_res(&cpu->A, 6);
       case 0xB8:
@@ -414,7 +415,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0xBD:
         return c_res(&cpu->L, 7);
       case 0xBE:
-        return c_res_mem(cpu, mmu, apu, gt_HL(cpu), 7);
+        return c_res_mem(cpu, bus, gt_HL(cpu), 7);
       case 0xBF:
         return c_res(&cpu->A, 7);
       case 0xC0:
@@ -430,7 +431,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0xC5:
         return c_set(&cpu->L, 0);
       case 0xC6:
-        return c_set_mem(cpu, mmu, apu, gt_HL(cpu), 0);
+        return c_set_mem(cpu, bus, gt_HL(cpu), 0);
       case 0xC7:
         return c_set(&cpu->A, 0);
       case 0xC8:
@@ -446,7 +447,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0xCD:
         return c_set(&cpu->L, 1);
       case 0xCE:
-        return c_set_mem(cpu, mmu, apu, gt_HL(cpu), 1);
+        return c_set_mem(cpu, bus, gt_HL(cpu), 1);
       case 0xCF:
         return c_set(&cpu->A, 1);
       case 0xD0:
@@ -462,7 +463,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0xD5:
         return c_set(&cpu->L, 2);
       case 0xD6:
-        return c_set_mem(cpu, mmu, apu, gt_HL(cpu), 2);
+        return c_set_mem(cpu, bus, gt_HL(cpu), 2);
       case 0xD7:
         return c_set(&cpu->A, 2);
       case 0xD8:
@@ -478,7 +479,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0xDD:
         return c_set(&cpu->L, 3);
       case 0xDE:
-        return c_set_mem(cpu, mmu, apu, gt_HL(cpu), 3);
+        return c_set_mem(cpu, bus, gt_HL(cpu), 3);
       case 0xDF:
         return c_set(&cpu->A, 3);
       case 0xE0:
@@ -494,7 +495,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0xE5:
         return c_set(&cpu->L, 4);
       case 0xE6:
-        return c_set_mem(cpu, mmu, apu, gt_HL(cpu), 4);
+        return c_set_mem(cpu, bus, gt_HL(cpu), 4);
       case 0xE7:
         return c_set(&cpu->A, 4);
       case 0xE8:
@@ -510,7 +511,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0xED:
         return c_set(&cpu->L, 5);
       case 0xEE:
-        return c_set_mem(cpu, mmu, apu, gt_HL(cpu), 5);
+        return c_set_mem(cpu, bus, gt_HL(cpu), 5);
       case 0xEF:
         return c_set(&cpu->A, 5);
       case 0xF0:
@@ -526,7 +527,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0xF5:
         return c_set(&cpu->L, 6);
       case 0xF6:
-        return c_set_mem(cpu, mmu, apu, gt_HL(cpu), 6);
+        return c_set_mem(cpu, bus, gt_HL(cpu), 6);
       case 0xF7:
         return c_set(&cpu->A, 6);
       case 0xF8:
@@ -542,28 +543,28 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0xFD:
         return c_set(&cpu->L, 7);
       case 0xFE:
-        return c_set_mem(cpu, mmu, apu, gt_HL(cpu), 7);
+        return c_set_mem(cpu, bus, gt_HL(cpu), 7);
       case 0xFF:
         return c_set(&cpu->A, 7);
       default:
         fprintf(stderr, "UNIMPLEMENTED PREFIX INSTRUCTION\n");
-        disassemble(cpu, mmu, instr, prfx, watch_addrs, watch_count,
+        disassemble(cpu, bus, instr, prfx, watch_addrs, watch_count,
                     total_cycles);
         return -1;
     }
   } else {
-    if (disassemble_enable && disassemble(cpu, mmu, instr, 0, watch_addrs,
+    if (disassemble_enable && disassemble(cpu, bus, instr, 0, watch_addrs,
                                           watch_count, total_cycles)) {
     }  // return -1 when completing disassembler
     switch (instr) {
       case 0x00:
         return 4;
       case 0x01:
-        st_BC(cpu, rd16(cpu, mmu));
+        st_BC(cpu, rd16(cpu, bus));
         return 12;
       case 0x02:
-        mem_tick(cpu, mmu, apu, 4);
-        mmu_w_mem(mmu, gt_BC(cpu), cpu->A);
+        mem_tick(cpu, bus, 4);
+        bus_write(bus, gt_BC(cpu), cpu->A);
         return 8;
       case 0x03:
         st_BC(cpu, gt_BC(cpu) + 1);
@@ -573,16 +574,16 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x05:
         return c_dec(cpu, &cpu->B);
       case 0x06:
-        cpu->B = rd8(cpu, mmu);
+        cpu->B = rd8(cpu, bus);
         return 8;
       case 0x07:
         c_rlc(cpu, &cpu->A);
         clear_flag(cpu, FLG_Z);
         return 4;
       case 0x08: {
-        uint16_t addr = rd16(cpu, mmu);
-        mmu_w_mem(mmu, addr, (uint8_t)(cpu->SP & 0xFF));
-        mmu_w_mem(mmu, addr + 1, (uint8_t)((cpu->SP >> 8) & 0xFF));
+        uint16_t addr = rd16(cpu, bus);
+        bus_write(bus, addr, (uint8_t)(cpu->SP & 0xFF));
+        bus_write(bus, addr + 1, (uint8_t)((cpu->SP >> 8) & 0xFF));
         return 20;
       }
       case 0x09:
@@ -592,8 +593,8 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
         clear_flag(cpu, FLG_N);
         return 8;
       case 0x0A:
-        mem_tick(cpu, mmu, apu, 4);
-        cpu->A = mmu_r_mem(mmu, gt_BC(cpu));
+        mem_tick(cpu, bus, 4);
+        cpu->A = bus_read(bus, gt_BC(cpu));
         return 8;
       case 0x0B:
         st_BC(cpu, gt_BC(cpu) - 1);
@@ -603,7 +604,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x0D:
         return c_dec(cpu, &cpu->C);
       case 0x0E:
-        cpu->C = rd8(cpu, mmu);
+        cpu->C = rd8(cpu, bus);
         return 8;
       case 0x0F:
         c_rrc(cpu, &cpu->A);
@@ -612,11 +613,11 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x10:
         return 4;
       case 0x11:
-        st_DE(cpu, rd16(cpu, mmu));
+        st_DE(cpu, rd16(cpu, bus));
         return 12;
       case 0x12:
-        mem_tick(cpu, mmu, apu, 4);
-        mmu_w_mem(mmu, gt_DE(cpu), cpu->A);
+        mem_tick(cpu, bus, 4);
+        bus_write(bus, gt_DE(cpu), cpu->A);
         return 8;
       case 0x13:
         st_DE(cpu, gt_DE(cpu) + 1);
@@ -626,14 +627,14 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x15:
         return c_dec(cpu, &cpu->D);
       case 0x16:
-        cpu->D = rd8(cpu, mmu);
+        cpu->D = rd8(cpu, bus);
         return 8;
       case 0x17:
         c_rl(cpu, &cpu->A);
         clear_flag(cpu, FLG_Z);
         return 4;
       case 0x18: {
-        int8_t offset = (int8_t)rd8(cpu, mmu);
+        int8_t offset = (int8_t)rd8(cpu, bus);
         cpu->PC = (uint16_t)(cpu->PC + offset);
         return 12;
       }
@@ -644,8 +645,8 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
         clear_flag(cpu, FLG_N);
         return 8;
       case 0x1A:
-        mem_tick(cpu, mmu, apu, 4);
-        cpu->A = mmu_r_mem(mmu, gt_DE(cpu));
+        mem_tick(cpu, bus, 4);
+        cpu->A = bus_read(bus, gt_DE(cpu));
         return 8;
       case 0x1B:
         st_DE(cpu, gt_DE(cpu) - 1);
@@ -655,20 +656,20 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x1D:
         return c_dec(cpu, &cpu->E);
       case 0x1E:
-        cpu->E = rd8(cpu, mmu);
+        cpu->E = rd8(cpu, bus);
         return 8;
       case 0x1F:
         c_rr(cpu, &cpu->A);
         clear_flag(cpu, FLG_Z);
         return 4;
       case 0x20:
-        return c_jp8(cpu, mmu, 1 - get_flag(cpu, FLG_Z));
+        return c_jp8(cpu, bus, 1 - get_flag(cpu, FLG_Z));
       case 0x21:
-        st_HL(cpu, rd16(cpu, mmu));
+        st_HL(cpu, rd16(cpu, bus));
         return 12;
       case 0x22:
-        mem_tick(cpu, mmu, apu, 4);
-        mmu_w_mem(mmu, gt_HL(cpu), cpu->A);
+        mem_tick(cpu, bus, 4);
+        bus_write(bus, gt_HL(cpu), cpu->A);
         st_HL(cpu, gt_HL(cpu) + 1);
         return 8;
       case 0x23:
@@ -679,7 +680,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x25:
         return c_dec(cpu, &cpu->H);
       case 0x26:
-        cpu->H = rd8(cpu, mmu);
+        cpu->H = rd8(cpu, bus);
         return 8;
       case 0x27:  // Taken from here:
                   // https://forums.nesdev.org/viewtopic.php?p=196282#p196282
@@ -699,7 +700,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
         clear_flag(cpu, FLG_H);
         return 4;
       case 0x28:
-        return c_jp8(cpu, mmu, get_flag(cpu, FLG_Z));
+        return c_jp8(cpu, bus, get_flag(cpu, FLG_Z));
       case 0x29:
         st_h_add16(cpu, gt_HL(cpu), gt_HL(cpu));
         st_c_add16(cpu, gt_HL(cpu), gt_HL(cpu));
@@ -707,8 +708,8 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
         clear_flag(cpu, FLG_N);
         return 8;
       case 0x2A:
-        mem_tick(cpu, mmu, apu, 4);
-        cpu->A = mmu_r_mem(mmu, gt_HL(cpu));
+        mem_tick(cpu, bus, 4);
+        cpu->A = bus_read(bus, gt_HL(cpu));
         st_HL(cpu, gt_HL(cpu) + 1);
         return 8;
       case 0x2B:
@@ -719,31 +720,31 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x2D:
         return c_dec(cpu, &cpu->L);
       case 0x2E:
-        cpu->L = rd8(cpu, mmu);
+        cpu->L = rd8(cpu, bus);
         return 8;
       case 0x2F:
         return c_cpl(cpu, &cpu->A);
       case 0x30:
-        return c_jp8(cpu, mmu, 1 - get_flag(cpu, FLG_C));
+        return c_jp8(cpu, bus, 1 - get_flag(cpu, FLG_C));
       case 0x31:
-        cpu->SP = rd16(cpu, mmu);
+        cpu->SP = rd16(cpu, bus);
         return 12;
       case 0x32:
-        mem_tick(cpu, mmu, apu, 4);
-        mmu_w_mem(mmu, gt_HL(cpu), cpu->A);
+        mem_tick(cpu, bus, 4);
+        bus_write(bus, gt_HL(cpu), cpu->A);
         st_HL(cpu, gt_HL(cpu) - 1);
         return 8;
       case 0x33:
         ++cpu->SP;
         return 8;
       case 0x34:
-        return c_inc_mem(cpu, mmu, apu, gt_HL(cpu));
+        return c_inc_mem(cpu, bus, gt_HL(cpu));
       case 0x35:
-        return c_dec_mem(cpu, mmu, apu, gt_HL(cpu));
+        return c_dec_mem(cpu, bus, gt_HL(cpu));
       case 0x36: {
-        uint8_t imm = rd8(cpu, mmu);
-        mem_tick(cpu, mmu, apu, 8);
-        mmu_w_mem(mmu, gt_HL(cpu), imm);
+        uint8_t imm = rd8(cpu, bus);
+        mem_tick(cpu, bus, 8);
+        bus_write(bus, gt_HL(cpu), imm);
         return 12;
       }
       case 0x37:
@@ -752,7 +753,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
         set_flag(cpu, FLG_C);
         return 4;
       case 0x38:
-        return c_jp8(cpu, mmu, get_flag(cpu, FLG_C));
+        return c_jp8(cpu, bus, get_flag(cpu, FLG_C));
       case 0x39:
         st_h_add16(cpu, gt_HL(cpu), cpu->SP);
         st_c_add16(cpu, gt_HL(cpu), cpu->SP);
@@ -760,8 +761,8 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
         clear_flag(cpu, FLG_N);
         return 8;
       case 0x3A:
-        mem_tick(cpu, mmu, apu, 4);
-        cpu->A = mmu_r_mem(mmu, gt_HL(cpu));
+        mem_tick(cpu, bus, 4);
+        cpu->A = bus_read(bus, gt_HL(cpu));
         st_HL(cpu, gt_HL(cpu) - 1);
         return 8;
       case 0x3B:
@@ -772,7 +773,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x3D:
         return c_dec(cpu, &cpu->A);
       case 0x3E:
-        cpu->A = rd8(cpu, mmu);
+        cpu->A = rd8(cpu, bus);
         return 8;
       case 0x3F:
         clear_flag(cpu, FLG_N);
@@ -811,8 +812,8 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
         cpu->B = cpu->L;
         return 4;
       case 0x46:
-        mem_tick(cpu, mmu, apu, 4);
-        cpu->B = mmu_r_mem(mmu, gt_HL(cpu));
+        mem_tick(cpu, bus, 4);
+        cpu->B = bus_read(bus, gt_HL(cpu));
         return 8;
       case 0x47:
         cpu->B = cpu->A;
@@ -836,8 +837,8 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
         cpu->C = cpu->L;
         return 4;
       case 0x4E:
-        mem_tick(cpu, mmu, apu, 4);
-        cpu->C = mmu_r_mem(mmu, gt_HL(cpu));
+        mem_tick(cpu, bus, 4);
+        cpu->C = bus_read(bus, gt_HL(cpu));
         return 8;
       case 0x4F:
         cpu->C = cpu->A;
@@ -861,8 +862,8 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
         cpu->D = cpu->L;
         return 4;
       case 0x56:
-        mem_tick(cpu, mmu, apu, 4);
-        cpu->D = mmu_r_mem(mmu, gt_HL(cpu));
+        mem_tick(cpu, bus, 4);
+        cpu->D = bus_read(bus, gt_HL(cpu));
         return 8;
       case 0x57:
         cpu->D = cpu->A;
@@ -886,8 +887,8 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
         cpu->E = cpu->L;
         return 4;
       case 0x5E:
-        mem_tick(cpu, mmu, apu, 4);
-        cpu->E = mmu_r_mem(mmu, gt_HL(cpu));
+        mem_tick(cpu, bus, 4);
+        cpu->E = bus_read(bus, gt_HL(cpu));
         return 8;
       case 0x5F:
         cpu->E = cpu->A;
@@ -911,8 +912,8 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
         cpu->H = cpu->L;
         return 4;
       case 0x66:
-        mem_tick(cpu, mmu, apu, 4);
-        cpu->H = mmu_r_mem(mmu, gt_HL(cpu));
+        mem_tick(cpu, bus, 4);
+        cpu->H = bus_read(bus, gt_HL(cpu));
         return 8;
       case 0x67:
         cpu->H = cpu->A;
@@ -936,46 +937,46 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
         cpu->L = cpu->L;  // NOLINT
         return 4;
       case 0x6E:
-        mem_tick(cpu, mmu, apu, 4);
-        cpu->L = mmu_r_mem(mmu, gt_HL(cpu));
+        mem_tick(cpu, bus, 4);
+        cpu->L = bus_read(bus, gt_HL(cpu));
         return 8;
       case 0x6F:
         cpu->L = cpu->A;
         return 4;
       case 0x70:
-        mem_tick(cpu, mmu, apu, 4);
-        mmu_w_mem(mmu, gt_HL(cpu), cpu->B);
+        mem_tick(cpu, bus, 4);
+        bus_write(bus, gt_HL(cpu), cpu->B);
         return 8;
       case 0x71:
-        mem_tick(cpu, mmu, apu, 4);
-        mmu_w_mem(mmu, gt_HL(cpu), cpu->C);
+        mem_tick(cpu, bus, 4);
+        bus_write(bus, gt_HL(cpu), cpu->C);
         return 8;
       case 0x72:
-        mem_tick(cpu, mmu, apu, 4);
-        mmu_w_mem(mmu, gt_HL(cpu), cpu->D);
+        mem_tick(cpu, bus, 4);
+        bus_write(bus, gt_HL(cpu), cpu->D);
         return 8;
       case 0x73:
-        mem_tick(cpu, mmu, apu, 4);
-        mmu_w_mem(mmu, gt_HL(cpu), cpu->E);
+        mem_tick(cpu, bus, 4);
+        bus_write(bus, gt_HL(cpu), cpu->E);
         return 8;
       case 0x74:
-        mem_tick(cpu, mmu, apu, 4);
-        mmu_w_mem(mmu, gt_HL(cpu), cpu->H);
+        mem_tick(cpu, bus, 4);
+        bus_write(bus, gt_HL(cpu), cpu->H);
         return 8;
       case 0x75:
-        mem_tick(cpu, mmu, apu, 4);
-        mmu_w_mem(mmu, gt_HL(cpu), cpu->L);
+        mem_tick(cpu, bus, 4);
+        bus_write(bus, gt_HL(cpu), cpu->L);
         return 8;
       case 0x76:
-        if (!cpu->bIME && (mmu_r_mem(mmu, IE) & mmu_r_mem(mmu, IF) & 0x1F)) {
+        if (!cpu->bIME && (cpu->ie_reg & cpu->if_reg & 0x1F)) {
           cpu->bHALT_BUG = 1;
         } else {
           cpu->bHALT = 1;
         }
         return 4;
       case 0x77:
-        mem_tick(cpu, mmu, apu, 4);
-        mmu_w_mem(mmu, gt_HL(cpu), cpu->A);
+        mem_tick(cpu, bus, 4);
+        bus_write(bus, gt_HL(cpu), cpu->A);
         return 8;
       case 0x78:
         cpu->A = cpu->B;
@@ -996,8 +997,8 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
         cpu->A = cpu->L;
         return 4;
       case 0x7E:
-        mem_tick(cpu, mmu, apu, 4);
-        cpu->A = mmu_r_mem(mmu, gt_HL(cpu));
+        mem_tick(cpu, bus, 4);
+        cpu->A = bus_read(bus, gt_HL(cpu));
         return 8;
       case 0x7F:
         cpu->A = cpu->A;  // NOLINT
@@ -1015,8 +1016,8 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x85:
         return c_add(cpu, cpu->L);
       case 0x86:
-        mem_tick(cpu, mmu, apu, 4);
-        c_add(cpu, mmu_r_mem(mmu, gt_HL(cpu)));
+        mem_tick(cpu, bus, 4);
+        c_add(cpu, bus_read(bus, gt_HL(cpu)));
         return 8;
       case 0x87:
         return c_add(cpu, cpu->A);
@@ -1033,8 +1034,8 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x8D:
         return c_adc(cpu, cpu->L);
       case 0x8E:
-        mem_tick(cpu, mmu, apu, 4);
-        c_adc(cpu, mmu_r_mem(mmu, gt_HL(cpu)));
+        mem_tick(cpu, bus, 4);
+        c_adc(cpu, bus_read(bus, gt_HL(cpu)));
         return 8;
       case 0x8F:
         return c_adc(cpu, cpu->A);
@@ -1051,8 +1052,8 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x95:
         return c_sub(cpu, cpu->L);
       case 0x96:
-        mem_tick(cpu, mmu, apu, 4);
-        c_sub(cpu, mmu_r_mem(mmu, gt_HL(cpu)));
+        mem_tick(cpu, bus, 4);
+        c_sub(cpu, bus_read(bus, gt_HL(cpu)));
         return 8;
       case 0x97:
         return c_sub(cpu, cpu->A);
@@ -1069,8 +1070,8 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0x9D:
         return c_sbc(cpu, cpu->L);
       case 0x9E:
-        mem_tick(cpu, mmu, apu, 4);
-        c_sbc(cpu, mmu_r_mem(mmu, gt_HL(cpu)));
+        mem_tick(cpu, bus, 4);
+        c_sbc(cpu, bus_read(bus, gt_HL(cpu)));
         return 8;
       case 0x9F:
         return c_sbc(cpu, cpu->A);
@@ -1087,8 +1088,8 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0xA5:
         return c_and(cpu, cpu->L);
       case 0xA6:
-        mem_tick(cpu, mmu, apu, 4);
-        c_and(cpu, mmu_r_mem(mmu, gt_HL(cpu)));
+        mem_tick(cpu, bus, 4);
+        c_and(cpu, bus_read(bus, gt_HL(cpu)));
         return 8;
       case 0xA7:
         return c_and(cpu, cpu->A);
@@ -1105,8 +1106,8 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0xAD:
         return c_xor(cpu, cpu->L);
       case 0xAE:
-        mem_tick(cpu, mmu, apu, 4);
-        c_xor(cpu, mmu_r_mem(mmu, gt_HL(cpu)));
+        mem_tick(cpu, bus, 4);
+        c_xor(cpu, bus_read(bus, gt_HL(cpu)));
         return 8;
       case 0xAF:
         return c_xor(cpu, cpu->A);
@@ -1123,8 +1124,8 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0xB5:
         return c_or(cpu, cpu->L);
       case 0xB6:
-        mem_tick(cpu, mmu, apu, 4);
-        c_or(cpu, mmu_r_mem(mmu, gt_HL(cpu)));
+        mem_tick(cpu, bus, 4);
+        c_or(cpu, bus_read(bus, gt_HL(cpu)));
         return 8;
       case 0xB7:
         return c_or(cpu, cpu->A);
@@ -1141,109 +1142,101 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
       case 0xBD:
         return c_cp(cpu, cpu->L);
       case 0xBE:
-        mem_tick(cpu, mmu, apu, 4);
-        c_cp(cpu, mmu_r_mem(mmu, gt_HL(cpu)));
+        mem_tick(cpu, bus, 4);
+        c_cp(cpu, bus_read(bus, gt_HL(cpu)));
         return 8;
       case 0xBF:
         return c_cp(cpu, cpu->A);
       case 0xC0:
-        return c_ret(cpu, mmu, 1 - get_flag(cpu, FLG_Z));
+        return c_ret(cpu, bus, 1 - get_flag(cpu, FLG_Z));
       case 0xC1:
-        st_BC(cpu, pop(cpu, mmu));
+        st_BC(cpu, pop(cpu, bus));
         return 12;
       case 0xC2:
-        return c_jp16(cpu, mmu, 1 - get_flag(cpu, FLG_Z));
+        return c_jp16(cpu, bus, 1 - get_flag(cpu, FLG_Z));
       case 0xC3:
-        return c_jp16(cpu, mmu, 1);
+        return c_jp16(cpu, bus, 1);
       case 0xC4:
-        return c_call(cpu, mmu, 1 - get_flag(cpu, FLG_Z));
+        return c_call(cpu, bus, 1 - get_flag(cpu, FLG_Z));
       case 0xC5:
-        push(cpu, mmu, gt_BC(cpu));
+        push(cpu, bus, gt_BC(cpu));
         return 16;
       case 0xC6:
-        c_add(cpu, rd8(cpu, mmu));
+        c_add(cpu, rd8(cpu, bus));
         return 8;
       case 0xC7:
-        return c_rst(cpu, mmu, 0x0000);
+        return c_rst(cpu, bus, 0x0000);
       case 0xC8:
-        return c_ret(cpu, mmu, get_flag(cpu, FLG_Z));
+        return c_ret(cpu, bus, get_flag(cpu, FLG_Z));
       case 0xC9:
-        c_ret(cpu, mmu, 1);
+        c_ret(cpu, bus, 1);
         return 16;
       case 0xCA:
-        return c_jp16(cpu, mmu, get_flag(cpu, FLG_Z));
+        return c_jp16(cpu, bus, get_flag(cpu, FLG_Z));
       case 0xCC:
-        return c_call(cpu, mmu, get_flag(cpu, FLG_Z));
+        return c_call(cpu, bus, get_flag(cpu, FLG_Z));
       case 0xCD:
-        return c_call(cpu, mmu, 1);
+        return c_call(cpu, bus, 1);
       case 0xCE:
-        c_adc(cpu, rd8(cpu, mmu));
+        c_adc(cpu, rd8(cpu, bus));
         return 8;
       case 0xCF:
-        return c_rst(cpu, mmu, 0x0008);
+        return c_rst(cpu, bus, 0x0008);
       case 0xD0:
-        return c_ret(cpu, mmu, 1 - get_flag(cpu, FLG_C));
+        return c_ret(cpu, bus, 1 - get_flag(cpu, FLG_C));
       case 0xD1:
-        st_DE(cpu, pop(cpu, mmu));
+        st_DE(cpu, pop(cpu, bus));
         return 12;
       case 0xD2:
-        return c_jp16(cpu, mmu, 1 - get_flag(cpu, FLG_C));
+        return c_jp16(cpu, bus, 1 - get_flag(cpu, FLG_C));
       case 0xD4:
-        return c_call(cpu, mmu, 1 - get_flag(cpu, FLG_C));
+        return c_call(cpu, bus, 1 - get_flag(cpu, FLG_C));
       case 0xD5:
-        push(cpu, mmu, gt_DE(cpu));
+        push(cpu, bus, gt_DE(cpu));
         return 16;
       case 0xD6:
-        c_sub(cpu, rd8(cpu, mmu));
+        c_sub(cpu, rd8(cpu, bus));
         return 8;
       case 0xD7:
-        return c_rst(cpu, mmu, 0x0010);
+        return c_rst(cpu, bus, 0x0010);
       case 0xD8:
-        return c_ret(cpu, mmu, get_flag(cpu, FLG_C));
+        return c_ret(cpu, bus, get_flag(cpu, FLG_C));
       case 0xD9:
         cpu->bIME = 1;
-        c_ret(cpu, mmu, 1);
+        c_ret(cpu, bus, 1);
         return 16;
       case 0xDA:
-        return c_jp16(cpu, mmu, get_flag(cpu, FLG_C));
+        return c_jp16(cpu, bus, get_flag(cpu, FLG_C));
       case 0xDC:
-        return c_call(cpu, mmu, get_flag(cpu, FLG_C));
+        return c_call(cpu, bus, get_flag(cpu, FLG_C));
       case 0xDE:
-        c_sbc(cpu, rd8(cpu, mmu));
+        c_sbc(cpu, rd8(cpu, bus));
         return 8;
       case 0xDF:
-        return c_rst(cpu, mmu, 0x0018);
+        return c_rst(cpu, bus, 0x0018);
       case 0xE0: {
-        uint8_t n = rd8(cpu, mmu);
-        mem_tick(cpu, mmu, apu, 8);
-        mmu_w_mem(mmu, 0xFF00 + (uint16_t)n, cpu->A);
-        if (n == 0x04) {
-          cpu->div_cnt = 0;
-          cpu->tim_cnt = 0;
-        }
+        uint8_t n = rd8(cpu, bus);
+        mem_tick(cpu, bus, 8);
+        bus_write(bus, 0xFF00 + (uint16_t)n, cpu->A);
         return 12;
       }
       case 0xE1:
-        st_HL(cpu, pop(cpu, mmu));
+        st_HL(cpu, pop(cpu, bus));
         return 12;
       case 0xE2:
-        mem_tick(cpu, mmu, apu, 4);
-        mmu_w_mem(mmu, 0xFF00 + cpu->C, cpu->A);
-        if (cpu->C == 0x04) {
-          cpu->div_cnt = 0;
-          cpu->tim_cnt = 0;
-        }
+        mem_tick(cpu, bus, 4);
+        bus_write(bus, 0xFF00 + cpu->C, cpu->A);
         return 8;
       case 0xE5:
-        push(cpu, mmu, gt_HL(cpu));
+        push(cpu, bus, gt_HL(cpu));
         return 16;
       case 0xE6:
-        c_and(cpu, rd8(cpu, mmu));
+        c_and(cpu, rd8(cpu, bus));
         return 8;
       case 0xE7:
-        return c_rst(cpu, mmu, 0x0020);
+        return c_rst(cpu, bus, 0x0020);
       case 0xE8: {
-        uint8_t add = rd8(cpu, mmu);
+        uint8_t add = rd8(cpu, bus);
         st_h_add(cpu, (uint8_t)cpu->SP, add);
         st_c_add(cpu, (uint8_t)cpu->SP, add);
         cpu->SP = (uint16_t)(cpu->SP + (int8_t)add);
@@ -1255,46 +1248,42 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
         cpu->PC = gt_HL(cpu);
         return 4;
       case 0xEA: {
-        uint16_t addr = rd16(cpu, mmu);
-        mem_tick(cpu, mmu, apu, 12);
-        mmu_w_mem(mmu, addr, cpu->A);
-        if (addr == 0xFF04) {
-          cpu->div_cnt = 0;
-          cpu->tim_cnt = 0;
-        }
+        uint16_t addr = rd16(cpu, bus);
+        mem_tick(cpu, bus, 12);
+        bus_write(bus, addr, cpu->A);
         return 16;
       }
       case 0xEE:
-        c_xor(cpu, rd8(cpu, mmu));
+        c_xor(cpu, rd8(cpu, bus));
         return 8;
       case 0xEF:
-        return c_rst(cpu, mmu, 0x0028);
+        return c_rst(cpu, bus, 0x0028);
       case 0xF0: {
-        uint8_t n = rd8(cpu, mmu);
-        mem_tick(cpu, mmu, apu, 8);
-        cpu->A = mmu_r_mem(mmu, 0xFF00 + (uint16_t)n);
+        uint8_t n = rd8(cpu, bus);
+        mem_tick(cpu, bus, 8);
+        cpu->A = bus_read(bus, 0xFF00 + (uint16_t)n);
         return 12;
       }
       case 0xF1:
-        st_AF(cpu, pop(cpu, mmu) & 0xFFF0);
+        st_AF(cpu, pop(cpu, bus) & 0xFFF0);
         return 12;
       case 0xF2:
-        mem_tick(cpu, mmu, apu, 4);
-        cpu->A = mmu_r_mem(mmu, 0xFF00 + cpu->C);
+        mem_tick(cpu, bus, 4);
+        cpu->A = bus_read(bus, 0xFF00 + cpu->C);
         return 8;
       case 0xF3:
         cpu->bIME = 0;
         return 4;
       case 0xF5:
-        push(cpu, mmu, gt_AF(cpu));
+        push(cpu, bus, gt_AF(cpu));
         return 16;
       case 0xF6:
-        c_or(cpu, rd8(cpu, mmu));
+        c_or(cpu, rd8(cpu, bus));
         return 8;
       case 0xF7:
-        return c_rst(cpu, mmu, 0x0030);
+        return c_rst(cpu, bus, 0x0030);
       case 0xF8: {
-        uint8_t nxt = rd8(cpu, mmu);
+        uint8_t nxt = rd8(cpu, bus);
         uint16_t add = (uint16_t)(cpu->SP + (int8_t)nxt);
         st_HL(cpu, add);
         clear_flag(cpu, FLG_Z);
@@ -1307,19 +1296,19 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
         cpu->SP = gt_HL(cpu);
         return 8;
       case 0xFA: {
-        uint16_t addr = rd16(cpu, mmu);
-        mem_tick(cpu, mmu, apu, 12);
-        cpu->A = mmu_r_mem(mmu, addr);
+        uint16_t addr = rd16(cpu, bus);
+        mem_tick(cpu, bus, 12);
+        cpu->A = bus_read(bus, addr);
         return 16;
       }
       case 0xFB:
         cpu->bIME_pending = 1;
         return 4;
       case 0xFE:
-        c_cp(cpu, rd8(cpu, mmu));
+        c_cp(cpu, rd8(cpu, bus));
         return 8;
       case 0xFF:
-        return c_rst(cpu, mmu, 0x0038);
+        return c_rst(cpu, bus, 0x0038);
       default:
         fprintf(stderr, "UNIMPLEMENTED INSTRUCTION\n");
         return -1;
@@ -1327,7 +1316,7 @@ static int step_inner(struct Cpu* cpu, Mmu* mmu, struct Apu* apu,
   }
 }
 
-int step(struct Cpu* cpu, Mmu* mmu, struct Apu* apu, uint8_t disassemble_enable,
+int step(struct Cpu* cpu, struct Bus* bus, uint8_t disassemble_enable,
          int test_category, uint8_t* b_done, const uint16_t* watch_addrs,
          uint8_t watch_count, uint64_t total_cycles) {
   if (cpu->bIME_pending) {
@@ -1337,7 +1326,7 @@ int step(struct Cpu* cpu, Mmu* mmu, struct Apu* apu, uint8_t disassemble_enable,
   uint16_t pc_before = cpu->PC;
   uint8_t halt_bug = cpu->bHALT_BUG;
   cpu->bHALT_BUG = 0;
-  int cyc = step_inner(cpu, mmu, apu, disassemble_enable, test_category, b_done,
+  int cyc = step_inner(cpu, bus, disassemble_enable, test_category, b_done,
                        watch_addrs, watch_count, total_cycles);
   if (halt_bug) cpu->PC = pc_before;
   return cyc;

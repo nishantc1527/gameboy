@@ -1,8 +1,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "gbemu/bus.h"
 #include "gbemu/cpu.h"
-#include "gbemu/mmu.h"
 #include "internal.h"
 
 static const char* io_reg_name(uint8_t n) {
@@ -98,10 +98,10 @@ static const char* io_reg_name(uint8_t n) {
   }
 }
 
-int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
+int disassemble(struct Cpu* cpu, struct Bus* bus, uint8_t instr, uint8_t prfx,
                 const uint16_t* watch_addrs, uint8_t watch_count,
                 uint64_t total_cycles) {
-  if (!mmu_r_mem(mmu, 0xFF50)) return 0;
+  if (!bus_read(bus, 0xFF50)) return 0;
   uint16_t instr_pc = (uint16_t)(cpu->PC - (instr == 0xCB ? 2 : 1));
   printf("$%04X %02X ", instr_pc, instr);
   if (instr == 0xCB) {
@@ -885,7 +885,7 @@ int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
         printf("NOP\n");
         break;
       case 0x01:
-        printf("LD BC, $%04X\n", rd16(cpu, mmu));
+        printf("LD BC, $%04X\n", rd16(cpu, bus));
         cpu->PC -= 2;
         break;
       case 0x02:
@@ -901,14 +901,14 @@ int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
         printf("DEC B\n");
         break;
       case 0x06:
-        printf("LD B, $%02X\n", rd8(cpu, mmu));
+        printf("LD B, $%02X\n", rd8(cpu, bus));
         cpu->PC--;
         break;
       case 0x07:
         printf("RLCA\n");
         break;
       case 0x08:
-        printf("LD ($%04X), SP\n", rd16(cpu, mmu));
+        printf("LD ($%04X), SP\n", rd16(cpu, bus));
         cpu->PC -= 2;
         break;
       case 0x09:
@@ -927,7 +927,7 @@ int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
         printf("DEC C\n");
         break;
       case 0x0E:
-        printf("LD C, $%02X\n", rd8(cpu, mmu));
+        printf("LD C, $%02X\n", rd8(cpu, bus));
         cpu->PC--;
         break;
       case 0x0F:
@@ -937,7 +937,7 @@ int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
         printf("STOP\n");
         break;
       case 0x11:
-        printf("LD DE, $%04X\n", rd16(cpu, mmu));
+        printf("LD DE, $%04X\n", rd16(cpu, bus));
         cpu->PC -= 2;
         break;
       case 0x12:
@@ -953,14 +953,14 @@ int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
         printf("DEC D\n");
         break;
       case 0x16:
-        printf("LD D, $%02X\n", rd8(cpu, mmu));
+        printf("LD D, $%02X\n", rd8(cpu, bus));
         cpu->PC--;
         break;
       case 0x17:
         printf("RLA\n");
         break;
       case 0x18: {
-        int8_t off = (int8_t)rd8(cpu, mmu);
+        int8_t off = (int8_t)rd8(cpu, bus);
         printf("JR $%04X\n", (uint16_t)(cpu->PC + off));
         cpu->PC--;
         break;
@@ -981,20 +981,20 @@ int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
         printf("DEC E\n");
         break;
       case 0x1E:
-        printf("LD E, $%02X\n", rd8(cpu, mmu));
+        printf("LD E, $%02X\n", rd8(cpu, bus));
         cpu->PC--;
         break;
       case 0x1F:
         printf("RRA\n");
         break;
       case 0x20: {
-        int8_t off = (int8_t)rd8(cpu, mmu);
+        int8_t off = (int8_t)rd8(cpu, bus);
         printf("JR NZ, $%04X\n", (uint16_t)(cpu->PC + off));
         cpu->PC--;
         break;
       }
       case 0x21:
-        printf("LD HL, $%04X\n", rd16(cpu, mmu));
+        printf("LD HL, $%04X\n", rd16(cpu, bus));
         cpu->PC -= 2;
         break;
       case 0x22:
@@ -1010,14 +1010,14 @@ int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
         printf("DEC H\n");
         break;
       case 0x26:
-        printf("LD H, $%02X\n", rd8(cpu, mmu));
+        printf("LD H, $%02X\n", rd8(cpu, bus));
         cpu->PC--;
         break;
       case 0x27:
         printf("DAA\n");
         break;
       case 0x28: {
-        int8_t off = (int8_t)rd8(cpu, mmu);
+        int8_t off = (int8_t)rd8(cpu, bus);
         printf("JR Z, $%04X\n", (uint16_t)(cpu->PC + off));
         cpu->PC--;
         break;
@@ -1038,20 +1038,20 @@ int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
         printf("DEC L\n");
         break;
       case 0x2E:
-        printf("LD L, $%02X\n", rd8(cpu, mmu));
+        printf("LD L, $%02X\n", rd8(cpu, bus));
         cpu->PC--;
         break;
       case 0x2F:
         printf("CPL\n");
         break;
       case 0x30: {
-        int8_t off = (int8_t)rd8(cpu, mmu);
+        int8_t off = (int8_t)rd8(cpu, bus);
         printf("JR NC, $%04X\n", (uint16_t)(cpu->PC + off));
         cpu->PC--;
         break;
       }
       case 0x31:
-        printf("LD SP, $%04X\n", rd16(cpu, mmu));
+        printf("LD SP, $%04X\n", rd16(cpu, bus));
         cpu->PC -= 2;
         break;
       case 0x32:
@@ -1067,14 +1067,14 @@ int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
         printf("DEC (HL)\n");
         break;
       case 0x36:
-        printf("LD (HL), $%02X\n", rd8(cpu, mmu));
+        printf("LD (HL), $%02X\n", rd8(cpu, bus));
         cpu->PC--;
         break;
       case 0x37:
         printf("SCF\n");
         break;
       case 0x38: {
-        int8_t off = (int8_t)rd8(cpu, mmu);
+        int8_t off = (int8_t)rd8(cpu, bus);
         printf("JR C, $%04X\n", (uint16_t)(cpu->PC + off));
         cpu->PC--;
         break;
@@ -1095,7 +1095,7 @@ int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
         printf("DEC A\n");
         break;
       case 0x3E:
-        printf("LD A, $%02X\n", rd8(cpu, mmu));
+        printf("LD A, $%02X\n", rd8(cpu, bus));
         cpu->PC--;
         break;
       case 0x3F:
@@ -1492,22 +1492,22 @@ int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
         printf("POP BC\n");
         break;
       case 0xC2:
-        printf("JP NZ, $%04X\n", rd16(cpu, mmu));
+        printf("JP NZ, $%04X\n", rd16(cpu, bus));
         cpu->PC -= 2;
         break;
       case 0xC3:
-        printf("JP $%04X\n", rd16(cpu, mmu));
+        printf("JP $%04X\n", rd16(cpu, bus));
         cpu->PC -= 2;
         break;
       case 0xC4:
-        printf("CALL NZ, $%04X\n", rd16(cpu, mmu));
+        printf("CALL NZ, $%04X\n", rd16(cpu, bus));
         cpu->PC -= 2;
         break;
       case 0xC5:
         printf("PUSH BC\n");
         break;
       case 0xC6:
-        printf("ADD A, $%02X\n", rd8(cpu, mmu));
+        printf("ADD A, $%02X\n", rd8(cpu, bus));
         cpu->PC--;
         break;
       case 0xC7:
@@ -1520,19 +1520,19 @@ int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
         printf("RET\n");
         break;
       case 0xCA:
-        printf("JP Z, $%04X\n", rd16(cpu, mmu));
+        printf("JP Z, $%04X\n", rd16(cpu, bus));
         cpu->PC -= 2;
         break;
       case 0xCC:
-        printf("CALL Z, $%04X\n", rd16(cpu, mmu));
+        printf("CALL Z, $%04X\n", rd16(cpu, bus));
         cpu->PC -= 2;
         break;
       case 0xCD:
-        printf("CALL $%04X\n", rd16(cpu, mmu));
+        printf("CALL $%04X\n", rd16(cpu, bus));
         cpu->PC -= 2;
         break;
       case 0xCE:
-        printf("ADC A, $%02X\n", rd8(cpu, mmu));
+        printf("ADC A, $%02X\n", rd8(cpu, bus));
         cpu->PC--;
         break;
       case 0xCF:
@@ -1545,18 +1545,18 @@ int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
         printf("POP DE\n");
         break;
       case 0xD2:
-        printf("JP NC, $%04X\n", rd16(cpu, mmu));
+        printf("JP NC, $%04X\n", rd16(cpu, bus));
         cpu->PC -= 2;
         break;
       case 0xD4:
-        printf("CALL NC, $%04X\n", rd16(cpu, mmu));
+        printf("CALL NC, $%04X\n", rd16(cpu, bus));
         cpu->PC -= 2;
         break;
       case 0xD5:
         printf("PUSH DE\n");
         break;
       case 0xD6:
-        printf("SUB $%02X\n", rd8(cpu, mmu));
+        printf("SUB $%02X\n", rd8(cpu, bus));
         cpu->PC--;
         break;
       case 0xD7:
@@ -1569,22 +1569,22 @@ int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
         printf("RETI\n");
         break;
       case 0xDA:
-        printf("JP C, $%04X\n", rd16(cpu, mmu));
+        printf("JP C, $%04X\n", rd16(cpu, bus));
         cpu->PC -= 2;
         break;
       case 0xDC:
-        printf("CALL C, $%04X\n", rd16(cpu, mmu));
+        printf("CALL C, $%04X\n", rd16(cpu, bus));
         cpu->PC -= 2;
         break;
       case 0xDE:
-        printf("SBC A, $%02X\n", rd8(cpu, mmu));
+        printf("SBC A, $%02X\n", rd8(cpu, bus));
         cpu->PC--;
         break;
       case 0xDF:
         printf("RST $18\n");
         break;
       case 0xE0: {
-        uint8_t n = rd8(cpu, mmu);
+        uint8_t n = rd8(cpu, bus);
         const char* name = io_reg_name(n);
         if (name)
           printf("LDH (%s), A\n", name);
@@ -1603,32 +1603,32 @@ int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
         printf("PUSH HL\n");
         break;
       case 0xE6:
-        printf("AND $%02X\n", rd8(cpu, mmu));
+        printf("AND $%02X\n", rd8(cpu, bus));
         cpu->PC--;
         break;
       case 0xE7:
         printf("RST $20\n");
         break;
       case 0xE8:
-        printf("ADD SP, %d\n", (signed char)rd8(cpu, mmu));
+        printf("ADD SP, %d\n", (signed char)rd8(cpu, bus));
         cpu->PC--;
         break;
       case 0xE9:
         printf("JP HL\n");
         break;
       case 0xEA:
-        printf("LD ($%04X), A\n", rd16(cpu, mmu));
+        printf("LD ($%04X), A\n", rd16(cpu, bus));
         cpu->PC -= 2;
         break;
       case 0xEE:
-        printf("XOR $%02X\n", rd8(cpu, mmu));
+        printf("XOR $%02X\n", rd8(cpu, bus));
         cpu->PC--;
         break;
       case 0xEF:
         printf("RST $28\n");
         break;
       case 0xF0: {
-        uint8_t n = rd8(cpu, mmu);
+        uint8_t n = rd8(cpu, bus);
         const char* name = io_reg_name(n);
         if (name)
           printf("LDH A, (%s)\n", name);
@@ -1650,28 +1650,28 @@ int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
         printf("PUSH AF\n");
         break;
       case 0xF6:
-        printf("OR $%02X\n", rd8(cpu, mmu));
+        printf("OR $%02X\n", rd8(cpu, bus));
         cpu->PC--;
         break;
       case 0xF7:
         printf("RST $30\n");
         break;
       case 0xF8:
-        printf("LD HL, SP+%d\n", (signed char)rd8(cpu, mmu));
+        printf("LD HL, SP+%d\n", (signed char)rd8(cpu, bus));
         cpu->PC--;
         break;
       case 0xF9:
         printf("LD SP, HL\n");
         break;
       case 0xFA:
-        printf("LD A, ($%04X)\n", rd16(cpu, mmu));
+        printf("LD A, ($%04X)\n", rd16(cpu, bus));
         cpu->PC -= 2;
         break;
       case 0xFB:
         printf("EI\n");
         break;
       case 0xFE:
-        printf("CP $%02X\n", rd8(cpu, mmu));
+        printf("CP $%02X\n", rd8(cpu, bus));
         cpu->PC--;
         break;
       case 0xFF:
@@ -1685,8 +1685,8 @@ int disassemble(struct Cpu* cpu, Mmu* mmu, uint8_t instr, uint8_t prfx,
   printf(
       "A:%d F:%d B:%d C:%d D:%d E:%d H:%d L:%d SP:%d PC:%d PCMEM:%d CYC:%llu\n",
       cpu->A, cpu->F, cpu->B, cpu->C, cpu->D, cpu->E, cpu->H, cpu->L, cpu->SP,
-      cpu->PC, mmu_r_mem(mmu, cpu->PC), (unsigned long long)total_cycles);
+      cpu->PC, bus_read(bus, cpu->PC), (unsigned long long)total_cycles);
   for (uint8_t i = 0; i < watch_count; i++)
-    printf("MEM[%04X]=%02X\n", watch_addrs[i], mmu_r_mem(mmu, watch_addrs[i]));
+    printf("MEM[%04X]=%02X\n", watch_addrs[i], bus_read(bus, watch_addrs[i]));
   return 0;
 }

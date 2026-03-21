@@ -2,6 +2,7 @@
 #include <SDL3/SDL_dialog.h>
 
 #include "gbemu/core.h"
+#include "gbemu/joypad.h"
 #include "gbemu/ppu.h"
 #include "gbemu/sdl.h"
 
@@ -13,14 +14,14 @@ static void SDLCALL rom_dialog_callback(void* userdata,
                                         const char* const* filelist,
                                         int filter) {
   (void)filter;
-  AppState* state = (AppState*)userdata;
+  struct AppState* state = (struct AppState*)userdata;
   state->dialog_open = 0;
   if (filelist && filelist[0])
     SDL_snprintf(state->pending_rom, sizeof(state->pending_rom), "%s",
                  filelist[0]);
 }
 
-void open_rom_dialog(AppState* state) {
+void open_rom_dialog(struct AppState* state) {
   if (state->dialog_open) return;
   state->dialog_open = 1;
   static const SDL_DialogFileFilter filters[] = {
@@ -31,7 +32,7 @@ void open_rom_dialog(AppState* state) {
                          false);
 }
 
-int handle_input(AppState* state, SDL_Event* event) {
+int handle_input(struct AppState* state, SDL_Event* event) {
   nk_sdl_handle_event(ctx, event);
 
   struct Ppu* ppu = state->gb ? state->gb->ppu : NULL;

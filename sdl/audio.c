@@ -1,7 +1,7 @@
 #include <SDL3/SDL.h>
 
 #include "gbemu/apu.h"
-#include "gbemu/core.h"
+#include "gbemu/settings.h"
 
 static SDL_AudioStream* audio_stream = NULL;
 

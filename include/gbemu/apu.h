@@ -2,10 +2,10 @@
 
 #include <stdint.h>
 
-#include "gbemu/mmu.h"
-
 #define APU_SAMPLE_RATE 48000
 #define APU_BUF_SIZE 1024
+
+struct Mmu;
 
 struct Apu {
   uint8_t ch1_enable, ch2_enable, ch3_enable, ch4_enable;

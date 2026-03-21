@@ -117,7 +117,7 @@ verify: clean $(RUST_HDR) $(PYTHON)
 	$(PYTHON) tests/check_coverage.py
 	$(MAKE) test ASAN=1
 
-compile_commands:
+compile_commands: clean
 	bear -- $(MAKE) all
 
 -include $(DEPS)

@@ -7,9 +7,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "gbemu/apu.h"
 #include "gbemu/core.h"
-#include "gbemu/mmu.h"
+#include "gbemu/joypad.h"
 #include "gbemu/pokemon.h"
+#include "gbemu/ppu.h"
+#include "gbemu/settings.h"
+#include "rust.h"
 
 static SDL_AppResult usage() {
   SDL_LogError(SDL_LOG_CATEGORY_ERROR,
@@ -17,7 +21,7 @@ static SDL_AppResult usage() {
   return SDL_APP_FAILURE;
 }
 
-static int load_rom(AppState* state, const char* path, uint8_t dis) {
+static int load_rom(struct AppState* state, const char* path, uint8_t dis) {
   FILE* f = fopen(path, "r");
   if (!f) {
     SDL_snprintf(state->rom_error, sizeof(state->rom_error),
@@ -65,7 +69,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
 
   settings_load(&g_settings);
 
-  AppState* state = calloc(1, sizeof(AppState));
+  struct AppState* state = calloc(1, sizeof(struct AppState));
   if (!state) return SDL_APP_FAILURE;
   *appstate = state;
 
@@ -84,7 +88,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
 }
 
 SDL_AppResult SDL_AppIterate(void* appstate) {
-  AppState* state = appstate;
+  struct AppState* state = appstate;
 
   if (state->pending_rom[0]) {
     char path[512];
@@ -127,8 +131,18 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
   SDL_SetRenderDrawColor(rnd, 20, 20, 20, 255);
   SDL_RenderClear(rnd);
   if (state->gb) {
-    update_input(state->gb->ppu, state->gb->mmu);
-    render(state->gb->ppu);
+    struct Ppu* ppu = state->gb->ppu;
+    uint8_t btns =
+        (uint8_t)((ppu->in[BTN_A] ? 0x01 : 0) | (ppu->in[BTN_B] ? 0x02 : 0) |
+                  (ppu->in[BTN_SELECT] ? 0x04 : 0) |
+                  (ppu->in[BTN_START] ? 0x08 : 0));
+    uint8_t dirs = (uint8_t)((ppu->in[BTN_RIGHT] ? 0x01 : 0) |
+                             (ppu->in[BTN_LEFT] ? 0x02 : 0) |
+                             (ppu->in[BTN_UP] ? 0x04 : 0) |
+                             (ppu->in[BTN_DOWN] ? 0x08 : 0));
+    for (int _i = 0; _i < 8; _i++)
+      state->gb->joypad->buttons[_i] = ppu->in[_i] != 0;
+    render(ppu);
   }
   draw_ui(state);
   SDL_RenderPresent(rnd);
@@ -137,14 +151,14 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 }
 
 SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event) {
-  AppState* state = appstate;
+  struct AppState* state = appstate;
   if (handle_input(state, event)) return SDL_APP_SUCCESS;
   return SDL_APP_CONTINUE;
 }
 
 void SDL_AppQuit(void* appstate, SDL_AppResult result) {
   (void)result;
-  AppState* state = appstate;
+  struct AppState* state = appstate;
   if (!state) return;
   settings_save(&g_settings);
   gbemu_free(state->gb);

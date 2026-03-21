@@ -787,6 +787,58 @@ impl Mmu {
         }
     }
 
+    pub fn read_io(&self, offset: u8) -> u8 {
+        self.io_regs[offset as usize]
+    }
+
+    pub fn write_io(&mut self, offset: u8, val: u8) {
+        self.io_regs[offset as usize] = val;
+    }
+
+    pub fn read_rom_region(&self, addr: u16) -> u8 {
+        match self.cart_type {
+            0x00 => self.no_mbc_read_rom(addr),
+            0x01 | 0x02 | 0x03 => self.mbc1_read_rom(addr),
+            0x05 | 0x06 => self.mbc2_read_rom(addr),
+            0x0F | 0x10 | 0x11 | 0x12 | 0x13 => self.mbc3_read_rom(addr),
+            0x19 | 0x1A | 0x1B | 0x1C | 0x1D | 0x1E => self.mbc5_read_rom(addr),
+            _ => 0xFF,
+        }
+    }
+
+    pub fn write_rom_region(&mut self, addr: u16, val: u8) {
+        match self.cart_type {
+            0x00 => self.no_mbc_write_rom(addr, val),
+            0x01 | 0x02 | 0x03 => self.mbc1_write_rom(addr, val),
+            0x05 | 0x06 => self.mbc2_write_rom(addr, val),
+            0x0F | 0x10 | 0x11 | 0x12 | 0x13 => self.mbc3_write_rom(addr, val),
+            0x19 | 0x1A | 0x1B | 0x1C | 0x1D | 0x1E => self.mbc5_write_rom(addr, val),
+            _ => {}
+        }
+    }
+
+    pub fn read_eram_region(&self, addr: u16) -> u8 {
+        match self.cart_type {
+            0x00 => self.no_mbc_read_ram(addr),
+            0x01 | 0x02 | 0x03 => self.mbc1_read_ram(addr),
+            0x05 | 0x06 => self.mbc2_read_ram(addr),
+            0x0F | 0x10 | 0x11 | 0x12 | 0x13 => self.mbc3_read_ram(addr),
+            0x19 | 0x1A | 0x1B | 0x1C | 0x1D | 0x1E => self.mbc5_read_ram(addr),
+            _ => 0xFF,
+        }
+    }
+
+    pub fn write_eram_region(&mut self, addr: u16, val: u8) {
+        match self.cart_type {
+            0x00 => self.no_mbc_write_ram(addr, val),
+            0x01 | 0x02 | 0x03 => self.mbc1_write_ram(addr, val),
+            0x05 | 0x06 => self.mbc2_write_ram(addr, val),
+            0x0F | 0x10 | 0x11 | 0x12 | 0x13 => self.mbc3_write_ram(addr, val),
+            0x19 | 0x1A | 0x1B | 0x1C | 0x1D | 0x1E => self.mbc5_write_ram(addr, val),
+            _ => {}
+        }
+    }
+
     pub fn set_joypad(&mut self, btns: u8, dirs: u8) {
         let new_press = (!self.joypad_btns & btns) | (!self.joypad_dirs & dirs);
         self.joypad_btns = btns;

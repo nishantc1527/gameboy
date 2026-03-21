@@ -230,3 +230,33 @@ extern "C" fn mmu_boot_active(mmu: *const Mmu) -> bool {
 extern "C" fn mmu_disable_boot(mmu: *mut Mmu) {
     unsafe { (*mmu).disable_boot() }
 }
+
+#[unsafe(no_mangle)]
+extern "C" fn mmu_read_io(mmu: *const Mmu, offset: u8) -> u8 {
+    unsafe { (*mmu).read_io(offset) }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn mmu_write_io(mmu: *mut Mmu, offset: u8, val: u8) {
+    unsafe { (*mmu).write_io(offset, val) }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn mmu_read_rom(mmu: *const Mmu, addr: u16) -> u8 {
+    unsafe { (*mmu).read_rom_region(addr) }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn mmu_write_rom(mmu: *mut Mmu, addr: u16, val: u8) {
+    unsafe { (*mmu).write_rom_region(addr, val) }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn mmu_read_eram(mmu: *const Mmu, addr: u16) -> u8 {
+    unsafe { (*mmu).read_eram_region(addr) }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn mmu_write_eram(mmu: *mut Mmu, addr: u16, val: u8) {
+    unsafe { (*mmu).write_eram_region(addr, val) }
+}

@@ -4,6 +4,8 @@
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "gbemu/core.h"
+#include "gbemu/ppu.h"
+#include "rust.h"
 #include "stb_image_write.h"
 
 static const uint8_t ACID_COLORS[5] = {0xFF, 0xAA, 0x55, 0x00, 0x00};
@@ -151,8 +153,9 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "MUST PROVIDE ROM FILE\n");
     return 1;
   }
-  gbemu* gb = gbemu_init(rom_name, boot_rom, test_category,
-                         (uint8_t)disassemble_enable, watch_addrs, watch_count);
+  struct gbemu* gb =
+      gbemu_init(rom_name, boot_rom, test_category, (uint8_t)disassemble_enable,
+                 watch_addrs, watch_count);
   if (!gb) return 1;
   while (!gb->bdone) {
     if (gbemu_step_frame(gb) == -1) {

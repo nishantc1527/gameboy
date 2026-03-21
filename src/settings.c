@@ -1,8 +1,9 @@
+#include "gbemu/settings.h"
+
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "gbemu/core.h"
 
 #ifdef _WIN32
 #include <direct.h>
@@ -14,9 +15,9 @@
 
 #include "tomlc17.h"
 
-Settings g_settings;
+struct Settings g_settings;
 
-void settings_defaults(Settings* s) {
+void settings_defaults(struct Settings* s) {
   s->scale = 3;
   s->fullscreen = false;
   s->dmg_palette[0] = 0x9a9e3f;
@@ -78,7 +79,7 @@ static void write_str(FILE* fp, const char* s) {
   fputc('"', fp);
 }
 
-void settings_save(const Settings* s) {
+void settings_save(const struct Settings* s) {
   mkdir_config_dir();
   char path[1024];
   config_path(path, sizeof(path));
@@ -131,7 +132,7 @@ void settings_save(const Settings* s) {
   fclose(fp);
 }
 
-void settings_load(Settings* s) {
+void settings_load(struct Settings* s) {
   settings_defaults(s);
   mkdir_config_dir();
   char path[1024];
@@ -210,7 +211,7 @@ void settings_load(Settings* s) {
   toml_free(res);
 }
 
-void settings_add_recent_rom(Settings* s, const char* path) {
+void settings_add_recent_rom(struct Settings* s, const char* path) {
   for (int i = 0; i < s->recent_rom_count; i++) {
     if (strcmp(s->recent_roms[i], path) == 0) {
       for (int j = i; j < s->recent_rom_count - 1; j++)

@@ -2,8 +2,9 @@
 
 #include <SDL3/SDL.h>
 
-#include "gbemu/core.h"
-#include "gbemu/ppu.h"
+struct Apu;
+struct Ppu;
+struct gbemu;
 
 enum {
   CTRL_A = 0,
@@ -32,22 +33,21 @@ extern SDL_Window* win;
 extern SDL_Renderer* rnd;
 extern struct nk_context* ctx;
 
-typedef struct {
-  gbemu* gb;
+struct AppState {
+  struct gbemu* gb;
   char pending_rom[512];
   int dialog_open;
   char rom_error[512];
-} AppState;
+};
 
 int init_window(const char* title);
 void set_window_title_rom(const char* rom_title);
 
-int handle_input(AppState* state, SDL_Event* event);
-void open_rom_dialog(AppState* state);
+int handle_input(struct AppState* state, SDL_Event* event);
+void open_rom_dialog(struct AppState* state);
 void render(struct Ppu* ppu);
-void draw_ui(AppState* state);
+void draw_ui(struct AppState* state);
 
-struct Apu;
 int init_audio(void);
 int audio_queued_bytes(void);
 void push_audio(struct Apu* apu);
