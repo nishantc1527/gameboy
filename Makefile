@@ -113,7 +113,7 @@ verify: clean $(RUST_HDR) $(PYTHON)
 	$(CARGO) clippy --manifest-path $(RUST_MANIFEST) -- -D warnings # -D clippy::pedantic
 # $(TIDY) $(CORE_SRCS) -header-filter='.*' --checks='*' --warnings-as-errors='*' -- $(CFLAGS) $(BASE_CPPFLAGS)
 # $(CPPCHECK) --enable=all --inconclusive --error-exitcode=1 $(SRC_DIR) include/
-	$(MAKE) all CFLAGS="$(CFLAGS) $(VERIFY_FLAGS)"
+	$(MAKE) gbemu_headless CFLAGS="$(CFLAGS) $(VERIFY_FLAGS)"
 	$(PYTHON) tests/check_coverage.py
 	$(MAKE) test ASAN=1
 
