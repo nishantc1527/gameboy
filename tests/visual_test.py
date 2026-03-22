@@ -12,6 +12,7 @@ def _stem(rom):
 params = [
     (rom, boot, frame, f"tests/refs/{_stem(rom)}/frame_{frame:03d}.png")
     for rom, boot, start, end in BOOT_ROMS + ROMS
+    if os.path.exists(rom)
     for frame in range(start, end + 1)
 ]
 
