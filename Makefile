@@ -106,7 +106,7 @@ $(PYTHON):
 	$(PIP) install --upgrade pip
 	$(PYTHON) -m pip install -r $(REQS)
 
-$(ALL_REFS) &: $(PYTHON) $(BUILD_DIR)/gbemu_headless
+$(ALL_REFS) &: | $(PYTHON) $(BUILD_DIR)/gbemu_headless
 	$(PYTHON) scripts/gen_boot_refs.py
 
 test: $(PYTHON) $(BUILD_DIR)/gbemu_headless $(ALL_REFS)

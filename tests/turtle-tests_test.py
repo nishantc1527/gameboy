@@ -1,7 +1,4 @@
-import sys
-
 import pytest
-
 from core import check_screenshot
 
 roms = [
