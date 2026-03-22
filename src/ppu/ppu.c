@@ -2,11 +2,10 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "gbemu/bus.h"
 #include "gbemu/cpu.h"
-#include "gbemu/mmu.h"
+#include "gbemu/dma.h"
 #include "gbemu/util.h"
 
 #define INTR_VBLANK 0
@@ -57,8 +56,8 @@ uint8_t ppu_read(const struct Ppu* ppu, uint16_t addr) {
 void ppu_write(struct Ppu* ppu, uint16_t addr, uint8_t val) {
   switch (addr) {
     case 0xFF40: {
-      bool was_on = (ppu->lcdc & 0x80u) != 0;
-      bool now_on = (val & 0x80u) != 0;
+      uint8_t was_on = (ppu->lcdc & 0x80u) != 0;
+      uint8_t now_on = (val & 0x80u) != 0;
       if (!was_on && now_on) ppu->lcdc_reenable = true;
       ppu->lcdc = val;
       break;
@@ -115,7 +114,7 @@ void ppu_write(struct Ppu* ppu, uint16_t addr, uint8_t val) {
   }
 }
 
-void ppu_post_boot(struct Ppu* ppu, bool cgb_mode) {
+void ppu_post_boot(struct Ppu* ppu, uint8_t cgb_mode) {
   ppu->lcdc = 0x91;
   ppu->stat = 0x85;
   ppu->scy = 0x00;
@@ -157,7 +156,7 @@ void update_lcd(struct Ppu* ppu, struct Bus* bus) {
     curr_mode = 0;
   if (ppu->ly >= SCRN_HEIGHT) curr_mode = 1;
   check_interrupt_vblank_lcd(bus, stat, prev_mode, curr_mode);
-  if (prev_mode != 0 && curr_mode == 0) mmu_do_hdma_block(bus->mmu);
+  if (prev_mode != 0 && curr_mode == 0) dma_hdma_block(bus->dma, bus);
   stat &= (uint8_t)~(0b11);
   stat |= curr_mode;
   if (ppu->ly == ppu->lyc)

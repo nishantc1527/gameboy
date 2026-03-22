@@ -39,6 +39,7 @@ static uint8_t io_read(struct Bus* bus, uint16_t addr) {
   if (addr == 0xFF0F) return bus->cpu->if_reg | 0xE0;
   if (addr >= 0xFF10 && addr <= 0xFF3F) return apu_read(bus->apu, addr);
   if (addr >= 0xFF40 && addr <= 0xFF4B) return ppu_read(bus->ppu, addr);
+  if (addr >= 0xFF51 && addr <= 0xFF55) return dma_hdma_read(bus->dma, addr);
   if (addr >= 0xFF68 && addr <= 0xFF6B) return ppu_read(bus->ppu, addr);
   return mmu_r_mem(bus->mmu, addr);
 }
@@ -65,7 +66,11 @@ static void io_write(struct Bus* bus, uint16_t addr, uint8_t val) {
     return;
   }
   if (addr == 0xFF46) {
-    dma_trigger(bus->dma, bus, val);
+    dma_trigger(bus->dma, val);
+    return;
+  }
+  if (addr >= 0xFF51 && addr <= 0xFF55) {
+    dma_hdma_write(bus->dma, bus, addr, val);
     return;
   }
   if (addr >= 0xFF40 && addr <= 0xFF4B) {
@@ -80,6 +85,7 @@ static void io_write(struct Bus* bus, uint16_t addr, uint8_t val) {
 }
 
 uint8_t bus_read(struct Bus* bus, uint16_t addr) {
+  if (dma_blocks_cpu(bus->dma) && addr < 0xFF80) return 0xFF;
   if (mmu_boot_active(bus->mmu)) {
     if (addr < 0x0100) return mmu_read_boot(bus->mmu, addr);
     if (mmu_is_cgb(bus->mmu) && addr >= 0x0200 && addr < 0x0900)
@@ -106,6 +112,7 @@ uint8_t bus_read(struct Bus* bus, uint16_t addr) {
 }
 
 void bus_write(struct Bus* bus, uint16_t addr, uint8_t val) {
+  if (dma_blocks_cpu(bus->dma) && addr < 0xFF80) return;
   if (addr < 0x8000) {
     mmu_write_rom(bus->mmu, addr, val);
     return;

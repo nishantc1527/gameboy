@@ -3,7 +3,7 @@
 struct Settings {
   int scale;
   uint32_t dmg_palette[4];
-  bool fullscreen;
+  uint8_t fullscreen;
   float volume;
   char key_a[64];
   char key_b[64];

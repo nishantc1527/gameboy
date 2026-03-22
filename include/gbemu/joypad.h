@@ -1,5 +1,4 @@
 #pragma once
-#include <stdbool.h>
 #include <stdint.h>
 
 #define BTN_A 0
@@ -14,7 +13,7 @@
 struct Mmu;
 
 struct Joypad {
-  bool buttons[8];
+  uint8_t buttons[8];
   uint8_t select;
 };
 
@@ -22,5 +21,5 @@ struct Joypad* joypad_init(void);
 void joypad_free(struct Joypad* j);
 uint8_t joypad_read(const struct Joypad* j);
 void joypad_write(struct Joypad* j, uint8_t val);
-void joypad_set_button(struct Joypad* j, int btn, bool pressed,
+void joypad_set_button(struct Joypad* j, int btn, uint8_t pressed,
                        struct Mmu* mmu);

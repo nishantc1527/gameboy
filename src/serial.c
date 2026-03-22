@@ -39,7 +39,7 @@ void serial_write(struct Serial* s, uint16_t addr, uint8_t val,
   }
 }
 
-bool serial_has_byte(const struct Serial* s) {
+uint8_t serial_has_byte(const struct Serial* s) {
   return s->buf_head != s->buf_tail;
 }
 

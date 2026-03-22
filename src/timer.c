@@ -74,12 +74,12 @@ void timer_write(struct Timer* t, uint16_t addr, uint8_t val, struct Apu* apu,
   }
   if (addr == 0xFF07) {
     uint8_t old_bit = timer_selected_bit(t);
-    bool old_enabled = (t->tac & 0x04) != 0;
+    uint8_t old_enabled = (t->tac & 0x04) != 0;
     t->tac = val & 0x07u;
-    bool new_enabled = (t->tac & 0x04) != 0;
+    uint8_t new_enabled = (t->tac & 0x04) != 0;
     if (old_enabled && (t->sys_ctr >> old_bit) & 1) {
       uint8_t new_bit = timer_selected_bit(t);
-      bool new_bit_is_1 = (t->sys_ctr >> new_bit) & 1;
+      uint8_t new_bit_is_1 = (t->sys_ctr >> new_bit) & 1;
       if (!new_enabled || !new_bit_is_1) {
         timer_increment_tima(t);
       }

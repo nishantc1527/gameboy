@@ -1,5 +1,4 @@
 #pragma once
-
 #include <stdint.h>
 
 #define APU_SAMPLE_RATE 48000
@@ -12,7 +11,7 @@ struct Apu {
   uint8_t nr41, nr42, nr43, nr44;
   uint8_t nr50, nr51;
   uint8_t wave_ram[16];
-  bool powered;
+  uint8_t powered;
   uint8_t seq_step;
   uint8_t ch1_active;
   uint8_t ch1_len;
@@ -25,21 +24,21 @@ struct Apu {
   uint8_t sweep_neg_used;
   uint8_t ch1_env_vol;
   uint8_t ch1_env_timer;
-  bool ch2_active;
+  uint8_t ch2_active;
   uint8_t ch2_len;
-  bool ch2_len_enable;
+  uint8_t ch2_len_enable;
   uint16_t ch2_freq_timer;
   uint8_t ch2_duty_pos;
   uint8_t ch2_env_vol;
   uint8_t ch2_env_timer;
-  bool ch3_active;
+  uint8_t ch3_active;
   uint16_t ch3_len;
-  bool ch3_len_enable;
+  uint8_t ch3_len_enable;
   uint16_t ch3_freq_timer;
   uint8_t ch3_pos;
-  bool ch4_active;
+  uint8_t ch4_active;
   uint8_t ch4_len;
-  bool ch4_len_enable;
+  uint8_t ch4_len_enable;
   uint32_t ch4_freq_timer;
   uint16_t ch4_lfsr;
   uint8_t ch4_env_vol;

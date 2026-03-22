@@ -1,5 +1,4 @@
 #pragma once
-#include <stdbool.h>
 #include <stdint.h>
 
 struct Apu;
@@ -10,7 +9,7 @@ struct Timer {
   uint8_t tima;
   uint8_t tma;
   uint8_t tac;
-  bool tima_overflow_pending;
+  uint8_t tima_overflow_pending;
   uint8_t sub_instr_cycles;
 };
 

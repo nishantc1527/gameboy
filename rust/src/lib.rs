@@ -109,11 +109,6 @@ extern "C" fn mmu_get_vram_bank1_byte(mmu: *const Mmu, addr: u16) -> u8 {
 }
 
 #[unsafe(no_mangle)]
-extern "C" fn mmu_do_hdma_block(mmu: *mut Mmu) {
-    unsafe { (*mmu).do_hdma_block() }
-}
-
-#[unsafe(no_mangle)]
 extern "C" fn mmu_set_joypad(mmu: *mut Mmu, btns: u8, dirs: u8) {
     unsafe { (*mmu).set_joypad(btns, dirs) }
 }

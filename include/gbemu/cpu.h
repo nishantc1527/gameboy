@@ -1,19 +1,17 @@
 #pragma once
-
-#include <stdbool.h>
 #include <stdint.h>
 
 struct Cpu {
   uint8_t A, B, C, D, E, F, H, L;
   uint16_t PC, SP;
-  bool halted;
-  bool ime;
-  bool ime_pending;
-  bool halt_bug;
+  uint8_t halted;
+  uint8_t ime;
+  uint8_t ime_pending;
+  uint8_t halt_bug;
   uint8_t if_reg;
   uint8_t ie_reg;
   uint8_t cgb_mode;
-  bool ldbb_fired;
+  uint8_t ldbb_fired;
 };
 
 struct Bus;

@@ -31,12 +31,12 @@ uint8_t joypad_read(const struct Joypad* j) {
 
 void joypad_write(struct Joypad* j, uint8_t val) { j->select = val; }
 
-void joypad_set_button(struct Joypad* j, int btn, bool pressed,
+void joypad_set_button(struct Joypad* j, int btn, uint8_t pressed,
                        struct Mmu* mmu) {
-  bool was_pressed = j->buttons[btn];
+  uint8_t was_pressed = j->buttons[btn];
   j->buttons[btn] = pressed;
   if (pressed && !was_pressed) {
-    bool relevant = false;
+    uint8_t relevant = false;
     if ((j->select & 0x20) == 0 &&
         (btn == BTN_A || btn == BTN_B || btn == BTN_SELECT || btn == BTN_START))
       relevant = true;

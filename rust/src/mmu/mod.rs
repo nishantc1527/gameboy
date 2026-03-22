@@ -47,10 +47,6 @@ pub struct Mmu {
     cgb_compat: bool,
     div_reset_pending: bool,
     boot_skipped: bool,
-    hdma_active: bool,
-    hdma_remaining: u8,
-    hdma_src: u16,
-    hdma_dst: u16,
 }
 
 impl Mmu {
@@ -297,10 +293,6 @@ impl Mmu {
             cgb_compat: cgb_mode && !cgb_flag,
             div_reset_pending: false,
             boot_skipped,
-            hdma_active: false,
-            hdma_remaining: 0,
-            hdma_src: 0,
-            hdma_dst: 0x8000,
         };
         if cgb_mode {
             mmu.io_regs[0x4D] = 0;
@@ -491,37 +483,6 @@ impl Mmu {
                     self.serial_byte_pending = true;
                 } else if self.cgb_mode && loc == 0xFF4F {
                     self.vram_bank_sel = val & 1;
-                } else if self.cgb_mode && loc == 0xFF55 {
-                    if self.hdma_active && val & 0x80 == 0 {
-                        self.hdma_active = false;
-                        self.io_regs[0x55] = 0x80 | self.hdma_remaining;
-                    } else if val & 0x80 == 0 {
-                        let src =
-                            ((self.io_regs[0x51] as u16) << 8) | (self.io_regs[0x52] as u16 & 0xF0);
-                        let dst = 0x8000u16
-                            | ((self.io_regs[0x53] as u16 & 0x1F) << 8)
-                            | (self.io_regs[0x54] as u16 & 0xF0);
-                        let blocks = (val & 0x7F) as u16 + 1;
-                        for i in 0..blocks * 0x10 {
-                            let byte = self.r_mem(src.wrapping_add(i));
-                            let addr = dst.wrapping_add(i);
-                            if self.vram_bank_sel & 1 == 0 {
-                                self.vram[(addr - 0x8000) as usize] = byte;
-                            } else {
-                                self.vram_bank1[(addr - 0x8000) as usize] = byte;
-                            }
-                        }
-                        self.io_regs[0x55] = 0xFF;
-                    } else {
-                        self.hdma_src =
-                            ((self.io_regs[0x51] as u16) << 8) | (self.io_regs[0x52] as u16 & 0xF0);
-                        self.hdma_dst = 0x8000u16
-                            | ((self.io_regs[0x53] as u16 & 0x1F) << 8)
-                            | (self.io_regs[0x54] as u16 & 0xF0);
-                        self.hdma_remaining = val & 0x7F;
-                        self.hdma_active = true;
-                        self.io_regs[0x55] = val & 0x7F;
-                    }
                 } else if self.cgb_mode && loc == 0xFF70 {
                     self.wram_bank = if val & 7 == 0 { 1 } else { val & 7 };
                     self.io_regs[0x70] = self.wram_bank;
@@ -668,30 +629,6 @@ impl Mmu {
         self.io_regs[0x50] = 1;
     }
 
-    pub fn do_hdma_block(&mut self) {
-        if !self.hdma_active {
-            return;
-        }
-        for i in 0..0x10u16 {
-            let byte = self.r_mem(self.hdma_src.wrapping_add(i));
-            let addr = self.hdma_dst.wrapping_add(i);
-            if self.vram_bank_sel & 1 == 0 {
-                self.vram[(addr - 0x8000) as usize] = byte;
-            } else {
-                self.vram_bank1[(addr - 0x8000) as usize] = byte;
-            }
-        }
-        self.hdma_src = self.hdma_src.wrapping_add(0x10);
-        self.hdma_dst = 0x8000 | (self.hdma_dst.wrapping_add(0x10) & 0x1FFF);
-        if self.hdma_remaining == 0 {
-            self.hdma_active = false;
-            self.io_regs[0x55] = 0xFF;
-        } else {
-            self.hdma_remaining -= 1;
-            self.io_regs[0x55] = self.hdma_remaining;
-        }
-    }
-
     pub fn read_io(&self, offset: u8) -> u8 {
         self.io_regs[offset as usize]
     }
@@ -787,11 +724,6 @@ impl Mmu {
             self.io_regs[0x02] = 0x7F;
             self.io_regs[0x46] = 0x00;
             self.io_regs[0x4D] = 0x7E;
-            self.io_regs[0x51] = 0xFF;
-            self.io_regs[0x52] = 0xFF;
-            self.io_regs[0x53] = 0xFF;
-            self.io_regs[0x54] = 0xFF;
-            self.io_regs[0x55] = 0xFF;
             self.io_regs[0x56] = 0x3E;
             self.io_regs[0x70] = 0x01;
         } else {

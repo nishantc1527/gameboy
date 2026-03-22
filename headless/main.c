@@ -16,7 +16,7 @@
 typedef struct TestState {
   int category;
   uint64_t frame_limit;
-  bool done;
+  uint8_t done;
 } TestState;
 
 static const uint8_t ACID_COLORS[5] = {0xFF, 0xAA, 0x55, 0x00, 0x00};

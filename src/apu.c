@@ -282,7 +282,7 @@ void apu_write(struct Apu* apu, uint16_t addr, uint8_t val) {
       apu->nr13 = val;
       break;
     case 0xFF14: {
-      bool old_len_enable = apu->ch1_len_enable;
+      uint8_t old_len_enable = apu->ch1_len_enable;
       apu->ch1_len_enable = (val >> 6) & 1;
       if (!old_len_enable && apu->ch1_len_enable && (apu->seq_step & 1) == 0) {
         if (clock_length_u8(&apu->ch1_len, 0x40)) apu->ch1_active = false;
@@ -327,7 +327,7 @@ void apu_write(struct Apu* apu, uint16_t addr, uint8_t val) {
       apu->nr23 = val;
       break;
     case 0xFF19: {
-      bool old_len_enable = apu->ch2_len_enable;
+      uint8_t old_len_enable = apu->ch2_len_enable;
       apu->ch2_len_enable = (val >> 6) & 1;
       if (!old_len_enable && apu->ch2_len_enable && (apu->seq_step & 1) == 0) {
         if (clock_length_u8(&apu->ch2_len, 0x40)) apu->ch2_active = false;
@@ -362,7 +362,7 @@ void apu_write(struct Apu* apu, uint16_t addr, uint8_t val) {
       apu->nr33 = val;
       break;
     case 0xFF1E: {
-      bool old_len_enable = apu->ch3_len_enable;
+      uint8_t old_len_enable = apu->ch3_len_enable;
       apu->ch3_len_enable = (val >> 6) & 1;
       if (!old_len_enable && apu->ch3_len_enable && (apu->seq_step & 1) == 0) {
         if (clock_length_u16(&apu->ch3_len, 0x100)) apu->ch3_active = false;
@@ -392,7 +392,7 @@ void apu_write(struct Apu* apu, uint16_t addr, uint8_t val) {
       apu->nr43 = val;
       break;
     case 0xFF23: {
-      bool old_len_enable = apu->ch4_len_enable;
+      uint8_t old_len_enable = apu->ch4_len_enable;
       apu->ch4_len_enable = (val >> 6) & 1;
       if (!old_len_enable && apu->ch4_len_enable && (apu->seq_step & 1) == 0) {
         if (clock_length_u8(&apu->ch4_len, 0x40)) apu->ch4_active = false;

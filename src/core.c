@@ -1,6 +1,5 @@
 #include "gbemu/core.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 
 #include "gbemu/apu.h"
@@ -12,7 +11,6 @@
 #include "gbemu/ppu.h"
 #include "gbemu/serial.h"
 #include "gbemu/timer.h"
-#include "gbemu/util.h"
 
 void disassemble(struct Cpu* cpu, struct Bus* bus, const uint16_t* watch_addrs,
                  uint8_t watch_count, uint64_t total_cycles);
@@ -22,7 +20,6 @@ static void system_tick(struct gbemu* gb, uint8_t cycles) {
   uint8_t timer_remaining = (uint8_t)(cycles - gb->timer->sub_instr_cycles);
   gb->timer->sub_instr_cycles = 0;
   if (timer_remaining) timer_tick(gb->timer, timer_remaining, gb->apu, gb->cpu);
-  dma_tick(gb->dma, gb->bus, cycles);
   apu_tick(gb->apu, (uint8_t)cycles);
   mmu_advance_rtc(gb->mmu, (uint64_t)cycles);
   gb->total_cycles += (uint64_t)cycles;
