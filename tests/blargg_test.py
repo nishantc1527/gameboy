@@ -1,7 +1,6 @@
 import os
 
 import pytest
-
 from core import check_stream
 
 cpu_roms = [
@@ -82,7 +81,6 @@ def test_blargg_mem_time(rom_path):
 
 @pytest.mark.timeout(30)
 @pytest.mark.parametrize("rom_path", halt_bug_roms)
-@pytest.mark.skip()
 def test_blargg_halt_bug(rom_path):
     check_stream(rom_path, "blargg_halt_bug")
 

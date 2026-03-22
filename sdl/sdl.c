@@ -9,7 +9,6 @@
 
 #include "gbemu/apu.h"
 #include "gbemu/core.h"
-#include "gbemu/joypad.h"
 #include "gbemu/pokemon.h"
 #include "gbemu/ppu.h"
 #include "gbemu/settings.h"

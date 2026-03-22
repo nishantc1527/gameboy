@@ -3,7 +3,6 @@
 
 #include "gbemu/core.h"
 #include "gbemu/joypad.h"
-#include "gbemu/ppu.h"
 #include "gbemu/sdl.h"
 
 static SDL_Gamepad* g_gamepad = NULL;
