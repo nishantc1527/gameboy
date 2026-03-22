@@ -1,7 +1,7 @@
+#include "gbemu/cpu.h"
+
 #include <stdint.h>
 #include <stdlib.h>
-
-#include "gbemu/cpu.h"
 
 struct Cpu* init_cpu(void) {
   struct Cpu* cpu = calloc(1, sizeof(struct Cpu));

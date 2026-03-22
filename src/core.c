@@ -14,6 +14,9 @@
 #include "gbemu/timer.h"
 #include "gbemu/util.h"
 
+void disassemble(struct Cpu* cpu, struct Bus* bus, const uint16_t* watch_addrs,
+                 uint8_t watch_count, uint64_t total_cycles);
+
 struct gbemu* gbemu_init(char* rom_name, const char* boot_rom,
                          int test_category, uint8_t disassemble_enable,
                          const uint16_t* watch_addrs, uint8_t watch_count) {
@@ -107,10 +110,26 @@ int gbemu_step_frame(struct gbemu* gb) {
   gb->ppu->frame = 0;
   while (!gb->ppu->frame) {
     uint8_t prev_lcdc_bit7 = bus_read(gb->bus, 0xFF40) & 0x80u;
-    const int cyc =
-        step(gb->cpu, gb->bus, gb->disassemble_enable, gb->test_category,
-             &gb->bdone, gb->watch_addrs, gb->watch_count, gb->total_cycles);
-    if (cyc == -1) return -1;
+    if (gb->disassemble_enable)
+      disassemble(gb->cpu, gb->bus, gb->watch_addrs, gb->watch_count,
+                  gb->total_cycles);
+    const int cyc = cpu_step(gb->cpu, gb->bus);
+    if (cyc == 0) return -1;
+    if (gb->cpu->ldbb_fired) {
+      gb->cpu->ldbb_fired = false;
+      if (gb->test_category == TestAge || gb->test_category == TestMooneye ||
+          gb->test_category == TestSame) {
+        if (gb->cpu->B == 3 && gb->cpu->C == 5 && gb->cpu->D == 8 &&
+            gb->cpu->E == 13 && gb->cpu->H == 21 && gb->cpu->L == 34)
+          printf("Passed\n");
+        else
+          printf("Failed\n");
+        gb->bdone = 1;
+      } else if (gb->test_category == TestAcid2 ||
+                 gb->test_category == TestMealybug) {
+        gb->bdone = 1;
+      }
+    }
     if (gb->test_category == TestBlarggCpu ||
         gb->test_category == TestBlarggAudio ||
         gb->test_category == TestBlarggCpuTime ||

@@ -569,8 +569,7 @@ static inline void st_HL(struct Cpu* cpu, uint16_t HL) {
   cpu->L = (uint8_t)HL;
 }
 
-int disassemble(struct Cpu* cpu, struct Bus* bus, uint8_t instr, uint8_t prfx,
-                const uint16_t* watch_addrs, uint8_t watch_count,
-                uint64_t total_cycles);
+void disassemble(struct Cpu* cpu, struct Bus* bus, const uint16_t* watch_addrs,
+                 uint8_t watch_count, uint64_t total_cycles);
 
 int do_intr(struct Cpu* cpu, struct Bus* bus, uint8_t intr);

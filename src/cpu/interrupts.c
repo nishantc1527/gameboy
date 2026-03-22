@@ -12,12 +12,12 @@ static const uint16_t INTR_VECTORS[5] = {
 };
 
 int do_intr(struct Cpu* cpu, struct Bus* bus, uint8_t intr) {
-  cpu->bHALT = 0;
-  if (cpu->bIME) {
+  cpu->halted = false;
+  if (cpu->ime) {
     cpu->if_reg &= (uint8_t)~(1u << intr);
     push(cpu, bus, cpu->PC);
     cpu->PC = INTR_VECTORS[intr];
-    cpu->bIME = 0;
+    cpu->ime = false;
     return 20;
   }
   return 0;

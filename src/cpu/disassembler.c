@@ -98,13 +98,14 @@ static const char* io_reg_name(uint8_t n) {
   }
 }
 
-int disassemble(struct Cpu* cpu, struct Bus* bus, uint8_t instr, uint8_t prfx,
-                const uint16_t* watch_addrs, uint8_t watch_count,
-                uint64_t total_cycles) {
-  if (!bus_read(bus, 0xFF50)) return 0;
-  uint16_t instr_pc = (uint16_t)(cpu->PC - (instr == 0xCB ? 2 : 1));
+void disassemble(struct Cpu* cpu, struct Bus* bus, const uint16_t* watch_addrs,
+                 uint8_t watch_count, uint64_t total_cycles) {
+  if (!bus_read(bus, 0xFF50)) return;
+  uint8_t instr = bus_read(bus, cpu->PC);
+  uint16_t instr_pc = cpu->PC;
   printf("$%04X %02X ", instr_pc, instr);
   if (instr == 0xCB) {
+    uint8_t prfx = bus_read(bus, (uint16_t)(cpu->PC + 1));
     printf("%02X ", prfx);
     switch (prfx) {
       case 0x00:
@@ -877,7 +878,7 @@ int disassemble(struct Cpu* cpu, struct Bus* bus, uint8_t instr, uint8_t prfx,
         break;
       default:
         printf("UNKONWN PREFIX INSTRUCTION %02X\n", prfx);
-        return 1;
+        break;
     }
   } else {
     switch (instr) {
@@ -885,8 +886,9 @@ int disassemble(struct Cpu* cpu, struct Bus* bus, uint8_t instr, uint8_t prfx,
         printf("NOP\n");
         break;
       case 0x01:
-        printf("LD BC, $%04X\n", rd16(cpu, bus));
-        cpu->PC -= 2;
+        printf("LD BC, $%04X\n",
+               (uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 1)) |
+                   ((uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 2)) << 8));
         break;
       case 0x02:
         printf("LD (BC), A\n");
@@ -901,15 +903,15 @@ int disassemble(struct Cpu* cpu, struct Bus* bus, uint8_t instr, uint8_t prfx,
         printf("DEC B\n");
         break;
       case 0x06:
-        printf("LD B, $%02X\n", rd8(cpu, bus));
-        cpu->PC--;
+        printf("LD B, $%02X\n", bus_read(bus, (uint16_t)(cpu->PC + 1)));
         break;
       case 0x07:
         printf("RLCA\n");
         break;
       case 0x08:
-        printf("LD ($%04X), SP\n", rd16(cpu, bus));
-        cpu->PC -= 2;
+        printf("LD ($%04X), SP\n",
+               (uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 1)) |
+                   ((uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 2)) << 8));
         break;
       case 0x09:
         printf("ADD HL, BC\n");
@@ -927,8 +929,7 @@ int disassemble(struct Cpu* cpu, struct Bus* bus, uint8_t instr, uint8_t prfx,
         printf("DEC C\n");
         break;
       case 0x0E:
-        printf("LD C, $%02X\n", rd8(cpu, bus));
-        cpu->PC--;
+        printf("LD C, $%02X\n", bus_read(bus, (uint16_t)(cpu->PC + 1)));
         break;
       case 0x0F:
         printf("RRCA\n");
@@ -937,8 +938,9 @@ int disassemble(struct Cpu* cpu, struct Bus* bus, uint8_t instr, uint8_t prfx,
         printf("STOP\n");
         break;
       case 0x11:
-        printf("LD DE, $%04X\n", rd16(cpu, bus));
-        cpu->PC -= 2;
+        printf("LD DE, $%04X\n",
+               (uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 1)) |
+                   ((uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 2)) << 8));
         break;
       case 0x12:
         printf("LD (DE), A\n");
@@ -953,16 +955,14 @@ int disassemble(struct Cpu* cpu, struct Bus* bus, uint8_t instr, uint8_t prfx,
         printf("DEC D\n");
         break;
       case 0x16:
-        printf("LD D, $%02X\n", rd8(cpu, bus));
-        cpu->PC--;
+        printf("LD D, $%02X\n", bus_read(bus, (uint16_t)(cpu->PC + 1)));
         break;
       case 0x17:
         printf("RLA\n");
         break;
       case 0x18: {
-        int8_t off = (int8_t)rd8(cpu, bus);
-        printf("JR $%04X\n", (uint16_t)(cpu->PC + off));
-        cpu->PC--;
+        int8_t off = (int8_t)bus_read(bus, (uint16_t)(cpu->PC + 1));
+        printf("JR $%04X\n", (uint16_t)(cpu->PC + 2 + off));
         break;
       }
       case 0x19:
@@ -981,21 +981,20 @@ int disassemble(struct Cpu* cpu, struct Bus* bus, uint8_t instr, uint8_t prfx,
         printf("DEC E\n");
         break;
       case 0x1E:
-        printf("LD E, $%02X\n", rd8(cpu, bus));
-        cpu->PC--;
+        printf("LD E, $%02X\n", bus_read(bus, (uint16_t)(cpu->PC + 1)));
         break;
       case 0x1F:
         printf("RRA\n");
         break;
       case 0x20: {
-        int8_t off = (int8_t)rd8(cpu, bus);
-        printf("JR NZ, $%04X\n", (uint16_t)(cpu->PC + off));
-        cpu->PC--;
+        int8_t off = (int8_t)bus_read(bus, (uint16_t)(cpu->PC + 1));
+        printf("JR NZ, $%04X\n", (uint16_t)(cpu->PC + 2 + off));
         break;
       }
       case 0x21:
-        printf("LD HL, $%04X\n", rd16(cpu, bus));
-        cpu->PC -= 2;
+        printf("LD HL, $%04X\n",
+               (uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 1)) |
+                   ((uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 2)) << 8));
         break;
       case 0x22:
         printf("LD (HL+), A\n");
@@ -1010,16 +1009,14 @@ int disassemble(struct Cpu* cpu, struct Bus* bus, uint8_t instr, uint8_t prfx,
         printf("DEC H\n");
         break;
       case 0x26:
-        printf("LD H, $%02X\n", rd8(cpu, bus));
-        cpu->PC--;
+        printf("LD H, $%02X\n", bus_read(bus, (uint16_t)(cpu->PC + 1)));
         break;
       case 0x27:
         printf("DAA\n");
         break;
       case 0x28: {
-        int8_t off = (int8_t)rd8(cpu, bus);
-        printf("JR Z, $%04X\n", (uint16_t)(cpu->PC + off));
-        cpu->PC--;
+        int8_t off = (int8_t)bus_read(bus, (uint16_t)(cpu->PC + 1));
+        printf("JR Z, $%04X\n", (uint16_t)(cpu->PC + 2 + off));
         break;
       }
       case 0x29:
@@ -1038,21 +1035,20 @@ int disassemble(struct Cpu* cpu, struct Bus* bus, uint8_t instr, uint8_t prfx,
         printf("DEC L\n");
         break;
       case 0x2E:
-        printf("LD L, $%02X\n", rd8(cpu, bus));
-        cpu->PC--;
+        printf("LD L, $%02X\n", bus_read(bus, (uint16_t)(cpu->PC + 1)));
         break;
       case 0x2F:
         printf("CPL\n");
         break;
       case 0x30: {
-        int8_t off = (int8_t)rd8(cpu, bus);
-        printf("JR NC, $%04X\n", (uint16_t)(cpu->PC + off));
-        cpu->PC--;
+        int8_t off = (int8_t)bus_read(bus, (uint16_t)(cpu->PC + 1));
+        printf("JR NC, $%04X\n", (uint16_t)(cpu->PC + 2 + off));
         break;
       }
       case 0x31:
-        printf("LD SP, $%04X\n", rd16(cpu, bus));
-        cpu->PC -= 2;
+        printf("LD SP, $%04X\n",
+               (uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 1)) |
+                   ((uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 2)) << 8));
         break;
       case 0x32:
         printf("LD (HL-), A\n");
@@ -1067,16 +1063,14 @@ int disassemble(struct Cpu* cpu, struct Bus* bus, uint8_t instr, uint8_t prfx,
         printf("DEC (HL)\n");
         break;
       case 0x36:
-        printf("LD (HL), $%02X\n", rd8(cpu, bus));
-        cpu->PC--;
+        printf("LD (HL), $%02X\n", bus_read(bus, (uint16_t)(cpu->PC + 1)));
         break;
       case 0x37:
         printf("SCF\n");
         break;
       case 0x38: {
-        int8_t off = (int8_t)rd8(cpu, bus);
-        printf("JR C, $%04X\n", (uint16_t)(cpu->PC + off));
-        cpu->PC--;
+        int8_t off = (int8_t)bus_read(bus, (uint16_t)(cpu->PC + 1));
+        printf("JR C, $%04X\n", (uint16_t)(cpu->PC + 2 + off));
         break;
       }
       case 0x39:
@@ -1095,8 +1089,7 @@ int disassemble(struct Cpu* cpu, struct Bus* bus, uint8_t instr, uint8_t prfx,
         printf("DEC A\n");
         break;
       case 0x3E:
-        printf("LD A, $%02X\n", rd8(cpu, bus));
-        cpu->PC--;
+        printf("LD A, $%02X\n", bus_read(bus, (uint16_t)(cpu->PC + 1)));
         break;
       case 0x3F:
         printf("CCF\n");
@@ -1492,23 +1485,25 @@ int disassemble(struct Cpu* cpu, struct Bus* bus, uint8_t instr, uint8_t prfx,
         printf("POP BC\n");
         break;
       case 0xC2:
-        printf("JP NZ, $%04X\n", rd16(cpu, bus));
-        cpu->PC -= 2;
+        printf("JP NZ, $%04X\n",
+               (uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 1)) |
+                   ((uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 2)) << 8));
         break;
       case 0xC3:
-        printf("JP $%04X\n", rd16(cpu, bus));
-        cpu->PC -= 2;
+        printf("JP $%04X\n",
+               (uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 1)) |
+                   ((uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 2)) << 8));
         break;
       case 0xC4:
-        printf("CALL NZ, $%04X\n", rd16(cpu, bus));
-        cpu->PC -= 2;
+        printf("CALL NZ, $%04X\n",
+               (uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 1)) |
+                   ((uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 2)) << 8));
         break;
       case 0xC5:
         printf("PUSH BC\n");
         break;
       case 0xC6:
-        printf("ADD A, $%02X\n", rd8(cpu, bus));
-        cpu->PC--;
+        printf("ADD A, $%02X\n", bus_read(bus, (uint16_t)(cpu->PC + 1)));
         break;
       case 0xC7:
         printf("RST $00\n");
@@ -1520,20 +1515,22 @@ int disassemble(struct Cpu* cpu, struct Bus* bus, uint8_t instr, uint8_t prfx,
         printf("RET\n");
         break;
       case 0xCA:
-        printf("JP Z, $%04X\n", rd16(cpu, bus));
-        cpu->PC -= 2;
+        printf("JP Z, $%04X\n",
+               (uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 1)) |
+                   ((uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 2)) << 8));
         break;
       case 0xCC:
-        printf("CALL Z, $%04X\n", rd16(cpu, bus));
-        cpu->PC -= 2;
+        printf("CALL Z, $%04X\n",
+               (uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 1)) |
+                   ((uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 2)) << 8));
         break;
       case 0xCD:
-        printf("CALL $%04X\n", rd16(cpu, bus));
-        cpu->PC -= 2;
+        printf("CALL $%04X\n",
+               (uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 1)) |
+                   ((uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 2)) << 8));
         break;
       case 0xCE:
-        printf("ADC A, $%02X\n", rd8(cpu, bus));
-        cpu->PC--;
+        printf("ADC A, $%02X\n", bus_read(bus, (uint16_t)(cpu->PC + 1)));
         break;
       case 0xCF:
         printf("RST $08\n");
@@ -1545,19 +1542,20 @@ int disassemble(struct Cpu* cpu, struct Bus* bus, uint8_t instr, uint8_t prfx,
         printf("POP DE\n");
         break;
       case 0xD2:
-        printf("JP NC, $%04X\n", rd16(cpu, bus));
-        cpu->PC -= 2;
+        printf("JP NC, $%04X\n",
+               (uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 1)) |
+                   ((uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 2)) << 8));
         break;
       case 0xD4:
-        printf("CALL NC, $%04X\n", rd16(cpu, bus));
-        cpu->PC -= 2;
+        printf("CALL NC, $%04X\n",
+               (uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 1)) |
+                   ((uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 2)) << 8));
         break;
       case 0xD5:
         printf("PUSH DE\n");
         break;
       case 0xD6:
-        printf("SUB $%02X\n", rd8(cpu, bus));
-        cpu->PC--;
+        printf("SUB $%02X\n", bus_read(bus, (uint16_t)(cpu->PC + 1)));
         break;
       case 0xD7:
         printf("RST $10\n");
@@ -1569,28 +1567,28 @@ int disassemble(struct Cpu* cpu, struct Bus* bus, uint8_t instr, uint8_t prfx,
         printf("RETI\n");
         break;
       case 0xDA:
-        printf("JP C, $%04X\n", rd16(cpu, bus));
-        cpu->PC -= 2;
+        printf("JP C, $%04X\n",
+               (uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 1)) |
+                   ((uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 2)) << 8));
         break;
       case 0xDC:
-        printf("CALL C, $%04X\n", rd16(cpu, bus));
-        cpu->PC -= 2;
+        printf("CALL C, $%04X\n",
+               (uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 1)) |
+                   ((uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 2)) << 8));
         break;
       case 0xDE:
-        printf("SBC A, $%02X\n", rd8(cpu, bus));
-        cpu->PC--;
+        printf("SBC A, $%02X\n", bus_read(bus, (uint16_t)(cpu->PC + 1)));
         break;
       case 0xDF:
         printf("RST $18\n");
         break;
       case 0xE0: {
-        uint8_t n = rd8(cpu, bus);
+        uint8_t n = bus_read(bus, (uint16_t)(cpu->PC + 1));
         const char* name = io_reg_name(n);
         if (name)
           printf("LDH (%s), A\n", name);
         else
           printf("LDH ($FF%02X), A\n", n);
-        cpu->PC--;
         break;
       }
       case 0xE1:
@@ -1603,38 +1601,36 @@ int disassemble(struct Cpu* cpu, struct Bus* bus, uint8_t instr, uint8_t prfx,
         printf("PUSH HL\n");
         break;
       case 0xE6:
-        printf("AND $%02X\n", rd8(cpu, bus));
-        cpu->PC--;
+        printf("AND $%02X\n", bus_read(bus, (uint16_t)(cpu->PC + 1)));
         break;
       case 0xE7:
         printf("RST $20\n");
         break;
       case 0xE8:
-        printf("ADD SP, %d\n", (signed char)rd8(cpu, bus));
-        cpu->PC--;
+        printf("ADD SP, %d\n",
+               (signed char)bus_read(bus, (uint16_t)(cpu->PC + 1)));
         break;
       case 0xE9:
         printf("JP HL\n");
         break;
       case 0xEA:
-        printf("LD ($%04X), A\n", rd16(cpu, bus));
-        cpu->PC -= 2;
+        printf("LD ($%04X), A\n",
+               (uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 1)) |
+                   ((uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 2)) << 8));
         break;
       case 0xEE:
-        printf("XOR $%02X\n", rd8(cpu, bus));
-        cpu->PC--;
+        printf("XOR $%02X\n", bus_read(bus, (uint16_t)(cpu->PC + 1)));
         break;
       case 0xEF:
         printf("RST $28\n");
         break;
       case 0xF0: {
-        uint8_t n = rd8(cpu, bus);
+        uint8_t n = bus_read(bus, (uint16_t)(cpu->PC + 1));
         const char* name = io_reg_name(n);
         if (name)
           printf("LDH A, (%s)\n", name);
         else
           printf("LDH A, ($FF%02X)\n", n);
-        cpu->PC--;
         break;
       }
       case 0xF1:
@@ -1650,43 +1646,42 @@ int disassemble(struct Cpu* cpu, struct Bus* bus, uint8_t instr, uint8_t prfx,
         printf("PUSH AF\n");
         break;
       case 0xF6:
-        printf("OR $%02X\n", rd8(cpu, bus));
-        cpu->PC--;
+        printf("OR $%02X\n", bus_read(bus, (uint16_t)(cpu->PC + 1)));
         break;
       case 0xF7:
         printf("RST $30\n");
         break;
       case 0xF8:
-        printf("LD HL, SP+%d\n", (signed char)rd8(cpu, bus));
-        cpu->PC--;
+        printf("LD HL, SP+%d\n",
+               (signed char)bus_read(bus, (uint16_t)(cpu->PC + 1)));
         break;
       case 0xF9:
         printf("LD SP, HL\n");
         break;
       case 0xFA:
-        printf("LD A, ($%04X)\n", rd16(cpu, bus));
-        cpu->PC -= 2;
+        printf("LD A, ($%04X)\n",
+               (uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 1)) |
+                   ((uint16_t)bus_read(bus, (uint16_t)(cpu->PC + 2)) << 8));
         break;
       case 0xFB:
         printf("EI\n");
         break;
       case 0xFE:
-        printf("CP $%02X\n", rd8(cpu, bus));
-        cpu->PC--;
+        printf("CP $%02X\n", bus_read(bus, (uint16_t)(cpu->PC + 1)));
         break;
       case 0xFF:
         printf("RST $38\n");
         break;
       default:
         printf("UNKNOWN INSTRUCTION %02X\n", instr);
-        return 1;
+        break;
     }
   }
   printf(
-      "A:%d F:%d B:%d C:%d D:%d E:%d H:%d L:%d SP:%d PC:%d PCMEM:%d CYC:%llu\n",
+      "A:%d F:%d B:%d C:%d D:%d E:%d H:%d L:%d SP:%d PC:%d PCMEM:%d "
+      "CYC:%llu\n",
       cpu->A, cpu->F, cpu->B, cpu->C, cpu->D, cpu->E, cpu->H, cpu->L, cpu->SP,
       cpu->PC, bus_read(bus, cpu->PC), (unsigned long long)total_cycles);
   for (uint8_t i = 0; i < watch_count; i++)
     printf("MEM[%04X]=%02X\n", watch_addrs[i], bus_read(bus, watch_addrs[i]));
-  return 0;
 }
