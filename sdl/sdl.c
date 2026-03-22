@@ -131,18 +131,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
   SDL_SetRenderDrawColor(rnd, 20, 20, 20, 255);
   SDL_RenderClear(rnd);
   if (state->gb) {
-    struct Ppu* ppu = state->gb->ppu;
-    uint8_t btns =
-        (uint8_t)((ppu->in[BTN_A] ? 0x01 : 0) | (ppu->in[BTN_B] ? 0x02 : 0) |
-                  (ppu->in[BTN_SELECT] ? 0x04 : 0) |
-                  (ppu->in[BTN_START] ? 0x08 : 0));
-    uint8_t dirs = (uint8_t)((ppu->in[BTN_RIGHT] ? 0x01 : 0) |
-                             (ppu->in[BTN_LEFT] ? 0x02 : 0) |
-                             (ppu->in[BTN_UP] ? 0x04 : 0) |
-                             (ppu->in[BTN_DOWN] ? 0x08 : 0));
-    for (int _i = 0; _i < 8; _i++)
-      state->gb->joypad->buttons[_i] = ppu->in[_i] != 0;
-    render(ppu);
+    render(state->gb->ppu);
   }
   draw_ui(state);
   SDL_RenderPresent(rnd);

@@ -109,16 +109,6 @@ extern "C" fn mmu_get_vram_bank1_byte(mmu: *const Mmu, addr: u16) -> u8 {
 }
 
 #[unsafe(no_mangle)]
-extern "C" fn mmu_get_bg_pal_byte(mmu: *const Mmu, idx: u8) -> u8 {
-    unsafe { (*mmu).get_bg_pal_byte(idx) }
-}
-
-#[unsafe(no_mangle)]
-extern "C" fn mmu_get_obj_pal_byte(mmu: *const Mmu, idx: u8) -> u8 {
-    unsafe { (*mmu).get_obj_pal_byte(idx) }
-}
-
-#[unsafe(no_mangle)]
 extern "C" fn mmu_do_hdma_block(mmu: *mut Mmu) {
     unsafe { (*mmu).do_hdma_block() }
 }

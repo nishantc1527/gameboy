@@ -60,6 +60,7 @@ struct gbemu* gbemu_init(char* rom_name, const char* boot_rom,
     uint8_t checksum = mmu_read_rom(gb->mmu, 0x014D);
     post_boot_cpu(gb->cpu, gb->cpu->cgb_mode, checksum);
     timer_post_boot(gb->timer);
+    ppu_post_boot(gb->ppu, gb->cpu->cgb_mode != 0);
   }
   return gb;
 }
@@ -103,16 +104,17 @@ void gbemu_reset(struct gbemu* gb) {
     uint8_t checksum = mmu_read_rom(gb->mmu, 0x014D);
     post_boot_cpu(gb->cpu, gb->cpu->cgb_mode, checksum);
     timer_post_boot(gb->timer);
+    ppu_post_boot(gb->ppu, gb->cpu->cgb_mode != 0);
   }
 }
 
 int gbemu_step_frame(struct gbemu* gb) {
   gb->ppu->frame = 0;
   while (!gb->ppu->frame) {
-    uint8_t prev_lcdc_bit7 = bus_read(gb->bus, 0xFF40) & 0x80u;
     if (gb->disassemble_enable)
       disassemble(gb->cpu, gb->bus, gb->watch_addrs, gb->watch_count,
                   gb->total_cycles);
+    uint8_t prev_lcdc = gb->ppu->lcdc;
     const int cyc = cpu_step(gb->cpu, gb->bus);
     if (cyc == 0) return -1;
     if (gb->cpu->ldbb_fired) {
@@ -144,9 +146,9 @@ int gbemu_step_frame(struct gbemu* gb) {
       do_scanline(gb->ppu, gb->bus);
       gb->ppu->scn -= SCANLINE_LEN;
     }
-    if (!prev_lcdc_bit7 && (bus_read(gb->bus, 0xFF40) & 0x80u)) {
+    if (!(prev_lcdc & 0x80) && (gb->ppu->lcdc & 0x80u)) {
       gb->ppu->scn = 4;
-      bus_write(gb->bus, 0xFF44, 0);
+      gb->ppu->ly = 0;
     }
     update_lcd(gb->ppu, gb->bus);
     uint8_t cyc_left = (uint8_t)(cyc - gb->cpu->cyc_ext);

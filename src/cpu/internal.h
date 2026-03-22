@@ -2,7 +2,6 @@
 
 #include <stdint.h>
 
-#include "gbemu/apu.h"
 #include "gbemu/bus.h"
 #include "gbemu/cpu.h"
 #include "gbemu/timer.h"

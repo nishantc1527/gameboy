@@ -1,10 +1,10 @@
 #include <stdint.h>
 
 #include "gbemu/bus.h"
+#include "gbemu/mmu.h"
 #include "gbemu/ppu.h"
 #include "gbemu/util.h"
 #include "internal.h"
-#include "rust.h"
 
 const uint16_t SCANLINE_LEN = 456;
 const uint16_t SCANLINES = 154;
@@ -13,8 +13,8 @@ uint8_t gt_clr(uint8_t pal, int val) { return (pal >> (val << 1)) & 0b11; }
 void w_pxl(struct Ppu* ppu, int y, int x, uint8_t clr) { ppu->dsp[y][x] = clr; }
 
 static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
-  uint8_t ly = bus_read(bus, LY);
-  uint8_t lcdc = bus_read(bus, LCDC);
+  uint8_t ly = ppu->ly;
+  uint8_t lcdc = ppu->lcdc;
   uint8_t bg_color_idx[SCRN_WIDTH];
   uint8_t bg_prio_bit[SCRN_WIDTH];
   for (int i = 0; i < SCRN_WIDTH; i++) {
@@ -25,10 +25,10 @@ static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
     int dat_area = get_bit(lcdc, 4);
     int mp_area = get_bit(lcdc, 3);
     for (int x = 0; x < SCRN_WIDTH; x++) {
-      uint8_t by = (uint8_t)((ly + bus_read(bus, SCY)) % 256);
+      uint8_t by = (uint8_t)((ly + ppu->scy) % 256);
       uint8_t tiley = by / 8;
       int offy = by % 8;
-      uint8_t bx = (uint8_t)((x + bus_read(bus, SCX)) % 256);
+      uint8_t bx = (uint8_t)((x + ppu->scx) % 256);
       uint8_t tilex = bx / 8;
       uint8_t offx = bx % 8;
       uint16_t tile_map_addr =
@@ -59,19 +59,17 @@ static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
       int clr = (get_bit(ms, bit_pos) << 1) | get_bit(ls, bit_pos);
       bg_color_idx[x] = (uint8_t)clr;
       bg_prio_bit[x] = bg_prio;
-      uint8_t lo =
-          mmu_get_bg_pal_byte(bus->mmu, (uint8_t)(pal_num * 8 + clr * 2));
-      uint8_t hi =
-          mmu_get_bg_pal_byte(bus->mmu, (uint8_t)(pal_num * 8 + clr * 2 + 1));
+      uint8_t lo = ppu->bg_pal_ram[pal_num * 8 + clr * 2];
+      uint8_t hi = ppu->bg_pal_ram[pal_num * 8 + clr * 2 + 1];
       ppu->cgb_dsp[ly][x] = (uint16_t)(lo | ((uint16_t)hi << 8));
     }
     if (get_bit(lcdc, 5)) {
       int win_mp = get_bit(lcdc, 6);
-      uint8_t wx = bus_read(bus, WX);
-      uint8_t wy = bus_read(bus, WY);
+      uint8_t wx = ppu->wx;
+      uint8_t wy = ppu->wy;
       if (wx < SCRN_WIDTH + 7 && wy < SCRN_HEIGHT && ly >= wy) {
         wx -= 7;
-        uint8_t win_ly = ppu->WIN_CNT;
+        uint8_t win_ly = ppu->win_cnt;
         uint8_t tiley = win_ly / 8;
         int offy = win_ly % 8;
         for (uint8_t x = wx; x < SCRN_WIDTH; x++) {
@@ -107,13 +105,11 @@ static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
           int clr = (get_bit(ms, bit_pos) << 1) | get_bit(ls, bit_pos);
           bg_color_idx[x] = (uint8_t)clr;
           bg_prio_bit[x] = bg_prio;
-          uint8_t lo =
-              mmu_get_bg_pal_byte(bus->mmu, (uint8_t)(pal_num * 8 + clr * 2));
-          uint8_t hi = mmu_get_bg_pal_byte(
-              bus->mmu, (uint8_t)(pal_num * 8 + clr * 2 + 1));
+          uint8_t lo = ppu->bg_pal_ram[pal_num * 8 + clr * 2];
+          uint8_t hi = ppu->bg_pal_ram[pal_num * 8 + clr * 2 + 1];
           ppu->cgb_dsp[ly][x] = (uint16_t)(lo | ((uint16_t)hi << 8));
         }
-        ppu->WIN_CNT++;
+        ppu->win_cnt++;
       }
     }
   }
@@ -177,10 +173,8 @@ static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
           bg_wins = 1;
         }
         if (!bg_wins) {
-          uint8_t lo =
-              mmu_get_obj_pal_byte(bus->mmu, (uint8_t)(pal_num * 8 + clr * 2));
-          uint8_t hi = mmu_get_obj_pal_byte(
-              bus->mmu, (uint8_t)(pal_num * 8 + clr * 2 + 1));
+          uint8_t lo = ppu->obj_pal_ram[pal_num * 8 + clr * 2];
+          uint8_t hi = ppu->obj_pal_ram[pal_num * 8 + clr * 2 + 1];
           ppu->cgb_dsp[ly][x0] = (uint16_t)(lo | ((uint16_t)hi << 8));
         }
       }
@@ -190,31 +184,29 @@ static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
 
 void do_scanline(struct Ppu* ppu,
                  struct Bus* bus) {  // TODO magic numbers, split up
-  if (get_bit(bus_read(bus, LCDC), 7)) {
-    if (bus_read(bus, LY) < SCRN_HEIGHT) {
+  if (get_bit(ppu->lcdc, 7)) {
+    if (ppu->ly < SCRN_HEIGHT) {
       if (ppu->cgb_mode) {
         do_scanline_cgb(ppu, bus);
-        uint8_t ly = bus_read(bus, LY);
-        ly++;
-        if (ly >= SCANLINES) {
-          ly = 0;
-          ppu->WIN_CNT = 0;
+        ppu->ly++;
+        if (ppu->ly >= SCANLINES) {
+          ppu->ly = 0;
+          ppu->win_cnt = 0;
           ppu->frame = 1;
         }
-        bus_write(bus, 0xFF44, ly);
         return;
       }
-      if (get_bit(bus_read(bus, LCDC), 0)) {
-        uint8_t ly = bus_read(bus, LY);
-        int dat_area = get_bit(bus_read(bus, LCDC), 4);
-        int mp_area = get_bit(bus_read(bus, LCDC), 3);
-        uint8_t pal = bus_read(bus, BGP);
+      if (get_bit(ppu->lcdc, 0)) {
+        uint8_t ly = ppu->ly;
+        int dat_area = get_bit(ppu->lcdc, 4);
+        int mp_area = get_bit(ppu->lcdc, 3);
+        uint8_t pal = ppu->bgp;
         for (int x = 0; x < SCRN_WIDTH; x++) {
-          uint8_t by = (ly + bus_read(bus, SCY)) % 256;
+          uint8_t by = (ly + ppu->scy) % 256;
           uint8_t tiley = by / (uint8_t)8;
           int offy = by % 8;
           int ty = offy << 1;
-          uint8_t bx = (uint8_t)((x + bus_read(bus, SCX)) % 256);
+          uint8_t bx = (uint8_t)((x + ppu->scx) % 256);
           uint8_t tilex = bx / 8;
           uint8_t offx = bx % 8;
           uint16_t idx =
@@ -236,14 +228,13 @@ void do_scanline(struct Ppu* ppu,
           int clr = (get_bit(ms, offx) << 1) | get_bit(ls, offx);
           w_pxl(ppu, ly, x, gt_clr(pal, clr));
         }
-        if (get_bit(bus_read(bus, LCDC), 5)) {
-          mp_area = get_bit(bus_read(bus, LCDC), 6);
-          uint8_t wx = bus_read(bus, WX);
-          uint8_t wy = bus_read(bus, WY);
-          if (wx < SCRN_WIDTH + 7 && wy < SCRN_HEIGHT &&
-              bus_read(bus, LY) >= wy) {
+        if (get_bit(ppu->lcdc, 5)) {
+          mp_area = get_bit(ppu->lcdc, 6);
+          uint8_t wx = ppu->wx;
+          uint8_t wy = ppu->wy;
+          if (wx < SCRN_WIDTH + 7 && wy < SCRN_HEIGHT && ppu->ly >= wy) {
             wx = wx - 7;
-            wy = ppu->WIN_CNT;
+            wy = ppu->win_cnt;
             uint8_t tiley = wy / 8;
             int offy = wy % 8;
             int ty = offy << 1;
@@ -271,17 +262,17 @@ void do_scanline(struct Ppu* ppu,
               int clr = (get_bit(ms, offx) << 1) | get_bit(ls, offx);
               w_pxl(ppu, ly, x, gt_clr(pal, clr));
             }
-            ppu->WIN_CNT++;
+            ppu->win_cnt++;
           }
         }
       } else {
         for (int x = 0; x < SCRN_WIDTH; x++) {
-          w_pxl(ppu, bus_read(bus, LY), x, CLR_WHT);
+          w_pxl(ppu, ppu->ly, x, CLR_WHT);
         }
       }
-      if (get_bit(bus_read(bus, LCDC), 1)) {
-        uint8_t ly = bus_read(bus, LY);
-        uint8_t sz = get_bit(bus_read(bus, LCDC), 2);
+      if (get_bit(ppu->lcdc, 1)) {
+        uint8_t ly = ppu->ly;
+        uint8_t sz = get_bit(ppu->lcdc, 2);
         int cnt = 0;
         uint16_t obj[10] = {0};
         for (uint16_t mem_loc = 0xFE00; mem_loc <= 0xFE9F && cnt < 10;
@@ -339,16 +330,16 @@ void do_scanline(struct Ppu* ppu,
           uint8_t ms = bus_read(bus, (uint16_t)(idx + (uint16_t)line + 1));
           uint8_t pal;
           if (get_bit(flg, 4))
-            pal = bus_read(bus, OBP1);
+            pal = ppu->obp1;
           else
-            pal = bus_read(bus, OBP0);
+            pal = ppu->obp0;
           for (int x0 = x; x0 < x + 8; x0++) {
             if (x0 < 0) continue;
             uint8_t posx = (uint8_t)7 - (uint8_t)(x0 - x);
             if (flipx) posx = 7 - posx;
             uint8_t clr = (uint8_t)(get_bit(ms, posx) << 1) | get_bit(ls, posx);
             if (get_bit(flg, 7)) {
-              if (ppu->dsp[ly][x0] == gt_clr(bus_read(bus, BGP), 0))
+              if (ppu->dsp[ly][x0] == gt_clr(ppu->bgp, 0))
                 w_pxl(ppu, ly, x0, gt_clr(pal, clr));
             } else if (clr != 0)
               w_pxl(ppu, ly, x0, gt_clr(pal, clr));
@@ -356,17 +347,15 @@ void do_scanline(struct Ppu* ppu,
         }
       }
     }
-    uint8_t ly = bus_read(bus, LY);
-    ly++;
-    if (ly >= SCANLINES) {
-      ly = 0;
-      ppu->WIN_CNT = 0;
+    ppu->ly++;
+    if (ppu->ly >= SCANLINES) {
+      ppu->ly = 0;
+      ppu->win_cnt = 0;
       ppu->frame = 1;
     }
-    bus_write(bus, 0xFF44, ly);
   } else {
-    bus_write(bus, 0xFF44, 0);
-    ppu->WIN_CNT = 0;
+    ppu->ly = 0;
+    ppu->win_cnt = 0;
     ppu->off_scn++;
     if (ppu->off_scn >= SCANLINES) {
       ppu->off_scn = 0;

@@ -37,6 +37,8 @@ static uint8_t io_read(struct Bus* bus, uint16_t addr) {
   if (addr == 0xFF01 || addr == 0xFF02) return serial_read(bus->serial, addr);
   if (addr >= 0xFF04 && addr <= 0xFF07) return timer_read(bus->timer, addr);
   if (addr == 0xFF0F) return bus->cpu->if_reg | 0xE0;
+  if (addr >= 0xFF40 && addr <= 0xFF4B) return ppu_read(bus->ppu, addr);
+  if (addr >= 0xFF68 && addr <= 0xFF6B) return ppu_read(bus->ppu, addr);
   return mmu_r_mem(bus->mmu, addr);
 }
 
@@ -58,8 +60,15 @@ static void io_write(struct Bus* bus, uint16_t addr, uint8_t val) {
     return;
   }
   if (addr == 0xFF46) {
-    mmu_write_io(bus->mmu, 0x46, val);
     dma_trigger(bus->dma, bus, val);
+    return;
+  }
+  if (addr >= 0xFF40 && addr <= 0xFF4B) {
+    ppu_write(bus->ppu, addr, val);
+    return;
+  }
+  if (addr >= 0xFF68 && addr <= 0xFF6B) {
+    ppu_write(bus->ppu, addr, val);
     return;
   }
   mmu_w_mem(bus->mmu, addr, val);
@@ -73,19 +82,17 @@ uint8_t bus_read(struct Bus* bus, uint16_t addr) {
   }
   if (addr < 0x8000) return mmu_read_rom(bus->mmu, addr);
   if (addr < 0xA000) {
-    uint8_t mode = mmu_read_io(bus->mmu, 0x41) & 0x03u;
-    uint8_t lcdc = mmu_read_io(bus->mmu, 0x40);
-    if ((lcdc & 0x80u) && mode == 3) return 0xFF;
+    uint8_t mode = bus->ppu->stat & 0x03;
+    if ((bus->ppu->lcdc & 0x80) && mode == 3) return 0xFF;
     return mmu_read_vram(bus->mmu, addr);
   }
   if (addr < 0xC000) return mmu_read_eram(bus->mmu, addr);
   if (addr < 0xE000) return mmu_read_wram(bus->mmu, addr);
-  if (addr < 0xFE00) return bus_read(bus, (uint16_t)(addr - 0x2000u));  // echo
+  if (addr < 0xFE00) return bus_read(bus, (uint16_t)(addr - 0x2000));
   if (addr < 0xFEA0) {
-    uint8_t mode = mmu_read_io(bus->mmu, 0x41) & 0x03u;
-    uint8_t lcdc = mmu_read_io(bus->mmu, 0x40);
-    if ((lcdc & 0x80u) && (mode == 2 || mode == 3)) return 0xFF;
-    return mmu_read_oam(bus->mmu, (uint16_t)(addr - 0xFE00u));
+    uint8_t mode = bus->ppu->stat & 0x03;
+    if ((bus->ppu->lcdc & 0x80) && (mode == 2 || mode == 3)) return 0xFF;
+    return mmu_read_oam(bus->mmu, (uint16_t)(addr - 0xFE00));
   }
   if (addr < 0xFF00) return 0xFF;
   if (addr < 0xFF80) return io_read(bus, addr);
@@ -99,9 +106,8 @@ void bus_write(struct Bus* bus, uint16_t addr, uint8_t val) {
     return;
   }
   if (addr < 0xA000) {
-    uint8_t mode = mmu_read_io(bus->mmu, 0x41) & 0x03u;
-    uint8_t lcdc = mmu_read_io(bus->mmu, 0x40);
-    if ((lcdc & 0x80u) && mode == 3) return;
+    uint8_t mode = bus->ppu->stat & 0x03;
+    if ((bus->ppu->lcdc & 0x80) && mode == 3) return;
     mmu_write_vram(bus->mmu, addr, val);
     return;
   }
@@ -118,9 +124,8 @@ void bus_write(struct Bus* bus, uint16_t addr, uint8_t val) {
     return;
   }
   if (addr < 0xFEA0) {
-    uint8_t mode = mmu_read_io(bus->mmu, 0x41) & 0x03u;
-    uint8_t lcdc = mmu_read_io(bus->mmu, 0x40);
-    if ((lcdc & 0x80u) && (mode == 2 || mode == 3)) return;
+    uint8_t mode = bus->ppu->stat & 0x03;
+    if ((bus->ppu->lcdc & 0x80u) && (mode == 2 || mode == 3)) return;
     mmu_write_oam(bus->mmu, (uint16_t)(addr - 0xFE00u), val);
     return;
   }

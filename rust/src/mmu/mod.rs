@@ -49,8 +49,6 @@ pub struct Mmu {
     cgb_mode: bool,
     cgb_compat: bool,
     div_reset_pending: bool,
-    bg_pal_ram: [u8; 64],
-    obj_pal_ram: [u8; 64],
     boot_skipped: bool,
     hdma_active: bool,
     hdma_remaining: u8,
@@ -302,8 +300,6 @@ impl Mmu {
             cgb_mode,
             cgb_compat: cgb_mode && !cgb_flag,
             div_reset_pending: false,
-            bg_pal_ram: [0u8; 64],
-            obj_pal_ram: [0u8; 64],
             boot_skipped,
             hdma_active: false,
             hdma_remaining: 0,
@@ -312,10 +308,6 @@ impl Mmu {
         };
         if cgb_mode {
             mmu.io_regs[0x4D] = 0;
-            for i in 0..32usize {
-                mmu.bg_pal_ram[i * 2] = 0xFF;
-                mmu.bg_pal_ram[i * 2 + 1] = 0x7F;
-            }
         }
         if boot_skipped {
             mmu.post_boot_init();
@@ -380,12 +372,6 @@ impl Mmu {
                 }
                 match loc {
                     0xFF4F if self.cgb_mode => (self.vram_bank_sel & 1) | 0xFE,
-                    0xFF69 if self.cgb_mode => {
-                        self.bg_pal_ram[(self.io_regs[0x68] & 0x3F) as usize]
-                    }
-                    0xFF6B if self.cgb_mode => {
-                        self.obj_pal_ram[(self.io_regs[0x6A] & 0x3F) as usize]
-                    }
                     0xFF70 if self.cgb_mode => self.wram_bank | 0xF8,
                     NR10 => self.io_regs[(NR10 - 0xFF00) as usize] | 0x80,
                     NR11 => self.io_regs[(NR11 - 0xFF00) as usize] | 0x3F,
@@ -545,22 +531,6 @@ impl Mmu {
                     self.serial_byte_pending = true;
                 } else if self.cgb_mode && loc == 0xFF4F {
                     self.vram_bank_sel = val & 1;
-                } else if self.cgb_mode && loc == 0xFF68 {
-                    self.io_regs[0x68] = val;
-                } else if self.cgb_mode && loc == 0xFF69 {
-                    let idx = (self.io_regs[0x68] & 0x3F) as usize;
-                    self.bg_pal_ram[idx] = val;
-                    if self.io_regs[0x68] & 0x80 != 0 {
-                        self.io_regs[0x68] = (self.io_regs[0x68] & 0x80) | ((idx as u8 + 1) & 0x3F);
-                    }
-                } else if self.cgb_mode && loc == 0xFF6A {
-                    self.io_regs[0x6A] = val;
-                } else if self.cgb_mode && loc == 0xFF6B {
-                    let idx = (self.io_regs[0x6A] & 0x3F) as usize;
-                    self.obj_pal_ram[idx] = val;
-                    if self.io_regs[0x6A] & 0x80 != 0 {
-                        self.io_regs[0x6A] = (self.io_regs[0x6A] & 0x80) | ((idx as u8 + 1) & 0x3F);
-                    }
                 } else if self.cgb_mode && loc == 0xFF55 {
                     if self.hdma_active && val & 0x80 == 0 {
                         self.hdma_active = false;
@@ -666,14 +636,6 @@ impl Mmu {
         self.vram_bank1[(addr - 0x8000) as usize]
     }
 
-    pub fn get_bg_pal_byte(&self, idx: u8) -> u8 {
-        self.bg_pal_ram[idx as usize]
-    }
-
-    pub fn get_obj_pal_byte(&self, idx: u8) -> u8 {
-        self.obj_pal_ram[idx as usize]
-    }
-
     pub fn boot_skipped(&self) -> bool {
         self.boot_skipped
     }
@@ -761,10 +723,6 @@ impl Mmu {
 
     pub fn do_hdma_block(&mut self) {
         if !self.hdma_active {
-            return;
-        }
-        let ly = self.io_regs[0x44];
-        if ly >= 144 {
             return;
         }
         for i in 0..0x10u16 {
@@ -876,19 +834,10 @@ impl Mmu {
         self.io_regs[0x24] = 0x77;
         self.io_regs[0x25] = 0xF3;
         self.io_regs[0x26] = 0xF1;
-        self.io_regs[0x40] = 0x91;
-        self.io_regs[0x42] = 0x00;
-        self.io_regs[0x43] = 0x00;
-        self.io_regs[0x44] = 0x00;
-        self.io_regs[0x45] = 0x00;
-        self.io_regs[0x47] = 0xFC;
-        self.io_regs[0x4A] = 0x00;
-        self.io_regs[0x4B] = 0x00;
         self.hram[0x7F] = 0x00;
         if self.cgb_mode {
             self.io_regs[0x00] = 0xCF;
             self.io_regs[0x02] = 0x7F;
-            self.io_regs[0x41] = 0x85;
             self.io_regs[0x46] = 0x00;
             self.io_regs[0x4D] = 0x7E;
             self.io_regs[0x51] = 0xFF;
@@ -902,7 +851,6 @@ impl Mmu {
             self.io_regs[0x00] = 0xCF;
             self.io_regs[0x02] = 0x7E;
             self.io_regs[0x04] = 0xAB;
-            self.io_regs[0x41] = 0x85;
             self.io_regs[0x46] = 0xFF;
         }
     }
