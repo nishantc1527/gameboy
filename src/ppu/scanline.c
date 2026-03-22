@@ -34,7 +34,7 @@ static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
       uint16_t tile_map_addr =
           (uint16_t)((uint16_t)tiley * 32 + (uint16_t)tilex);
       tile_map_addr = (uint16_t)(tile_map_addr + (mp_area ? 0x9C00 : 0x9800));
-      uint8_t tile_idx_raw = mmu_read_vram(bus->mmu, tile_map_addr);
+      uint8_t tile_idx_raw = mmu_read_vram_bank0(bus->mmu, tile_map_addr);
       uint8_t attr = mmu_read_vram_bank1(bus->mmu, tile_map_addr);
       uint8_t pal_num = attr & 7;
       uint8_t vram_bank = (attr >> 3) & 1;
@@ -49,8 +49,8 @@ static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
       idx = (uint16_t)(idx + (dat_area ? 0x8000 : 0x8800));
       uint8_t ls, ms;
       if (vram_bank == 0) {
-        ls = mmu_read_vram(bus->mmu, (uint16_t)(idx + ty));
-        ms = mmu_read_vram(bus->mmu, (uint16_t)(idx + ty + 1));
+        ls = mmu_read_vram_bank0(bus->mmu, (uint16_t)(idx + ty));
+        ms = mmu_read_vram_bank0(bus->mmu, (uint16_t)(idx + ty + 1));
       } else {
         ls = mmu_read_vram_bank1(bus->mmu, (uint16_t)(idx + ty));
         ms = mmu_read_vram_bank1(bus->mmu, (uint16_t)(idx + ty + 1));
@@ -80,7 +80,7 @@ static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
               (uint16_t)((uint16_t)tiley * 32 + (uint16_t)tilex);
           tile_map_addr =
               (uint16_t)(tile_map_addr + (win_mp ? 0x9C00 : 0x9800));
-          uint8_t tile_idx_raw = mmu_read_vram(bus->mmu, tile_map_addr);
+          uint8_t tile_idx_raw = mmu_read_vram_bank0(bus->mmu, tile_map_addr);
           uint8_t attr = mmu_read_vram_bank1(bus->mmu, tile_map_addr);
           uint8_t pal_num = attr & 7;
           uint8_t vram_bank = (attr >> 3) & 1;
@@ -95,8 +95,8 @@ static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
           idx = (uint16_t)(idx + (dat_area ? 0x8000 : 0x8800));
           uint8_t ls, ms;
           if (vram_bank == 0) {
-            ls = mmu_read_vram(bus->mmu, (uint16_t)(idx + ty));
-            ms = mmu_read_vram(bus->mmu, (uint16_t)(idx + ty + 1));
+            ls = mmu_read_vram_bank0(bus->mmu, (uint16_t)(idx + ty));
+            ms = mmu_read_vram_bank0(bus->mmu, (uint16_t)(idx + ty + 1));
           } else {
             ls = mmu_read_vram_bank1(bus->mmu, (uint16_t)(idx + ty));
             ms = mmu_read_vram_bank1(bus->mmu, (uint16_t)(idx + ty + 1));
@@ -119,7 +119,7 @@ static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
     uint16_t obj[10] = {0};
     for (uint16_t mem_loc = 0xFE00; mem_loc <= 0xFE9F && cnt < 10;
          mem_loc += 4) {
-      int y = bus_read(bus, mem_loc + 0);
+      int y = mmu_read_oam(bus->mmu, (uint16_t)(mem_loc - 0xFE00));
       y -= 16;
       if (ly < y) continue;
       if (sz) {
@@ -130,10 +130,10 @@ static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
     }
     for (int i = cnt - 1; i >= 0; i--) {
       uint16_t mem_loc = obj[i];
-      uint8_t y = bus_read(bus, mem_loc + 0);
-      int x = bus_read(bus, mem_loc + 1);
-      uint16_t tile_idx = bus_read(bus, mem_loc + 2);
-      uint8_t flg = bus_read(bus, mem_loc + 3);
+      uint8_t y = mmu_read_oam(bus->mmu, (uint16_t)(mem_loc - 0xFE00));
+      int x = mmu_read_oam(bus->mmu, (uint16_t)(mem_loc - 0xFE00 + 1));
+      uint16_t tile_idx = mmu_read_oam(bus->mmu, (uint16_t)(mem_loc - 0xFE00 + 2));
+      uint8_t flg = mmu_read_oam(bus->mmu, (uint16_t)(mem_loc - 0xFE00 + 3));
       y -= 16;
       x -= 8;
       if (sz) tile_idx &= 0xFE;
@@ -152,8 +152,8 @@ static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
       line = (uint8_t)(line << 1);
       uint8_t ls, ms;
       if (vram_bank == 0) {
-        ls = mmu_read_vram(bus->mmu, (uint16_t)(idx + line));
-        ms = mmu_read_vram(bus->mmu, (uint16_t)(idx + line + 1));
+        ls = mmu_read_vram_bank0(bus->mmu, (uint16_t)(idx + line));
+        ms = mmu_read_vram_bank0(bus->mmu, (uint16_t)(idx + line + 1));
       } else {
         ls = mmu_read_vram_bank1(bus->mmu, (uint16_t)(idx + line));
         ms = mmu_read_vram_bank1(bus->mmu, (uint16_t)(idx + line + 1));
@@ -215,15 +215,15 @@ void do_scanline(struct Ppu* ppu,
             idx += 0x9800;
           else
             idx += 0x9C00;
-          idx = bus_read(bus, idx);
+          idx = mmu_read_vram(bus->mmu, idx);
           if (dat_area == 0) idx = (uint16_t)((int8_t)idx + (uint16_t)128);
           idx *= 16;
           if (dat_area == 0)
             idx += 0x8800;
           else
             idx += 0x8000;
-          uint8_t ls = bus_read(bus, (uint16_t)(idx + (uint16_t)ty));
-          uint8_t ms = bus_read(bus, (uint16_t)(idx + (uint16_t)ty + 1));
+          uint8_t ls = mmu_read_vram(bus->mmu, (uint16_t)(idx + (uint16_t)ty));
+          uint8_t ms = mmu_read_vram(bus->mmu, (uint16_t)(idx + (uint16_t)ty + 1));
           offx = 7 - offx;
           int clr = (get_bit(ms, offx) << 1) | get_bit(ls, offx);
           w_pxl(ppu, ly, x, gt_clr(pal, clr));
@@ -248,16 +248,16 @@ void do_scanline(struct Ppu* ppu,
                 idx += 0x9800;
               else
                 idx += 0x9C00;
-              idx = bus_read(bus, idx);
+              idx = mmu_read_vram(bus->mmu, idx);
               if (dat_area == 0) idx = (uint16_t)((int8_t)idx + (uint16_t)128);
               idx *= 16;
               if (dat_area == 0)
                 idx += 0x8800;
               else
                 idx += 0x8000;
-              uint8_t ls = bus_read(bus, idx + (uint16_t)ty);
+              uint8_t ls = mmu_read_vram(bus->mmu, idx + (uint16_t)ty);
               uint8_t ms =
-                  bus_read(bus, (uint16_t)(idx + (uint16_t)ty + (uint16_t)1));
+                  mmu_read_vram(bus->mmu, (uint16_t)(idx + (uint16_t)ty + (uint16_t)1));
               offx = 7 - offx;
               int clr = (get_bit(ms, offx) << 1) | get_bit(ls, offx);
               w_pxl(ppu, ly, x, gt_clr(pal, clr));
@@ -277,7 +277,7 @@ void do_scanline(struct Ppu* ppu,
         uint16_t obj[10] = {0};
         for (uint16_t mem_loc = 0xFE00; mem_loc <= 0xFE9F && cnt < 10;
              mem_loc += 4) {
-          int y = bus_read(bus, mem_loc + 0);
+          int y = mmu_read_oam(bus->mmu, (uint16_t)(mem_loc - 0xFE00));
           y -= 16;
           if (ly < y) continue;
           if (sz) {
@@ -292,12 +292,12 @@ void do_scanline(struct Ppu* ppu,
           int midx = -1;
           for (int i = 0; i < 10; i++)
             if (obj[i]) {
-              uint8_t x = bus_read(bus, obj[i] + 1);
+              uint8_t x = mmu_read_oam(bus->mmu, (uint16_t)(obj[i] - 0xFE00 + 1));
               if (x < maxx || (x == maxx && obj[i] < maxm)) {
                 if (midx == -1)
                   midx = i;
                 else {
-                  uint8_t prev = bus_read(bus, obj[midx] + 1);
+                  uint8_t prev = mmu_read_oam(bus->mmu, (uint16_t)(obj[midx] - 0xFE00 + 1));
                   if (x > prev) midx = i;
                   if (x == prev && obj[i] > obj[midx]) midx = i;
                 }
@@ -306,12 +306,12 @@ void do_scanline(struct Ppu* ppu,
           if (midx == -1) break;
           uint16_t mem_loc = obj[midx];
           obj[midx] = 0;
-          maxx = bus_read(bus, mem_loc + 1);
+          maxx = mmu_read_oam(bus->mmu, (uint16_t)(mem_loc - 0xFE00 + 1));
           maxm = mem_loc;
-          uint8_t y = bus_read(bus, mem_loc + 0);
-          int x = bus_read(bus, mem_loc + 1);
-          uint16_t idx = bus_read(bus, mem_loc + 2);
-          uint8_t flg = bus_read(bus, mem_loc + 3);
+          uint8_t y = mmu_read_oam(bus->mmu, (uint16_t)(mem_loc - 0xFE00));
+          int x = mmu_read_oam(bus->mmu, (uint16_t)(mem_loc - 0xFE00 + 1));
+          uint16_t idx = mmu_read_oam(bus->mmu, (uint16_t)(mem_loc - 0xFE00 + 2));
+          uint8_t flg = mmu_read_oam(bus->mmu, (uint16_t)(mem_loc - 0xFE00 + 3));
           y -= 16;
           x -= 8;
           if (sz) idx &= 0xFE;
@@ -326,8 +326,8 @@ void do_scanline(struct Ppu* ppu,
             if (flipy) line = 7 - line;
           }
           line = (uint8_t)(line << 1);
-          uint8_t ls = bus_read(bus, idx + line + 0);
-          uint8_t ms = bus_read(bus, (uint16_t)(idx + (uint16_t)line + 1));
+          uint8_t ls = mmu_read_vram_bank0(bus->mmu, idx + line + 0);
+          uint8_t ms = mmu_read_vram_bank0(bus->mmu, (uint16_t)(idx + (uint16_t)line + 1));
           uint8_t pal;
           if (get_bit(flg, 4))
             pal = ppu->obp1;

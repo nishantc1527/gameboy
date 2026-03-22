@@ -17,6 +17,7 @@ void disassemble(struct Cpu* cpu, struct Bus* bus, const uint16_t* watch_addrs,
 
 static void system_tick(struct GBemu* gb, uint8_t cycles) {
   ppu_tick(gb->ppu, gb->bus, cycles);
+  dma_tick(gb->dma, gb->bus, cycles);
   uint8_t timer_remaining = (uint8_t)(cycles - gb->timer->sub_instr_cycles);
   gb->timer->sub_instr_cycles = 0;
   if (timer_remaining) timer_tick(gb->timer, timer_remaining, gb->apu, gb->cpu);

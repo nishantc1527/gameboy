@@ -75,6 +75,11 @@ extern "C" fn mmu_boot_skipped(mmu: *const Mmu) -> bool {
 }
 
 #[unsafe(no_mangle)]
+extern "C" fn mmu_read_vram_bank0(mmu: *const Mmu, addr: u16) -> u8 {
+    unsafe { (*mmu).read_vram_bank0(addr) }
+}
+
+#[unsafe(no_mangle)]
 extern "C" fn mmu_read_vram_bank1(mmu: *const Mmu, addr: u16) -> u8 {
     unsafe { (*mmu).read_vram_bank1(addr) }
 }

@@ -257,6 +257,10 @@ impl Mmu {
         self.cgb_compat
     }
 
+    pub fn read_vram_bank0(&self, addr: u16) -> u8 {
+        self.vram[(addr - 0x8000) as usize]
+    }
+
     pub fn read_vram_bank1(&self, addr: u16) -> u8 {
         self.vram_bank1[(addr - 0x8000) as usize]
     }
