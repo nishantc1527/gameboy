@@ -5,8 +5,6 @@ mod mbc3;
 mod mbc5;
 mod no_mbc;
 
-use crate::constants::apu::*;
-
 use std::{fs::File, io::Read, path::Path};
 
 pub struct Mmu {
@@ -33,7 +31,6 @@ pub struct Mmu {
     mbc1_1mb_mode: bool,
     mbc1_multicart: bool,
     serial_byte_pending: bool,
-    len_dirty: u8,
     rtc_latched: [u8; 5],
     rtc_latch_state: u8,
     rtc_s: u8,
@@ -284,7 +281,6 @@ impl Mmu {
             mbc1_1mb_mode,
             mbc1_multicart,
             serial_byte_pending: false,
-            len_dirty: 0,
             rtc_latched: [0u8; 5],
             rtc_latch_state: 0,
             rtc_s: 0,
@@ -373,30 +369,6 @@ impl Mmu {
                 match loc {
                     0xFF4F if self.cgb_mode => (self.vram_bank_sel & 1) | 0xFE,
                     0xFF70 if self.cgb_mode => self.wram_bank | 0xF8,
-                    NR10 => self.io_regs[(NR10 - 0xFF00) as usize] | 0x80,
-                    NR11 => self.io_regs[(NR11 - 0xFF00) as usize] | 0x3F,
-                    NR12 => self.io_regs[(NR12 - 0xFF00) as usize] | 0x00,
-                    NR13 => self.io_regs[(NR13 - 0xFF00) as usize] | 0xFF,
-                    NR14 => self.io_regs[(NR14 - 0xFF00) as usize] | 0xBF,
-                    0xFF15 => 0xFF,
-                    NR21 => self.io_regs[(NR21 - 0xFF00) as usize] | 0x3F,
-                    NR22 => self.io_regs[(NR22 - 0xFF00) as usize] | 0x00,
-                    NR23 => self.io_regs[(NR23 - 0xFF00) as usize] | 0xFF,
-                    NR24 => self.io_regs[(NR24 - 0xFF00) as usize] | 0xBF,
-                    NR30 => self.io_regs[(NR30 - 0xFF00) as usize] | 0x7F,
-                    NR31 => self.io_regs[(NR31 - 0xFF00) as usize] | 0xFF,
-                    NR32 => self.io_regs[(NR32 - 0xFF00) as usize] | 0x9F,
-                    NR33 => self.io_regs[(NR33 - 0xFF00) as usize] | 0xFF,
-                    NR34 => self.io_regs[(NR34 - 0xFF00) as usize] | 0xBF,
-                    0xFF1F => 0xFF,
-                    NR41 => self.io_regs[(NR41 - 0xFF00) as usize] | 0xFF,
-                    NR42 => self.io_regs[(NR42 - 0xFF00) as usize] | 0x00,
-                    NR43 => self.io_regs[(NR43 - 0xFF00) as usize] | 0x00,
-                    NR44 => self.io_regs[(NR44 - 0xFF00) as usize] | 0xBF,
-                    NR50 => self.io_regs[(NR50 - 0xFF00) as usize] | 0x00,
-                    NR51 => self.io_regs[(NR51 - 0xFF00) as usize] | 0x00,
-                    NR52 => self.io_regs[(NR52 - 0xFF00) as usize] | 0x70,
-                    0xFF27..0xFF30 => 0xFF,
                     0xFF00 => {
                         let sel = self.io_regs[0x00];
                         let mut result = (sel & 0x30) | 0xCF;
@@ -509,19 +481,7 @@ impl Mmu {
                     self.oam[loc as usize - 0xFE00] = val;
                     return;
                 }
-                if (0xFF10..0xFF26).contains(&loc)
-                    && loc != 0xFF20
-                    && self.io_regs[0x26] & 0x80 == 0
-                {
-                    if loc == 0xFF11 || loc == 0xFF16 {
-                        self.io_regs[(loc - 0xFF00) as usize] = val & 0x3F;
-                        let bit: u8 = if loc == 0xFF11 { 0x01 } else { 0x02 };
-                        self.len_dirty |= bit;
-                    } else if loc == 0xFF1B {
-                        self.io_regs[(loc - 0xFF00) as usize] = val;
-                        self.len_dirty |= 0x04;
-                    }
-                } else if loc == 0xFF04 {
+                if loc == 0xFF04 {
                     self.io_regs[0x4E] = self.io_regs[0x04];
                     self.div_reset_pending = true;
                     self.io_regs[0x04] = 0x00;
@@ -566,13 +526,6 @@ impl Mmu {
                     self.wram_bank = if val & 7 == 0 { 1 } else { val & 7 };
                     self.io_regs[0x70] = self.wram_bank;
                 } else {
-                    match loc {
-                        0xFF11 => self.len_dirty |= 0x01,
-                        0xFF16 => self.len_dirty |= 0x02,
-                        0xFF1B => self.len_dirty |= 0x04,
-                        0xFF20 => self.len_dirty |= 0x08,
-                        _ => {}
-                    }
                     match loc {
                         0xC000..0xD000 => self.wram[(loc - 0xC000) as usize] = val,
                         0xD000..0xE000 => self.wram_banks[(loc - 0xD000) as usize] = val,
@@ -624,12 +577,6 @@ impl Mmu {
         } else {
             None
         }
-    }
-
-    pub fn take_len_dirty(&mut self) -> u8 {
-        let val = self.len_dirty;
-        self.len_dirty = 0;
-        val
     }
 
     pub fn get_vram_bank1_byte(&self, addr: u16) -> u8 {

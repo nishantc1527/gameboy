@@ -129,11 +129,6 @@ extern "C" fn mmu_take_serial_byte(mmu: *mut Mmu) -> i32 {
 }
 
 #[unsafe(no_mangle)]
-extern "C" fn mmu_take_len_dirty(mmu: *mut Mmu) -> u8 {
-    unsafe { (*mmu).take_len_dirty() }
-}
-
-#[unsafe(no_mangle)]
 extern "C" fn mmu_advance_rtc(mmu: *mut Mmu, cycles: u64) {
     unsafe { (*mmu).advance_rtc(cycles) }
 }

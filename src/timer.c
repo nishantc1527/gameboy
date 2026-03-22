@@ -58,10 +58,7 @@ void timer_write(struct Timer* t, uint16_t addr, uint8_t val, struct Apu* apu,
       timer_increment_tima(t);
     }
     if ((t->sys_ctr >> 12) & 1) {
-      apu->div_apu++;
-      if ((apu->div_apu & 1) == 0) apu->length_clock = 1;
-      if ((apu->div_apu & 3) == 0) apu->sweep_clock = 1;
-      if ((apu->div_apu & 7) == 7) apu->envelope_clock = 1;
+      apu_notify_div_tick(apu);
     }
     t->sys_ctr = 0;
     return;
@@ -103,10 +100,7 @@ void timer_tick(struct Timer* t, uint8_t cycles, struct Apu* apu,
     uint16_t old = t->sys_ctr;
     t->sys_ctr = (uint16_t)(t->sys_ctr + 1);
     if ((old >> 12) & 1 && !((t->sys_ctr >> 12) & 1)) {
-      apu->div_apu++;
-      if ((apu->div_apu & 1) == 0) apu->length_clock = 1;
-      if ((apu->div_apu & 3) == 0) apu->sweep_clock = 1;
-      if ((apu->div_apu & 7) == 7) apu->envelope_clock = 1;
+      apu_notify_div_tick(apu);
     }
     if (t->tac & 0x04) {
       uint8_t bit = timer_selected_bit(t);

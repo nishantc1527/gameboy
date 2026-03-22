@@ -40,7 +40,7 @@ struct gbemu* gbemu_init(char* rom_name, const char* boot_rom,
     free(gb);
     return NULL;
   }
-  gb->apu = init_apu();
+  gb->apu = apu_init();
   gb->ppu = init_ppu();
   gb->timer = timer_init();
   gb->dma = dma_init();
@@ -71,7 +71,7 @@ static void gbemu_free_components(struct gbemu* gb) {
   joypad_free(gb->joypad);
   dma_free(gb->dma);
   timer_free(gb->timer);
-  free(gb->apu);
+  apu_free(gb->apu);
   free(gb->ppu);
   free(gb->cpu);
 }
@@ -83,7 +83,7 @@ void gbemu_reset(struct gbemu* gb) {
 
   gb->cpu = init_cpu();
   gb->mmu = mmu_init(gb->rom_name, gb->boot_rom);
-  gb->apu = init_apu();
+  gb->apu = apu_init();
   gb->ppu = init_ppu();
   gb->timer = timer_init();
   gb->dma = dma_init();
@@ -154,7 +154,7 @@ int gbemu_step_frame(struct gbemu* gb) {
     uint8_t cyc_left = (uint8_t)(cyc - gb->cpu->cyc_ext);
     gb->cpu->cyc_ext = 0;
     timer_tick(gb->timer, cyc_left, gb->apu, gb->cpu);
-    upd_apu(gb->apu, gb->mmu, (uint8_t)cyc);
+    apu_tick(gb->apu, (uint8_t)cyc);
     int disp_cyc = check_interrupt(gb->cpu, gb->bus);
     if (disp_cyc > 0) {
       gb->total_cycles += (uint64_t)disp_cyc;
@@ -165,7 +165,7 @@ int gbemu_step_frame(struct gbemu* gb) {
       }
       update_lcd(gb->ppu, gb->bus);
       timer_tick(gb->timer, (uint8_t)disp_cyc, gb->apu, gb->cpu);
-      upd_apu(gb->apu, gb->mmu, (uint8_t)disp_cyc);
+      apu_tick(gb->apu, (uint8_t)disp_cyc);
     }
   }
   if ((gb->test_category == TestBlarggAudio ||

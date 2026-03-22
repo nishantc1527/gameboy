@@ -37,6 +37,7 @@ static uint8_t io_read(struct Bus* bus, uint16_t addr) {
   if (addr == 0xFF01 || addr == 0xFF02) return serial_read(bus->serial, addr);
   if (addr >= 0xFF04 && addr <= 0xFF07) return timer_read(bus->timer, addr);
   if (addr == 0xFF0F) return bus->cpu->if_reg | 0xE0;
+  if (addr >= 0xFF10 && addr <= 0xFF3F) return apu_read(bus->apu, addr);
   if (addr >= 0xFF40 && addr <= 0xFF4B) return ppu_read(bus->ppu, addr);
   if (addr >= 0xFF68 && addr <= 0xFF6B) return ppu_read(bus->ppu, addr);
   return mmu_r_mem(bus->mmu, addr);
@@ -57,6 +58,10 @@ static void io_write(struct Bus* bus, uint16_t addr, uint8_t val) {
   }
   if (addr == 0xFF0F) {
     bus->cpu->if_reg = val & 0x1Fu;
+    return;
+  }
+  if (addr >= 0xFF10 && addr <= 0xFF3F) {
+    apu_write(bus->apu, addr, val);
     return;
   }
   if (addr == 0xFF46) {
