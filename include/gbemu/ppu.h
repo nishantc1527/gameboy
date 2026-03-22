@@ -20,7 +20,8 @@ struct Ppu {
   uint8_t dsp[SCRN_HEIGHT][SCRN_WIDTH];
   uint16_t cgb_dsp[SCRN_HEIGHT][SCRN_WIDTH];
   uint16_t scn;
-  uint8_t frame;
+  bool frame_ready;
+  bool lcdc_reenable;
   uint8_t off_scn;
   uint8_t cgb_mode;
   uint8_t cgb_compat;
@@ -44,6 +45,7 @@ struct Ppu* init_ppu(void);
 uint8_t ppu_read(const struct Ppu* ppu, uint16_t addr);
 void ppu_write(struct Ppu* ppu, uint16_t addr, uint8_t val);
 void ppu_post_boot(struct Ppu* ppu, bool cgb_mode);
+void ppu_tick(struct Ppu* ppu, struct Bus* bus, uint8_t cycles);
 
 void update_lcd(struct Ppu* ppu, struct Bus* bus);
 void do_scanline(struct Ppu* ppu, struct Bus* bus);

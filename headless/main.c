@@ -3,10 +3,21 @@
 #include <string.h>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "gbemu/bus.h"
 #include "gbemu/core.h"
+#include "gbemu/cpu.h"
+#include "gbemu/joypad.h"
 #include "gbemu/ppu.h"
+#include "gbemu/serial.h"
+#include "gbemu/util.h"
 #include "rust.h"
 #include "stb_image_write.h"
+
+typedef struct TestState {
+  int category;
+  uint64_t frame_limit;
+  bool done;
+} TestState;
 
 static const uint8_t ACID_COLORS[5] = {0xFF, 0xAA, 0x55, 0x00, 0x00};
 
@@ -37,6 +48,107 @@ static int write_screenshot(struct Ppu* ppu, const char* path) {
     }
   }
   return 0;
+}
+
+static TestState test_init(int category) {
+  TestState ts = {.category = category, .done = false};
+  ts.frame_limit = (uint64_t)-1;
+  return ts;
+}
+
+static void handle_test_frame(struct gbemu* gb, TestState* ts) {
+  uint64_t f = gb->total_frames - BROM_FRAMES;
+  int cat = ts->category;
+  if (cat == TestBlarggCpu || cat == TestBlarggAudio ||
+      cat == TestBlarggCpuTime || cat == TestBlarggMemTime ||
+      cat == TestBlarggHaltBug || cat == TestBlarggInterruptTime ||
+      cat == TestBlarggMemTime2 || cat == TestBlarggOamBug ||
+      cat == TestBlarggCgbSound) {
+    while (serial_has_byte(gb->serial))
+      printf("%c", (char)serial_take_byte(gb->serial));
+  }
+  if (gb->cpu->ldbb_fired) {
+    gb->cpu->ldbb_fired = false;
+    if (cat == TestAge || cat == TestMooneye || cat == TestSame) {
+      if (gb->cpu->B == 3 && gb->cpu->C == 5 && gb->cpu->D == 8 &&
+          gb->cpu->E == 13 && gb->cpu->H == 21 && gb->cpu->L == 34)
+        printf("Passed\n");
+      else
+        printf("Failed\n");
+      ts->done = true;
+    } else if (cat == TestAcid2 || cat == TestMealybug)
+      ts->done = true;
+  }
+  if (cat == TestBlarggAudio || cat == TestBlarggCgbSound) {
+    if (bus_read(gb->bus, 0xA001) == 0xDE &&
+        bus_read(gb->bus, 0xA002) == 0xB0 &&
+        bus_read(gb->bus, 0xA003) == 0x61) {
+      uint8_t status = bus_read(gb->bus, 0xA000);
+      if (status != 0x80) {
+        if (status == 0x00)
+          printf("Passed\n");
+        else
+          printf("Failed %d\n", status);
+        ts->done = true;
+      }
+    }
+  }
+  if (cat == TestMicro && gb->total_frames >= BROM_FRAMES + 10) {
+    uint8_t result = bus_read(gb->bus, 0xFF82);
+    if (result == 0x01)
+      printf("Passed\n");
+    else if (result == 0xFF)
+      printf("Failed\n");
+    else
+      printf("TEST DID NOT COMPLETE\n");
+    ts->done = true;
+  }
+  if (cat == TestRtc3Basic || cat == TestRtc3Range || cat == TestRtc3Sub) {
+    int btn_down = 0, btn_a = 0;
+    if (cat == TestRtc3Basic) {
+      btn_a = (f >= 12 && f < 22) ? 1 : 0;
+    } else if (cat == TestRtc3Range) {
+      btn_down = (f >= 12 && f < 22) ? 1 : 0;
+      btn_a = (f >= 32 && f < 42) ? 1 : 0;
+    } else {
+      btn_down = ((f >= 12 && f < 22) || (f >= 32 && f < 42)) ? 1 : 0;
+      btn_a = (f >= 52 && f < 62) ? 1 : 0;
+    }
+    gb->joypad->buttons[BTN_DOWN] = btn_down != 0;
+    gb->joypad->buttons[BTN_A] = btn_a != 0;
+    if ((cat == TestRtc3Basic &&
+         gb->total_frames >= BROM_FRAMES + 22 + 13 * 60) ||
+        (cat == TestRtc3Range &&
+         gb->total_frames >= BROM_FRAMES + 42 + 8 * 60) ||
+        (cat == TestRtc3Sub && gb->total_frames >= BROM_FRAMES + 62 + 26 * 60))
+      ts->done = true;
+  }
+  if (cat == TestBlarggCpu && gb->total_frames >= BROM_FRAMES + 60 * 60)
+    ts->done = true;
+  if (cat == TestBlarggAudio && gb->total_frames >= BROM_FRAMES + 60 * 60)
+    ts->done = true;
+  if ((cat == TestBlarggCpuTime || cat == TestBlarggMemTime ||
+       cat == TestBlarggHaltBug || cat == TestBlarggInterruptTime) &&
+      gb->total_frames >= BROM_FRAMES + 120)
+    ts->done = true;
+  if (cat == TestBlarggMemTime2 && gb->total_frames >= BROM_FRAMES + 240)
+    ts->done = true;
+  if (cat == TestBlarggOamBug && gb->total_frames >= BROM_FRAMES + 1260)
+    ts->done = true;
+  if (cat == TestBlarggCgbSound && gb->total_frames >= BROM_FRAMES + 2220)
+    ts->done = true;
+  if (cat == TestBully && gb->total_frames >= BROM_FRAMES + 30) ts->done = true;
+  if (cat == TestGambatte && gb->total_frames >= BROM_FRAMES + 15)
+    ts->done = true;
+  if (cat == TestLittle && gb->total_frames >= BROM_FRAMES + 30)
+    ts->done = true;
+  if (cat == TestMbc3 && gb->total_frames >= BROM_FRAMES + 60) ts->done = true;
+  if (cat == TestScribble && gb->total_frames >= BROM_FRAMES + 10)
+    ts->done = true;
+  if (cat == TestStrike && gb->total_frames >= BROM_FRAMES + 30)
+    ts->done = true;
+  if (cat == TestTurtle && gb->total_frames >= BROM_FRAMES + 30)
+    ts->done = true;
 }
 
 int main(int argc, char* argv[]) {
@@ -153,15 +265,16 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "MUST PROVIDE ROM FILE\n");
     return 1;
   }
-  struct gbemu* gb =
-      gbemu_init(rom_name, boot_rom, test_category, (uint8_t)disassemble_enable,
-                 watch_addrs, watch_count);
+  struct gbemu* gb = gbemu_init(rom_name, boot_rom, (uint8_t)disassemble_enable,
+                                watch_addrs, watch_count);
   if (!gb) return 1;
-  while (!gb->bdone) {
+  TestState ts = test_init(test_category);
+  while (!ts.done) {
     if (gbemu_step_frame(gb) == -1) {
       gbemu_free(gb);
       return 1;
     }
+    handle_test_frame(gb, &ts);
   }
   if (screenshot_path && write_screenshot(gb->ppu, screenshot_path)) return 1;
   gbemu_free(gb);

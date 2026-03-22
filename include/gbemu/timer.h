@@ -11,6 +11,7 @@ struct Timer {
   uint8_t tma;
   uint8_t tac;
   bool tima_overflow_pending;
+  uint8_t sub_instr_cycles;
 };
 
 struct Timer* timer_init(void);

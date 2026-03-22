@@ -21,7 +21,8 @@
 static inline void mem_tick(struct Cpu* cpu, struct Bus* bus,
                             uint8_t pre_cycles) {
   timer_tick(bus->timer, pre_cycles, bus->apu, cpu);
-  cpu->cyc_ext = (uint8_t)(cpu->cyc_ext + pre_cycles);
+  bus->timer->sub_instr_cycles =
+      (uint8_t)(bus->timer->sub_instr_cycles + pre_cycles);
 }
 
 static inline uint8_t get_flag(struct Cpu* cpu, uint8_t flg) {
@@ -572,3 +573,4 @@ void disassemble(struct Cpu* cpu, struct Bus* bus, const uint16_t* watch_addrs,
                  uint8_t watch_count, uint64_t total_cycles);
 
 int do_intr(struct Cpu* cpu, struct Bus* bus, uint8_t intr);
+uint8_t cpu_check_interrupts(struct Cpu* cpu, struct Bus* bus);

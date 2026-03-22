@@ -31,7 +31,7 @@ static int load_rom(struct AppState* state, const char* path, uint8_t dis) {
   fclose(f);
   state->rom_error[0] = '\0';
   gbemu_free(state->gb);
-  state->gb = gbemu_init((char*)path, g_settings.boot_rom, -1, dis, NULL, 0);
+  state->gb = gbemu_init((char*)path, g_settings.boot_rom, dis, NULL, 0);
   if (!state->gb) {
     SDL_snprintf(state->rom_error, sizeof(state->rom_error),
                  "Failed to load ROM: %s", path);
@@ -96,8 +96,6 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     state->pending_rom[0] = '\0';
     load_rom(state, path, 0);
   }
-
-  if (state->gb && state->gb->bdone) return SDL_APP_SUCCESS;
 
   static Uint64 perf_freq = 0;
   static Uint64 next_frame_time = 0;

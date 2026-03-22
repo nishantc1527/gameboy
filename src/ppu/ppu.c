@@ -56,9 +56,13 @@ uint8_t ppu_read(const struct Ppu* ppu, uint16_t addr) {
 
 void ppu_write(struct Ppu* ppu, uint16_t addr, uint8_t val) {
   switch (addr) {
-    case 0xFF40:
+    case 0xFF40: {
+      bool was_on = (ppu->lcdc & 0x80u) != 0;
+      bool now_on = (val & 0x80u) != 0;
+      if (!was_on && now_on) ppu->lcdc_reenable = true;
       ppu->lcdc = val;
       break;
+    }
     case 0xFF41:
       ppu->stat = (ppu->stat & 0x07) | (val & 0x78);
       break;
@@ -122,6 +126,20 @@ void ppu_post_boot(struct Ppu* ppu, bool cgb_mode) {
   ppu->wy = 0x00;
   ppu->wx = 0x00;
   (void)cgb_mode;
+}
+
+void ppu_tick(struct Ppu* ppu, struct Bus* bus, uint8_t cycles) {
+  ppu->scn = (uint16_t)(ppu->scn + cycles);
+  if (ppu->scn >= SCANLINE_LEN) {
+    do_scanline(ppu, bus);
+    ppu->scn -= SCANLINE_LEN;
+  }
+  if (ppu->lcdc_reenable) {
+    ppu->lcdc_reenable = false;
+    ppu->scn = 4;
+    ppu->ly = 0;
+  }
+  update_lcd(ppu, bus);
 }
 
 static const uint16_t scx_mode3_penalty[8] = {0, 0, 0, 0, 4, 4, 4, 8};

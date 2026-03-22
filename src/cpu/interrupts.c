@@ -23,12 +23,12 @@ int do_intr(struct Cpu* cpu, struct Bus* bus, uint8_t intr) {
   return 0;
 }
 
-int check_interrupt(struct Cpu* cpu, struct Bus* bus) {
+uint8_t cpu_check_interrupts(struct Cpu* cpu, struct Bus* bus) {
   (void)bus;
   uint8_t pending = cpu->if_reg & cpu->ie_reg & 0x1Fu;
   for (uint8_t intr = 0; intr < 5; intr++) {
     if (pending & (uint8_t)(1u << intr)) {
-      return do_intr(cpu, bus, intr);
+      return (uint8_t)do_intr(cpu, bus, intr);
     }
   }
   return 0;

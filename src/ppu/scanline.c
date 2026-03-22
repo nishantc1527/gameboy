@@ -192,7 +192,7 @@ void do_scanline(struct Ppu* ppu,
         if (ppu->ly >= SCANLINES) {
           ppu->ly = 0;
           ppu->win_cnt = 0;
-          ppu->frame = 1;
+          ppu->frame_ready = true;
         }
         return;
       }
@@ -351,7 +351,7 @@ void do_scanline(struct Ppu* ppu,
     if (ppu->ly >= SCANLINES) {
       ppu->ly = 0;
       ppu->win_cnt = 0;
-      ppu->frame = 1;
+      ppu->frame_ready = true;
     }
   } else {
     ppu->ly = 0;
@@ -359,7 +359,7 @@ void do_scanline(struct Ppu* ppu,
     ppu->off_scn++;
     if (ppu->off_scn >= SCANLINES) {
       ppu->off_scn = 0;
-      ppu->frame = 1;
+      ppu->frame_ready = true;
     }
   }
 }

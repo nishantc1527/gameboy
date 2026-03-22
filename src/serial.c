@@ -1,6 +1,5 @@
 #include "gbemu/serial.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 
 #include "gbemu/cpu.h"
@@ -27,8 +26,11 @@ void serial_write(struct Serial* s, uint16_t addr, uint8_t val,
     if ((val & 0x81) == 0x81) {
       s->sc = val & 0x7F;
       s->byte_ready = true;
-      fprintf(stderr, "[DBG] serial byte: 0x%02X '%c'\n", s->sb,
-              s->sb >= 0x20 ? s->sb : '?');
+      uint8_t next = (uint8_t)((s->buf_tail + 1) % 0xFF);
+      if (next != s->buf_head) {
+        s->buf[s->buf_tail] = s->sb;
+        s->buf_tail = next;
+      }
       cpu->if_reg |= (uint8_t)(1u << INTR_SERIAL);
     } else {
       s->sc = val;
@@ -37,7 +39,17 @@ void serial_write(struct Serial* s, uint16_t addr, uint8_t val,
   }
 }
 
+bool serial_has_byte(const struct Serial* s) {
+  return s->buf_head != s->buf_tail;
+}
+
 uint8_t serial_take_byte(struct Serial* s) {
-  s->byte_ready = false;
-  return s->sb;
+  if (s->buf_head == s->buf_tail) {
+    s->byte_ready = false;
+    return s->sb;
+  }
+  uint8_t byte = s->buf[s->buf_head];
+  s->buf_head = (uint8_t)((s->buf_head + 1) % 0xFF);
+  if (s->buf_head == s->buf_tail) s->byte_ready = false;
+  return byte;
 }
