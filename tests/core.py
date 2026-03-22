@@ -35,7 +35,7 @@ def check_stream(rom_path, test_category):
     assert status == "PASSED", f"ROM {rom_path} {status}:\n{''.join(full_output)}"
 
 
-def check_screenshot(rom_path, ref_path, test_category):
+def run_with_screenshot(rom_path, ref_path, extra_args):
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
         tmp = f.name
     try:
@@ -43,16 +43,14 @@ def check_screenshot(rom_path, ref_path, test_category):
             "./build/gbemu_headless",
             "-r",
             rom_path,
-            "-t",
-            test_category,
             "--screenshot",
             tmp,
-        ]
+        ] + extra_args
         subprocess.run(cmd, capture_output=True, text=True, timeout=30, check=True)
-        out = Image.open(tmp).convert("L")
-        ref = Image.open(ref_path).convert("L")
-        out_px = list(out.get_flattened_data())
-        ref_px = list(ref.get_flattened_data())
+        out = Image.open(tmp).convert("RGB")
+        ref = Image.open(ref_path).convert("RGB")
+        out_px = list(out.getdata())
+        ref_px = list(ref.getdata())
         diffs = sum(1 for a, b in zip(out_px, ref_px) if a != b)
         assert diffs == 0, (
             f"ROM {rom_path} screenshot differs from {ref_path}: "
@@ -60,3 +58,12 @@ def check_screenshot(rom_path, ref_path, test_category):
         )
     finally:
         os.unlink(tmp)
+
+
+def check_screenshot(rom_path, ref_path, test_category):
+    run_with_screenshot(rom_path, ref_path, ["-t", test_category])
+
+
+def check_screenshot_at_frame(rom_path, ref_path, frame, boot_rom=None):
+    extra = (["-b", boot_rom] if boot_rom else []) + ["--stop-frame", str(frame)]
+    run_with_screenshot(rom_path, ref_path, extra)

@@ -157,6 +157,7 @@ int main(int argc, char* argv[]) {
   char* screenshot_path = NULL;
   int test_category = -1;
   int disassemble_enable = 0;
+  uint64_t stop_frame = (uint64_t)-1;
   uint16_t watch_addrs[8];
   uint8_t watch_count = 0;
   for (int i = 1; i < argc; i++) {
@@ -170,6 +171,7 @@ int main(int argc, char* argv[]) {
       printf("  -b, --boot-rom <file>   Boot ROM file (default: boot.rom)\n");
       printf("  -t, --test <category>   Test category for automated testing\n");
       printf("  -s, --screenshot <file> Save screenshot to PNG file\n");
+      printf("  -f, --stop-frame <N>    Stop after N total frames\n");
       printf("  -d, --disassembly       Print per-instruction disassembly\n");
       printf("  -w, --watch <hex addr>  Watch memory address (up to 8)\n");
       printf("      --version           Print version and exit\n");
@@ -250,6 +252,9 @@ int main(int argc, char* argv[]) {
     else if ((!strcmp(argv[i], "-s") || !strcmp(argv[i], "--screenshot")) &&
              i + 1 < argc)
       screenshot_path = argv[++i];
+    else if ((!strcmp(argv[i], "-f") || !strcmp(argv[i], "--stop-frame")) &&
+             i + 1 < argc)
+      stop_frame = (uint64_t)strtoull(argv[++i], NULL, 10);
     else if ((!strcmp(argv[i], "-w") || !strcmp(argv[i], "--watch")) &&
              i + 1 < argc) {
       if (watch_count < 8)
@@ -275,6 +280,7 @@ int main(int argc, char* argv[]) {
       return 1;
     }
     handle_test_frame(gb, &ts);
+    if (gb->total_frames >= stop_frame) ts.done = true;
   }
   if (screenshot_path && write_screenshot(gb->ppu, screenshot_path)) return 1;
   gbemu_free(gb);

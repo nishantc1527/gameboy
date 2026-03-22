@@ -59,6 +59,8 @@ HEADLESS_OBJ  := $(HEADLESS_SRC:%.c=$(BUILD_DIR)/%.o)
 ALL_OBJS      := $(CORE_OBJS) $(VENDOR_OBJS) $(SDL_OBJS) $(HEADLESS_OBJ)
 DEPS          := $(ALL_OBJS:.o=.d)
 
+ALL_REFS := $(shell python3 scripts/gen_boot_refs.py --list)
+
 .PHONY: all gbemu gbemu_headless clean format test verify compile_commands
 
 all: gbemu gbemu_headless $(PYTHON)
@@ -104,7 +106,10 @@ $(PYTHON):
 	$(PIP) install --upgrade pip
 	$(PYTHON) -m pip install -r $(REQS)
 
-test: $(PYTHON) $(BUILD_DIR)/gbemu_headless
+$(ALL_REFS) &: $(PYTHON) $(BUILD_DIR)/gbemu_headless
+	$(PYTHON) scripts/gen_boot_refs.py
+
+test: $(PYTHON) $(BUILD_DIR)/gbemu_headless $(ALL_REFS)
 	$(PYTHON) -m pytest
 
 verify: clean $(RUST_HDR) $(PYTHON)
