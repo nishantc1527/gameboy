@@ -3,14 +3,14 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-struct Cpu* init_cpu(void) {
+struct Cpu* cpu_init(void) {
   struct Cpu* cpu = calloc(1, sizeof(struct Cpu));
   cpu->PC = 0x0000;
   cpu->cgb_mode = 0;
   return cpu;
 }
 
-void post_boot_cpu(struct Cpu* cpu, int cgb_mode, uint8_t header_checksum) {
+void cpu_post_boot(struct Cpu* cpu, int cgb_mode, uint8_t header_checksum) {
   if (cgb_mode) {
     cpu->A = 0x11;
     cpu->F = 0x80;

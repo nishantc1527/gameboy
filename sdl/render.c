@@ -6,7 +6,7 @@
 #include "gbemu/ppu.h"
 #include "gbemu/sdl.h"
 #include "gbemu/settings.h"
-#include "internal.h"
+#include "sdl_private.h"
 
 uint32_t buf[SCRN_HEIGHT][SCRN_WIDTH];
 

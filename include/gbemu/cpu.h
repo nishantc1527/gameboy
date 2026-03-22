@@ -16,8 +16,8 @@ struct Cpu {
 
 struct Bus;
 
-struct Cpu* init_cpu(void);
-void post_boot_cpu(struct Cpu* cpu, int cgb_mode, uint8_t header_checksum);
+struct Cpu* cpu_init(void);
+void cpu_post_boot(struct Cpu* cpu, int cgb_mode, uint8_t header_checksum);
 uint8_t cpu_step(struct Cpu* cpu, struct Bus* bus);
 
 uint8_t cpu_check_interrupts(struct Cpu* cpu, struct Bus* bus);

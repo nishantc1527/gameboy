@@ -41,7 +41,10 @@ static uint8_t io_read(struct Bus* bus, uint16_t addr) {
   if (addr >= 0xFF40 && addr <= 0xFF4B) return ppu_read(bus->ppu, addr);
   if (addr >= 0xFF51 && addr <= 0xFF55) return dma_hdma_read(bus->dma, addr);
   if (addr >= 0xFF68 && addr <= 0xFF6B) return ppu_read(bus->ppu, addr);
-  return mmu_r_mem(bus->mmu, addr);
+  if (addr == 0xFF4D) return mmu_read_cgb_speed(bus->mmu);
+  if (addr == 0xFF4F) return mmu_get_vram_bank(bus->mmu);
+  if (addr == 0xFF70) return mmu_get_wram_bank(bus->mmu);
+  return 0xFF;
 }
 
 static void io_write(struct Bus* bus, uint16_t addr, uint8_t val) {
@@ -81,7 +84,22 @@ static void io_write(struct Bus* bus, uint16_t addr, uint8_t val) {
     ppu_write(bus->ppu, addr, val);
     return;
   }
-  mmu_w_mem(bus->mmu, addr, val);
+  if (addr == 0xFF4D) {
+    mmu_write_cgb_speed(bus->mmu, val);
+    return;
+  }
+  if (addr == 0xFF4F) {
+    mmu_set_vram_bank(bus->mmu, val);
+    return;
+  }
+  if (addr == 0xFF50) {
+    mmu_disable_boot(bus->mmu);
+    return;
+  }
+  if (addr == 0xFF70) {
+    mmu_set_wram_bank(bus->mmu, val);
+    return;
+  }
 }
 
 uint8_t bus_read(struct Bus* bus, uint16_t addr) {

@@ -1,9 +1,9 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "cpu_private.h"
 #include "gbemu/bus.h"
 #include "gbemu/cpu.h"
-#include "internal.h"
 
 static const char* io_reg_name(uint8_t n) {
   switch (n) {

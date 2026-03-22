@@ -26,37 +26,13 @@ extern "C" fn mmu_init(
 }
 
 #[unsafe(no_mangle)]
-extern "C" fn mmu_r_mem(mmu: *const Mmu, loc: u16) -> u8 {
-    unsafe { (*mmu).r_mem(loc) }
+extern "C" fn mmu_read_extern_ram(mmu: *const Mmu, loc: u16) -> u8 {
+    unsafe { (*mmu).read_extern_ram(loc) }
 }
 
 #[unsafe(no_mangle)]
-extern "C" fn mmu_r_mem_raw(mmu: *const Mmu, loc: u16) -> u8 {
-    unsafe { (*mmu).r_mem_raw(loc) }
-}
-
-#[unsafe(no_mangle)]
-extern "C" fn mmu_r_ram_raw(mmu: *const Mmu, loc: u16) -> u8 {
-    unsafe { (*mmu).r_ram_raw(loc) }
-}
-
-#[unsafe(no_mangle)]
-extern "C" fn mmu_w_mem(mmu: *mut Mmu, loc: u16, val: u8) {
-    unsafe { (*mmu).w_mem(loc, val) }
-}
-
-#[unsafe(no_mangle)]
-extern "C" fn mmu_w_mem_raw(mmu: *mut Mmu, loc: u16, val: u8) {
-    unsafe {
-        (*mmu).w_mem_raw(loc, val);
-    }
-}
-
-#[unsafe(no_mangle)]
-extern "C" fn mmu_w_ram_raw(mmu: *mut Mmu, loc: u16, val: u8) {
-    unsafe {
-        (*mmu).w_ram_raw(loc, val);
-    }
+extern "C" fn mmu_write_extern_ram(mmu: *mut Mmu, loc: u16, val: u8) {
+    unsafe { (*mmu).write_extern_ram(loc, val) }
 }
 
 #[unsafe(no_mangle)]
@@ -99,28 +75,8 @@ extern "C" fn mmu_boot_skipped(mmu: *const Mmu) -> bool {
 }
 
 #[unsafe(no_mangle)]
-extern "C" fn mmu_take_div_reset(mmu: *mut Mmu) -> bool {
-    unsafe { (*mmu).take_div_reset() }
-}
-
-#[unsafe(no_mangle)]
-extern "C" fn mmu_get_vram_bank1_byte(mmu: *const Mmu, addr: u16) -> u8 {
-    unsafe { (*mmu).get_vram_bank1_byte(addr) }
-}
-
-#[unsafe(no_mangle)]
-extern "C" fn mmu_set_joypad(mmu: *mut Mmu, btns: u8, dirs: u8) {
-    unsafe { (*mmu).set_joypad(btns, dirs) }
-}
-
-#[unsafe(no_mangle)]
-extern "C" fn mmu_take_serial_byte(mmu: *mut Mmu) -> i32 {
-    unsafe {
-        match (*mmu).take_serial_byte() {
-            Some(b) => b as i32,
-            None => -1,
-        }
-    }
+extern "C" fn mmu_read_vram_bank1(mmu: *const Mmu, addr: u16) -> u8 {
+    unsafe { (*mmu).read_vram_bank1(addr) }
 }
 
 #[unsafe(no_mangle)]
@@ -212,13 +168,13 @@ extern "C" fn mmu_disable_boot(mmu: *mut Mmu) {
 }
 
 #[unsafe(no_mangle)]
-extern "C" fn mmu_read_io(mmu: *const Mmu, offset: u8) -> u8 {
-    unsafe { (*mmu).read_io(offset) }
+extern "C" fn mmu_read_cgb_speed(mmu: *const Mmu) -> u8 {
+    unsafe { (*mmu).read_cgb_speed() }
 }
 
 #[unsafe(no_mangle)]
-extern "C" fn mmu_write_io(mmu: *mut Mmu, offset: u8, val: u8) {
-    unsafe { (*mmu).write_io(offset, val) }
+extern "C" fn mmu_write_cgb_speed(mmu: *mut Mmu, val: u8) {
+    unsafe { (*mmu).write_cgb_speed(val) }
 }
 
 #[unsafe(no_mangle)]

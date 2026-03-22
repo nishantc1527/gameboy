@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 
-#include "gbemu/mmu.h"
+#include "gbemu/cpu.h"
 
 struct Joypad* joypad_init(void) {
   struct Joypad* j = calloc(1, sizeof(struct Joypad));
@@ -32,7 +32,7 @@ uint8_t joypad_read(const struct Joypad* j) {
 void joypad_write(struct Joypad* j, uint8_t val) { j->select = val; }
 
 void joypad_set_button(struct Joypad* j, int btn, uint8_t pressed,
-                       struct Mmu* mmu) {
+                       struct Cpu* cpu) {
   uint8_t was_pressed = j->buttons[btn];
   j->buttons[btn] = pressed;
   if (pressed && !was_pressed) {
@@ -43,10 +43,6 @@ void joypad_set_button(struct Joypad* j, int btn, uint8_t pressed,
     if ((j->select & 0x10) == 0 && (btn == BTN_RIGHT || btn == BTN_LEFT ||
                                     btn == BTN_UP || btn == BTN_DOWN))
       relevant = true;
-    if (relevant) {
-      uint8_t ifval = mmu_read_io(mmu, 0x0F);
-      ifval |= 0x10u;  // INTR_JOYPAD = bit 4
-      mmu_write_io(mmu, 0x0F, ifval);
-    }
+    if (relevant) cpu->if_reg |= 0x10u;
   }
 }

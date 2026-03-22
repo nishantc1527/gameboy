@@ -4,7 +4,7 @@
 
 #define GBEMU_VERSION "1.0.0"
 
-struct gbemu {
+struct GBemu {
   struct Apu* apu;
   struct Cpu* cpu;
   struct Mmu* mmu;
@@ -25,9 +25,9 @@ struct gbemu {
   uint64_t total_frames;
 };
 
-struct gbemu* gbemu_init(char* rom_name, const char* boot_rom,
+struct GBemu* gbemu_init(char* rom_name, const char* boot_rom,
                          uint8_t disassemble_enable,
                          const uint16_t* watch_addrs, uint8_t watch_count);
-int gbemu_step_frame(struct gbemu* gb);
-void gbemu_free(struct gbemu* gb);
-void gbemu_reset(struct gbemu* gb);
+int gbemu_step_frame(struct GBemu* gb);
+void gbemu_free(struct GBemu* gb);
+void gbemu_reset(struct GBemu* gb);

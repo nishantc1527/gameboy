@@ -4,7 +4,7 @@
 #include "gbemu/mmu.h"
 #include "gbemu/ppu.h"
 #include "gbemu/util.h"
-#include "internal.h"
+#include "ppu_private.h"
 
 const uint16_t SCANLINE_LEN = 456;
 const uint16_t SCANLINES = 154;
@@ -34,8 +34,8 @@ static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
       uint16_t tile_map_addr =
           (uint16_t)((uint16_t)tiley * 32 + (uint16_t)tilex);
       tile_map_addr = (uint16_t)(tile_map_addr + (mp_area ? 0x9C00 : 0x9800));
-      uint8_t tile_idx_raw = mmu_r_mem_raw(bus->mmu, tile_map_addr);
-      uint8_t attr = mmu_get_vram_bank1_byte(bus->mmu, tile_map_addr);
+      uint8_t tile_idx_raw = mmu_read_vram(bus->mmu, tile_map_addr);
+      uint8_t attr = mmu_read_vram_bank1(bus->mmu, tile_map_addr);
       uint8_t pal_num = attr & 7;
       uint8_t vram_bank = (attr >> 3) & 1;
       uint8_t xflip = (attr >> 5) & 1;
@@ -49,11 +49,11 @@ static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
       idx = (uint16_t)(idx + (dat_area ? 0x8000 : 0x8800));
       uint8_t ls, ms;
       if (vram_bank == 0) {
-        ls = mmu_r_mem_raw(bus->mmu, (uint16_t)(idx + ty));
-        ms = mmu_r_mem_raw(bus->mmu, (uint16_t)(idx + ty + 1));
+        ls = mmu_read_vram(bus->mmu, (uint16_t)(idx + ty));
+        ms = mmu_read_vram(bus->mmu, (uint16_t)(idx + ty + 1));
       } else {
-        ls = mmu_get_vram_bank1_byte(bus->mmu, (uint16_t)(idx + ty));
-        ms = mmu_get_vram_bank1_byte(bus->mmu, (uint16_t)(idx + ty + 1));
+        ls = mmu_read_vram_bank1(bus->mmu, (uint16_t)(idx + ty));
+        ms = mmu_read_vram_bank1(bus->mmu, (uint16_t)(idx + ty + 1));
       }
       uint8_t bit_pos = xflip ? offx : (uint8_t)(7 - offx);
       int clr = (get_bit(ms, bit_pos) << 1) | get_bit(ls, bit_pos);
@@ -80,8 +80,8 @@ static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
               (uint16_t)((uint16_t)tiley * 32 + (uint16_t)tilex);
           tile_map_addr =
               (uint16_t)(tile_map_addr + (win_mp ? 0x9C00 : 0x9800));
-          uint8_t tile_idx_raw = mmu_r_mem_raw(bus->mmu, tile_map_addr);
-          uint8_t attr = mmu_get_vram_bank1_byte(bus->mmu, tile_map_addr);
+          uint8_t tile_idx_raw = mmu_read_vram(bus->mmu, tile_map_addr);
+          uint8_t attr = mmu_read_vram_bank1(bus->mmu, tile_map_addr);
           uint8_t pal_num = attr & 7;
           uint8_t vram_bank = (attr >> 3) & 1;
           uint8_t xflip = (attr >> 5) & 1;
@@ -95,11 +95,11 @@ static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
           idx = (uint16_t)(idx + (dat_area ? 0x8000 : 0x8800));
           uint8_t ls, ms;
           if (vram_bank == 0) {
-            ls = mmu_r_mem_raw(bus->mmu, (uint16_t)(idx + ty));
-            ms = mmu_r_mem_raw(bus->mmu, (uint16_t)(idx + ty + 1));
+            ls = mmu_read_vram(bus->mmu, (uint16_t)(idx + ty));
+            ms = mmu_read_vram(bus->mmu, (uint16_t)(idx + ty + 1));
           } else {
-            ls = mmu_get_vram_bank1_byte(bus->mmu, (uint16_t)(idx + ty));
-            ms = mmu_get_vram_bank1_byte(bus->mmu, (uint16_t)(idx + ty + 1));
+            ls = mmu_read_vram_bank1(bus->mmu, (uint16_t)(idx + ty));
+            ms = mmu_read_vram_bank1(bus->mmu, (uint16_t)(idx + ty + 1));
           }
           uint8_t bit_pos = xflip ? offx : (uint8_t)(7 - offx);
           int clr = (get_bit(ms, bit_pos) << 1) | get_bit(ls, bit_pos);
@@ -152,11 +152,11 @@ static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
       line = (uint8_t)(line << 1);
       uint8_t ls, ms;
       if (vram_bank == 0) {
-        ls = mmu_r_mem_raw(bus->mmu, (uint16_t)(idx + line));
-        ms = mmu_r_mem_raw(bus->mmu, (uint16_t)(idx + line + 1));
+        ls = mmu_read_vram(bus->mmu, (uint16_t)(idx + line));
+        ms = mmu_read_vram(bus->mmu, (uint16_t)(idx + line + 1));
       } else {
-        ls = mmu_get_vram_bank1_byte(bus->mmu, (uint16_t)(idx + line));
-        ms = mmu_get_vram_bank1_byte(bus->mmu, (uint16_t)(idx + line + 1));
+        ls = mmu_read_vram_bank1(bus->mmu, (uint16_t)(idx + line));
+        ms = mmu_read_vram_bank1(bus->mmu, (uint16_t)(idx + line + 1));
       }
       for (int x0 = x; x0 < x + 8; x0++) {
         if (x0 < 0 || x0 >= SCRN_WIDTH) continue;

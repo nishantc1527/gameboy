@@ -7,11 +7,12 @@
 #include "gbemu/cpu.h"
 #include "gbemu/dma.h"
 #include "gbemu/util.h"
+#include "ppu_private.h"
 
 #define INTR_VBLANK 0
 #define INTR_LCD 1
 
-struct Ppu* init_ppu(void) {
+struct Ppu* ppu_init(void) {
   struct Ppu* ppu = calloc(1, sizeof(struct Ppu));
   return ppu;
 }

@@ -56,7 +56,7 @@ static TestState test_init(int category) {
   return ts;
 }
 
-static void handle_test_frame(struct gbemu* gb, TestState* ts) {
+static void handle_test_frame(struct GBemu* gb, TestState* ts) {
   uint64_t f = gb->total_frames - BROM_FRAMES;
   int cat = ts->category;
   if (cat == TestBlarggCpu || cat == TestBlarggAudio ||
@@ -265,7 +265,7 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "MUST PROVIDE ROM FILE\n");
     return 1;
   }
-  struct gbemu* gb = gbemu_init(rom_name, boot_rom, (uint8_t)disassemble_enable,
+  struct GBemu* gb = gbemu_init(rom_name, boot_rom, (uint8_t)disassemble_enable,
                                 watch_addrs, watch_count);
   if (!gb) return 1;
   TestState ts = test_init(test_category);

@@ -1,10 +1,10 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "cpu_private.h"
 #include "gbemu/bus.h"
 #include "gbemu/cpu.h"
 #include "gbemu/cpu_ops.h"
-#include "internal.h"
 
 static uint8_t op_xx(struct Cpu* cpu, struct Bus* bus) {
   (void)cpu;

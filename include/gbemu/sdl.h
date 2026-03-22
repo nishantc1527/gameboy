@@ -4,7 +4,7 @@
 
 struct Apu;
 struct Ppu;
-struct gbemu;
+struct GBemu;
 
 enum {
   CTRL_A = 0,
@@ -34,7 +34,7 @@ extern SDL_Renderer* rnd;
 extern struct nk_context* ctx;
 
 struct AppState {
-  struct gbemu* gb;
+  struct GBemu* gb;
   char pending_rom[512];
   int dialog_open;
   char rom_error[512];

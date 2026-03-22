@@ -40,11 +40,8 @@ struct Ppu {
   uint8_t obj_pal_ram[64];
 };
 
-struct Ppu* init_ppu(void);
+struct Ppu* ppu_init(void);
 uint8_t ppu_read(const struct Ppu* ppu, uint16_t addr);
 void ppu_write(struct Ppu* ppu, uint16_t addr, uint8_t val);
 void ppu_post_boot(struct Ppu* ppu, uint8_t cgb_mode);
 void ppu_tick(struct Ppu* ppu, struct Bus* bus, uint8_t cycles);
-
-void update_lcd(struct Ppu* ppu, struct Bus* bus);
-void do_scanline(struct Ppu* ppu, struct Bus* bus);

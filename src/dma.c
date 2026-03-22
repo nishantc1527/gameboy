@@ -5,6 +5,14 @@
 #include "gbemu/bus.h"
 #include "gbemu/mmu.h"
 
+static uint8_t dma_bus_read(struct Bus* bus, uint16_t addr) {
+  if (addr < 0x8000) return mmu_read_rom(bus->mmu, addr);
+  if (addr < 0xA000) return mmu_read_vram(bus->mmu, addr);
+  if (addr < 0xC000) return mmu_read_eram(bus->mmu, addr);
+  if (addr < 0xE000) return mmu_read_wram(bus->mmu, addr);
+  return 0xFF;
+}
+
 struct Dma* dma_init(void) {
   struct Dma* d = calloc(1, sizeof(struct Dma));
   d->hdma1 = 0xFF;
@@ -28,7 +36,7 @@ void dma_trigger(struct Dma* d, uint8_t val) {
 void dma_tick(struct Dma* d, struct Bus* bus, uint8_t cycles) {
   if (!d->active) return;
   for (uint8_t i = 0; i < cycles && d->pos < 160; i++) {
-    uint8_t byte = mmu_r_mem(bus->mmu, (uint16_t)(d->src + d->pos));
+    uint8_t byte = dma_bus_read(bus, (uint16_t)(d->src + d->pos));
     mmu_write_oam(bus->mmu, d->pos, byte);
     d->pos++;
   }
@@ -65,7 +73,7 @@ void dma_hdma_write(struct Dma* d, struct Bus* bus, uint16_t addr,
                        (uint16_t)(d->hdma4 & 0xF0);
         uint16_t blocks = (uint16_t)(val & 0x7Fu) + 1u;
         for (uint16_t i = 0; i < blocks * 0x10u; i++) {
-          uint8_t byte = mmu_r_mem(bus->mmu, (uint16_t)(src + i));
+          uint8_t byte = dma_bus_read(bus, (uint16_t)(src + i));
           mmu_write_vram(bus->mmu, (uint16_t)(dst + i), byte);
         }
         d->hdma5 = 0xFF;
@@ -103,7 +111,7 @@ uint8_t dma_hdma_read(const struct Dma* d, uint16_t addr) {
 void dma_hdma_block(struct Dma* d, struct Bus* bus) {
   if (!d->hdma_active) return;
   for (uint16_t i = 0; i < 0x10u; i++) {
-    uint8_t byte = mmu_r_mem(bus->mmu, (uint16_t)(d->hdma_src + i));
+    uint8_t byte = dma_bus_read(bus, (uint16_t)(d->hdma_src + i));
     mmu_write_vram(bus->mmu, (uint16_t)(d->hdma_dst + i), byte);
   }
   d->hdma_src = (uint16_t)(d->hdma_src + 0x10u);

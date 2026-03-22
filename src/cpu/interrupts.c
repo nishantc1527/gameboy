@@ -1,7 +1,7 @@
+#include "cpu_private.h"
 #include "gbemu/bus.h"
 #include "gbemu/cpu.h"
 #include "gbemu/util.h"
-#include "internal.h"
 
 static const uint16_t INTR_VECTORS[5] = {
     0x0040,  // VBlank
