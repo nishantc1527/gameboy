@@ -21,14 +21,14 @@ struct Bus;
 struct Ppu {
   uint8_t dsp[SCRN_HEIGHT][SCRN_WIDTH];
   uint16_t cgb_dsp[SCRN_HEIGHT][SCRN_WIDTH];
-  uint16_t scn;
+  uint16_t line_cycles;
   uint8_t frame_ready;
-  uint8_t lcdc_reenable;
+  uint8_t lcd_turning_on;
   uint8_t stat_irq_line;
-  uint8_t off_scn;
+  uint8_t off_line_count;
   uint8_t cgb_mode;
   uint8_t cgb_compat;
-  uint8_t win_cnt;
+  uint8_t window_line;
   uint8_t wy_triggered;
   uint8_t lcdc;
   uint8_t stat;

@@ -69,9 +69,9 @@
 struct Bus;
 
 // Writes to pixel buffer
-void w_pxl(struct Ppu* ppu, int y, int x, uint8_t clr);
+void write_pixel(struct Ppu* ppu, int y, int x, uint8_t clr);
 
-uint8_t gt_clr(uint8_t pal, int val);
+uint8_t palette_color(uint8_t pal, int color_idx);
 
-void update_lcd(struct Ppu* ppu, struct Bus* bus);
-void do_scanline(struct Ppu* ppu, struct Bus* bus);
+void ppu_update_mode(struct Ppu* ppu, struct Bus* bus);
+void ppu_render_line(struct Ppu* ppu, struct Bus* bus);

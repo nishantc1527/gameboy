@@ -67,8 +67,8 @@ static void handle_test_frame(struct GBemu* gb, TestState* ts) {
     while (serial_has_byte(gb->serial))
       printf("%c", (char)serial_take_byte(gb->serial));
   }
-  if (gb->cpu->ldbb_fired) {
-    gb->cpu->ldbb_fired = false;
+  if (gb->cpu->ld_b_b_fired) {
+    gb->cpu->ld_b_b_fired = false;
     if (cat == TestAge || cat == TestMooneye || cat == TestSame) {
       if (gb->cpu->B == 3 && gb->cpu->C == 5 && gb->cpu->D == 8 &&
           gb->cpu->E == 13 && gb->cpu->H == 21 && gb->cpu->L == 34)

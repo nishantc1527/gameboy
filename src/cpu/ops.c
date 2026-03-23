@@ -20,12 +20,12 @@ static uint8_t op_00(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x01 LD BC,d16 */
 static uint8_t op_01(struct Cpu* cpu, struct Bus* bus) {
-  st_BC(cpu, rd16(cpu, bus));
+  st_BC(cpu, fetch_word(cpu, bus));
   return 12;
 }
 /* 0x02 LD (BC),A */
 static uint8_t op_02(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   bus_write(bus, gt_BC(cpu), cpu->A);
   return 8;
 }
@@ -47,7 +47,7 @@ static uint8_t op_05(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x06 LD B,d8 */
 static uint8_t op_06(struct Cpu* cpu, struct Bus* bus) {
-  cpu->B = rd8(cpu, bus);
+  cpu->B = fetch_byte(cpu, bus);
   return 8;
 }
 /* 0x07 RLCA */
@@ -59,7 +59,7 @@ static uint8_t op_07(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x08 LD (a16),SP */
 static uint8_t op_08(struct Cpu* cpu, struct Bus* bus) {
-  uint16_t addr = rd16(cpu, bus);
+  uint16_t addr = fetch_word(cpu, bus);
   bus_write(bus, addr, (uint8_t)(cpu->SP & 0xFF));
   bus_write(bus, (uint16_t)(addr + 1), (uint8_t)((cpu->SP >> 8) & 0xFF));
   return 20;
@@ -67,15 +67,15 @@ static uint8_t op_08(struct Cpu* cpu, struct Bus* bus) {
 /* 0x09 ADD HL,BC */
 static uint8_t op_09(struct Cpu* cpu, struct Bus* bus) {
   (void)bus;
-  st_h_add16(cpu, gt_HL(cpu), gt_BC(cpu));
-  st_c_add16(cpu, gt_HL(cpu), gt_BC(cpu));
+  set_half_carry_add16(cpu, gt_HL(cpu), gt_BC(cpu));
+  set_carry_add16(cpu, gt_HL(cpu), gt_BC(cpu));
   st_HL(cpu, gt_HL(cpu) + gt_BC(cpu));
   clear_flag(cpu, FLG_N);
   return 8;
 }
 /* 0x0A LD A,(BC) */
 static uint8_t op_0A(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   cpu->A = bus_read(bus, gt_BC(cpu));
   return 8;
 }
@@ -97,7 +97,7 @@ static uint8_t op_0D(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x0E LD C,d8 */
 static uint8_t op_0E(struct Cpu* cpu, struct Bus* bus) {
-  cpu->C = rd8(cpu, bus);
+  cpu->C = fetch_byte(cpu, bus);
   return 8;
 }
 /* 0x0F RRCA */
@@ -115,12 +115,12 @@ static uint8_t op_10(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x11 LD DE,d16 */
 static uint8_t op_11(struct Cpu* cpu, struct Bus* bus) {
-  st_DE(cpu, rd16(cpu, bus));
+  st_DE(cpu, fetch_word(cpu, bus));
   return 12;
 }
 /* 0x12 LD (DE),A */
 static uint8_t op_12(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   bus_write(bus, gt_DE(cpu), cpu->A);
   return 8;
 }
@@ -142,7 +142,7 @@ static uint8_t op_15(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x16 LD D,d8 */
 static uint8_t op_16(struct Cpu* cpu, struct Bus* bus) {
-  cpu->D = rd8(cpu, bus);
+  cpu->D = fetch_byte(cpu, bus);
   return 8;
 }
 /* 0x17 RLA */
@@ -154,22 +154,22 @@ static uint8_t op_17(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x18 JR r8 */
 static uint8_t op_18(struct Cpu* cpu, struct Bus* bus) {
-  int8_t offset = (int8_t)rd8(cpu, bus);
+  int8_t offset = (int8_t)fetch_byte(cpu, bus);
   cpu->PC = (uint16_t)(cpu->PC + offset);
   return 12;
 }
 /* 0x19 ADD HL,DE */
 static uint8_t op_19(struct Cpu* cpu, struct Bus* bus) {
   (void)bus;
-  st_h_add16(cpu, gt_HL(cpu), gt_DE(cpu));
-  st_c_add16(cpu, gt_HL(cpu), gt_DE(cpu));
+  set_half_carry_add16(cpu, gt_HL(cpu), gt_DE(cpu));
+  set_carry_add16(cpu, gt_HL(cpu), gt_DE(cpu));
   st_HL(cpu, gt_HL(cpu) + gt_DE(cpu));
   clear_flag(cpu, FLG_N);
   return 8;
 }
 /* 0x1A LD A,(DE) */
 static uint8_t op_1A(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   cpu->A = bus_read(bus, gt_DE(cpu));
   return 8;
 }
@@ -191,7 +191,7 @@ static uint8_t op_1D(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x1E LD E,d8 */
 static uint8_t op_1E(struct Cpu* cpu, struct Bus* bus) {
-  cpu->E = rd8(cpu, bus);
+  cpu->E = fetch_byte(cpu, bus);
   return 8;
 }
 /* 0x1F RRA */
@@ -207,12 +207,12 @@ static uint8_t op_20(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x21 LD HL,d16 */
 static uint8_t op_21(struct Cpu* cpu, struct Bus* bus) {
-  st_HL(cpu, rd16(cpu, bus));
+  st_HL(cpu, fetch_word(cpu, bus));
   return 12;
 }
 /* 0x22 LD (HL+),A */
 static uint8_t op_22(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   bus_write(bus, gt_HL(cpu), cpu->A);
   st_HL(cpu, gt_HL(cpu) + 1);
   return 8;
@@ -235,7 +235,7 @@ static uint8_t op_25(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x26 LD H,d8 */
 static uint8_t op_26(struct Cpu* cpu, struct Bus* bus) {
-  cpu->H = rd8(cpu, bus);
+  cpu->H = fetch_byte(cpu, bus);
   return 8;
 }
 /* 0x27 DAA */
@@ -253,7 +253,7 @@ static uint8_t op_27(struct Cpu* cpu, struct Bus* bus) {
     if (get_flag(cpu, FLG_C)) cpu->A -= 0x60;
     if (get_flag(cpu, FLG_H)) cpu->A -= 0x06;
   }
-  st_z(cpu, cpu->A);
+  set_zero_flag(cpu, cpu->A);
   clear_flag(cpu, FLG_H);
   return 4;
 }
@@ -264,15 +264,15 @@ static uint8_t op_28(struct Cpu* cpu, struct Bus* bus) {
 /* 0x29 ADD HL,HL */
 static uint8_t op_29(struct Cpu* cpu, struct Bus* bus) {
   (void)bus;
-  st_h_add16(cpu, gt_HL(cpu), gt_HL(cpu));
-  st_c_add16(cpu, gt_HL(cpu), gt_HL(cpu));
+  set_half_carry_add16(cpu, gt_HL(cpu), gt_HL(cpu));
+  set_carry_add16(cpu, gt_HL(cpu), gt_HL(cpu));
   st_HL(cpu, gt_HL(cpu) + gt_HL(cpu));
   clear_flag(cpu, FLG_N);
   return 8;
 }
 /* 0x2A LD A,(HL+) */
 static uint8_t op_2A(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   cpu->A = bus_read(bus, gt_HL(cpu));
   st_HL(cpu, gt_HL(cpu) + 1);
   return 8;
@@ -295,7 +295,7 @@ static uint8_t op_2D(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x2E LD L,d8 */
 static uint8_t op_2E(struct Cpu* cpu, struct Bus* bus) {
-  cpu->L = rd8(cpu, bus);
+  cpu->L = fetch_byte(cpu, bus);
   return 8;
 }
 /* 0x2F CPL */
@@ -309,12 +309,12 @@ static uint8_t op_30(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x31 LD SP,d16 */
 static uint8_t op_31(struct Cpu* cpu, struct Bus* bus) {
-  cpu->SP = rd16(cpu, bus);
+  cpu->SP = fetch_word(cpu, bus);
   return 12;
 }
 /* 0x32 LD (HL-),A */
 static uint8_t op_32(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   bus_write(bus, gt_HL(cpu), cpu->A);
   st_HL(cpu, gt_HL(cpu) - 1);
   return 8;
@@ -335,8 +335,8 @@ static uint8_t op_35(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x36 LD (HL),d8 */
 static uint8_t op_36(struct Cpu* cpu, struct Bus* bus) {
-  uint8_t imm = rd8(cpu, bus);
-  mem_tick(cpu, bus, 8);
+  uint8_t imm = fetch_byte(cpu, bus);
+  cpu_mem_tick(cpu, bus, 8);
   bus_write(bus, gt_HL(cpu), imm);
   return 12;
 }
@@ -355,15 +355,15 @@ static uint8_t op_38(struct Cpu* cpu, struct Bus* bus) {
 /* 0x39 ADD HL,SP */
 static uint8_t op_39(struct Cpu* cpu, struct Bus* bus) {
   (void)bus;
-  st_h_add16(cpu, gt_HL(cpu), cpu->SP);
-  st_c_add16(cpu, gt_HL(cpu), cpu->SP);
+  set_half_carry_add16(cpu, gt_HL(cpu), cpu->SP);
+  set_carry_add16(cpu, gt_HL(cpu), cpu->SP);
   st_HL(cpu, gt_HL(cpu) + cpu->SP);
   clear_flag(cpu, FLG_N);
   return 8;
 }
 /* 0x3A LD A,(HL-) */
 static uint8_t op_3A(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   cpu->A = bus_read(bus, gt_HL(cpu));
   st_HL(cpu, gt_HL(cpu) - 1);
   return 8;
@@ -386,7 +386,7 @@ static uint8_t op_3D(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x3E LD A,d8 */
 static uint8_t op_3E(struct Cpu* cpu, struct Bus* bus) {
-  cpu->A = rd8(cpu, bus);
+  cpu->A = fetch_byte(cpu, bus);
   return 8;
 }
 /* 0x3F CCF */
@@ -400,11 +400,11 @@ static uint8_t op_3F(struct Cpu* cpu, struct Bus* bus) {
     set_flag(cpu, FLG_C);
   return 4;
 }
-/* 0x40 LD B,B (+ ldbb_fired) */
+/* 0x40 LD B,B (+ ld_b_b_fired) */
 static uint8_t op_40(struct Cpu* cpu, struct Bus* bus) {
   (void)bus;
   cpu->B = cpu->B;  // NOLINT
-  cpu->ldbb_fired = true;
+  cpu->ld_b_b_fired = true;
   return 4;
 }
 /* 0x41 LD B,C */
@@ -439,7 +439,7 @@ static uint8_t op_45(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x46 LD B,(HL) */
 static uint8_t op_46(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   cpu->B = bus_read(bus, gt_HL(cpu));
   return 8;
 }
@@ -487,7 +487,7 @@ static uint8_t op_4D(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x4E LD C,(HL) */
 static uint8_t op_4E(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   cpu->C = bus_read(bus, gt_HL(cpu));
   return 8;
 }
@@ -535,7 +535,7 @@ static uint8_t op_55(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x56 LD D,(HL) */
 static uint8_t op_56(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   cpu->D = bus_read(bus, gt_HL(cpu));
   return 8;
 }
@@ -583,7 +583,7 @@ static uint8_t op_5D(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x5E LD E,(HL) */
 static uint8_t op_5E(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   cpu->E = bus_read(bus, gt_HL(cpu));
   return 8;
 }
@@ -631,7 +631,7 @@ static uint8_t op_65(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x66 LD H,(HL) */
 static uint8_t op_66(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   cpu->H = bus_read(bus, gt_HL(cpu));
   return 8;
 }
@@ -679,7 +679,7 @@ static uint8_t op_6D(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x6E LD L,(HL) */
 static uint8_t op_6E(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   cpu->L = bus_read(bus, gt_HL(cpu));
   return 8;
 }
@@ -691,37 +691,37 @@ static uint8_t op_6F(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x70 LD (HL),B */
 static uint8_t op_70(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   bus_write(bus, gt_HL(cpu), cpu->B);
   return 8;
 }
 /* 0x71 LD (HL),C */
 static uint8_t op_71(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   bus_write(bus, gt_HL(cpu), cpu->C);
   return 8;
 }
 /* 0x72 LD (HL),D */
 static uint8_t op_72(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   bus_write(bus, gt_HL(cpu), cpu->D);
   return 8;
 }
 /* 0x73 LD (HL),E */
 static uint8_t op_73(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   bus_write(bus, gt_HL(cpu), cpu->E);
   return 8;
 }
 /* 0x74 LD (HL),H */
 static uint8_t op_74(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   bus_write(bus, gt_HL(cpu), cpu->H);
   return 8;
 }
 /* 0x75 LD (HL),L */
 static uint8_t op_75(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   bus_write(bus, gt_HL(cpu), cpu->L);
   return 8;
 }
@@ -737,7 +737,7 @@ static uint8_t op_76(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x77 LD (HL),A */
 static uint8_t op_77(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   bus_write(bus, gt_HL(cpu), cpu->A);
   return 8;
 }
@@ -779,7 +779,7 @@ static uint8_t op_7D(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x7E LD A,(HL) */
 static uint8_t op_7E(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   cpu->A = bus_read(bus, gt_HL(cpu));
   return 8;
 }
@@ -821,7 +821,7 @@ static uint8_t op_85(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x86 ADD A,(HL) */
 static uint8_t op_86(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   c_add(cpu, bus_read(bus, gt_HL(cpu)));
   return 8;
 }
@@ -862,7 +862,7 @@ static uint8_t op_8D(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x8E ADC A,(HL) */
 static uint8_t op_8E(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   c_adc(cpu, bus_read(bus, gt_HL(cpu)));
   return 8;
 }
@@ -903,7 +903,7 @@ static uint8_t op_95(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x96 SUB (HL) */
 static uint8_t op_96(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   c_sub(cpu, bus_read(bus, gt_HL(cpu)));
   return 8;
 }
@@ -944,7 +944,7 @@ static uint8_t op_9D(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x9E SBC A,(HL) */
 static uint8_t op_9E(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   c_sbc(cpu, bus_read(bus, gt_HL(cpu)));
   return 8;
 }
@@ -985,7 +985,7 @@ static uint8_t op_A5(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0xA6 AND (HL) */
 static uint8_t op_A6(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   c_and(cpu, bus_read(bus, gt_HL(cpu)));
   return 8;
 }
@@ -1026,7 +1026,7 @@ static uint8_t op_AD(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0xAE XOR (HL) */
 static uint8_t op_AE(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   c_xor(cpu, bus_read(bus, gt_HL(cpu)));
   return 8;
 }
@@ -1067,7 +1067,7 @@ static uint8_t op_B5(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0xB6 OR (HL) */
 static uint8_t op_B6(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   c_or(cpu, bus_read(bus, gt_HL(cpu)));
   return 8;
 }
@@ -1108,7 +1108,7 @@ static uint8_t op_BD(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0xBE CP (HL) */
 static uint8_t op_BE(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   c_cp(cpu, bus_read(bus, gt_HL(cpu)));
   return 8;
 }
@@ -1145,7 +1145,7 @@ static uint8_t op_C5(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0xC6 ADD A,d8 */
 static uint8_t op_C6(struct Cpu* cpu, struct Bus* bus) {
-  c_add(cpu, rd8(cpu, bus));
+  c_add(cpu, fetch_byte(cpu, bus));
   return 8;
 }
 /* 0xC7 RST 00H */
@@ -1181,7 +1181,7 @@ static uint8_t op_CD(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0xCE ADC A,d8 */
 static uint8_t op_CE(struct Cpu* cpu, struct Bus* bus) {
-  c_adc(cpu, rd8(cpu, bus));
+  c_adc(cpu, fetch_byte(cpu, bus));
   return 8;
 }
 /* 0xCF RST 08H */
@@ -1213,7 +1213,7 @@ static uint8_t op_D5(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0xD6 SUB d8 */
 static uint8_t op_D6(struct Cpu* cpu, struct Bus* bus) {
-  c_sub(cpu, rd8(cpu, bus));
+  c_sub(cpu, fetch_byte(cpu, bus));
   return 8;
 }
 /* 0xD7 RST 10H */
@@ -1242,7 +1242,7 @@ static uint8_t op_DC(struct Cpu* cpu, struct Bus* bus) {
 /* 0xDD illegal */
 /* 0xDE SBC A,d8 */
 static uint8_t op_DE(struct Cpu* cpu, struct Bus* bus) {
-  c_sbc(cpu, rd8(cpu, bus));
+  c_sbc(cpu, fetch_byte(cpu, bus));
   return 8;
 }
 /* 0xDF RST 18H */
@@ -1251,8 +1251,8 @@ static uint8_t op_DF(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0xE0 LDH (a8),A */
 static uint8_t op_E0(struct Cpu* cpu, struct Bus* bus) {
-  uint8_t n = rd8(cpu, bus);
-  mem_tick(cpu, bus, 8);
+  uint8_t n = fetch_byte(cpu, bus);
+  cpu_mem_tick(cpu, bus, 8);
   bus_write(bus, 0xFF00 + (uint16_t)n, cpu->A);
   return 12;
 }
@@ -1263,7 +1263,7 @@ static uint8_t op_E1(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0xE2 LD (C),A */
 static uint8_t op_E2(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   bus_write(bus, 0xFF00 + cpu->C, cpu->A);
   return 8;
 }
@@ -1276,7 +1276,7 @@ static uint8_t op_E5(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0xE6 AND d8 */
 static uint8_t op_E6(struct Cpu* cpu, struct Bus* bus) {
-  c_and(cpu, rd8(cpu, bus));
+  c_and(cpu, fetch_byte(cpu, bus));
   return 8;
 }
 /* 0xE7 RST 20H */
@@ -1285,9 +1285,9 @@ static uint8_t op_E7(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0xE8 ADD SP,r8 */
 static uint8_t op_E8(struct Cpu* cpu, struct Bus* bus) {
-  uint8_t add = rd8(cpu, bus);
-  st_h_add(cpu, (uint8_t)cpu->SP, add);
-  st_c_add(cpu, (uint8_t)cpu->SP, add);
+  uint8_t add = fetch_byte(cpu, bus);
+  set_half_carry_add(cpu, (uint8_t)cpu->SP, add);
+  set_carry_add(cpu, (uint8_t)cpu->SP, add);
   cpu->SP = (uint16_t)(cpu->SP + (int8_t)add);
   clear_flag(cpu, FLG_Z);
   clear_flag(cpu, FLG_N);
@@ -1301,8 +1301,8 @@ static uint8_t op_E9(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0xEA LD (a16),A */
 static uint8_t op_EA(struct Cpu* cpu, struct Bus* bus) {
-  uint16_t addr = rd16(cpu, bus);
-  mem_tick(cpu, bus, 12);
+  uint16_t addr = fetch_word(cpu, bus);
+  cpu_mem_tick(cpu, bus, 12);
   bus_write(bus, addr, cpu->A);
   return 16;
 }
@@ -1311,7 +1311,7 @@ static uint8_t op_EA(struct Cpu* cpu, struct Bus* bus) {
 /* 0xED illegal */
 /* 0xEE XOR d8 */
 static uint8_t op_EE(struct Cpu* cpu, struct Bus* bus) {
-  c_xor(cpu, rd8(cpu, bus));
+  c_xor(cpu, fetch_byte(cpu, bus));
   return 8;
 }
 /* 0xEF RST 28H */
@@ -1320,8 +1320,8 @@ static uint8_t op_EF(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0xF0 LDH A,(a8) */
 static uint8_t op_F0(struct Cpu* cpu, struct Bus* bus) {
-  uint8_t n = rd8(cpu, bus);
-  mem_tick(cpu, bus, 8);
+  uint8_t n = fetch_byte(cpu, bus);
+  cpu_mem_tick(cpu, bus, 8);
   cpu->A = bus_read(bus, 0xFF00 + (uint16_t)n);
   return 12;
 }
@@ -1332,7 +1332,7 @@ static uint8_t op_F1(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0xF2 LD A,(C) */
 static uint8_t op_F2(struct Cpu* cpu, struct Bus* bus) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   cpu->A = bus_read(bus, 0xFF00 + cpu->C);
   return 8;
 }
@@ -1350,7 +1350,7 @@ static uint8_t op_F5(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0xF6 OR d8 */
 static uint8_t op_F6(struct Cpu* cpu, struct Bus* bus) {
-  c_or(cpu, rd8(cpu, bus));
+  c_or(cpu, fetch_byte(cpu, bus));
   return 8;
 }
 /* 0xF7 RST 30H */
@@ -1359,13 +1359,13 @@ static uint8_t op_F7(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0xF8 LD HL,SP+r8 */
 static uint8_t op_F8(struct Cpu* cpu, struct Bus* bus) {
-  uint8_t nxt = rd8(cpu, bus);
+  uint8_t nxt = fetch_byte(cpu, bus);
   uint16_t add = (uint16_t)(cpu->SP + (int8_t)nxt);
   st_HL(cpu, add);
   clear_flag(cpu, FLG_Z);
   clear_flag(cpu, FLG_N);
-  st_h_add(cpu, (uint8_t)cpu->SP, nxt);
-  st_c_add(cpu, (uint8_t)cpu->SP, nxt);
+  set_half_carry_add(cpu, (uint8_t)cpu->SP, nxt);
+  set_carry_add(cpu, (uint8_t)cpu->SP, nxt);
   return 12;
 }
 /* 0xF9 LD SP,HL */
@@ -1376,8 +1376,8 @@ static uint8_t op_F9(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0xFA LD A,(a16) */
 static uint8_t op_FA(struct Cpu* cpu, struct Bus* bus) {
-  uint16_t addr = rd16(cpu, bus);
-  mem_tick(cpu, bus, 12);
+  uint16_t addr = fetch_word(cpu, bus);
+  cpu_mem_tick(cpu, bus, 12);
   cpu->A = bus_read(bus, addr);
   return 16;
 }
@@ -1391,7 +1391,7 @@ static uint8_t op_FB(struct Cpu* cpu, struct Bus* bus) {
 /* 0xFD illegal */
 /* 0xFE CP d8 */
 static uint8_t op_FE(struct Cpu* cpu, struct Bus* bus) {
-  c_cp(cpu, rd8(cpu, bus));
+  c_cp(cpu, fetch_byte(cpu, bus));
   return 8;
 }
 /* 0xFF RST 38H */
@@ -1666,7 +1666,7 @@ static uint8_t cb_3F(struct Cpu* cpu, struct Bus* bus) {
   }
 #define CB_BIT_HL(HEX, BIT)                                   \
   static uint8_t cb_##HEX(struct Cpu* cpu, struct Bus* bus) { \
-    mem_tick(cpu, bus, 8);                                    \
+    cpu_mem_tick(cpu, bus, 8);                                    \
     c_bit(cpu, bus_read(bus, gt_HL(cpu)), BIT);               \
     return 12;                                                \
   }

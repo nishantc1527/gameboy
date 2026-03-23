@@ -10,7 +10,7 @@ struct Cpu {
   uint8_t if_reg;
   uint8_t ie_reg;
   uint8_t cgb_mode;
-  uint8_t ldbb_fired;  // Many tests exit by executing LD B, B
+  uint8_t ld_b_b_fired;  // Many tests exit by executing LD B, B
 };
 
 struct Bus;

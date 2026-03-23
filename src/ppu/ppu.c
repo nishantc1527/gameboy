@@ -57,8 +57,8 @@ void ppu_write(struct Ppu* ppu, uint16_t addr, uint8_t val) {
     case 0xFF40: {
       uint8_t was_on = (ppu->lcdc & (1u << LCDC_BIT_LCD_ENABLE)) != 0;
       uint8_t now_on = (val & (1u << LCDC_BIT_LCD_ENABLE)) != 0;
-      if (was_on && !now_on) ppu->win_cnt = 0;
-      if (!was_on && now_on) ppu->lcdc_reenable = true;
+      if (was_on && !now_on) ppu->window_line = 0;
+      if (!was_on && now_on) ppu->lcd_turning_on = true;
       ppu->lcdc = val;
       break;
     }
@@ -144,17 +144,17 @@ uint8_t ppu_blocks_oam(const struct Ppu* ppu) {
 }
 
 void ppu_tick(struct Ppu* ppu, struct Bus* bus, uint8_t cycles) {
-  ppu->scn = (uint16_t)(ppu->scn + cycles);
-  if (ppu->scn >= PPU_CYCLES_PER_LINE) {
-    do_scanline(ppu, bus);
-    ppu->scn -= PPU_CYCLES_PER_LINE;
+  ppu->line_cycles = (uint16_t)(ppu->line_cycles + cycles);
+  if (ppu->line_cycles >= PPU_CYCLES_PER_LINE) {
+    ppu_render_line(ppu, bus);
+    ppu->line_cycles -= PPU_CYCLES_PER_LINE;
   }
-  if (ppu->lcdc_reenable) {
-    ppu->lcdc_reenable = false;
-    ppu->scn = 4;
+  if (ppu->lcd_turning_on) {
+    ppu->lcd_turning_on = false;
+    ppu->line_cycles = 4;
     ppu->ly = 0;
   }
-  update_lcd(ppu, bus);
+  ppu_update_mode(ppu, bus);
 }
 
 static void ppu_check_stat_irq(struct Ppu* ppu, struct Bus* bus,
@@ -173,15 +173,15 @@ static void ppu_check_stat_irq(struct Ppu* ppu, struct Bus* bus,
 
 static const uint16_t scx_mode3_penalty[8] = {0, 0, 0, 0, 4, 4, 4, 8};
 
-void update_lcd(struct Ppu* ppu, struct Bus* bus) {
+void ppu_update_mode(struct Ppu* ppu, struct Bus* bus) {
   uint8_t stat = ppu->stat;
   uint8_t prev_mode = stat & PPU_MODE_MASK;
   uint8_t curr_mode;
   uint16_t mode3_end =
       (uint16_t)(PPU_TRANSFER_BASE_END + scx_mode3_penalty[ppu->scx & 7u]);
-  if (ppu->scn < PPU_OAM_END_CYCLE)
+  if (ppu->line_cycles < PPU_OAM_END_CYCLE)
     curr_mode = PPU_MODE_OAM;
-  else if (ppu->scn < mode3_end)
+  else if (ppu->line_cycles < mode3_end)
     curr_mode = PPU_MODE_TRANSFER;
   else
     curr_mode = PPU_MODE_HBLANK;

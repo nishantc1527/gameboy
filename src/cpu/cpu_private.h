@@ -42,8 +42,8 @@
 #define CPU_CGB_H 0x00
 #define CPU_CGB_L 0x0D
 
-static inline void mem_tick(struct Cpu* cpu, struct Bus* bus,
-                            uint8_t pre_cycles) {
+static inline void cpu_mem_tick(struct Cpu* cpu, struct Bus* bus,
+                                uint8_t pre_cycles) {
   (void)cpu;
   timer_tick(bus->timer, pre_cycles, bus);
   timer_record_sub_cycles(bus->timer, pre_cycles);
@@ -59,11 +59,11 @@ static inline void clear_flag(struct Cpu* cpu, uint8_t flg) {
   clear_bit(&cpu->F, flg);
 }
 
-static inline uint8_t rd8(struct Cpu* cpu, struct Bus* bus) {
+static inline uint8_t fetch_byte(struct Cpu* cpu, struct Bus* bus) {
   return bus_read(bus, cpu->PC++);
 }
 
-static inline uint16_t rd16(struct Cpu* cpu, struct Bus* bus) {
+static inline uint16_t fetch_word(struct Cpu* cpu, struct Bus* bus) {
   uint16_t addr1 = cpu->PC++;
   uint16_t addr2 = cpu->PC++;
   return (uint16_t)((uint16_t)bus_read(bus, addr2) << 8) |
@@ -85,63 +85,67 @@ static inline uint16_t pop(struct Cpu* cpu, struct Bus* bus) {
   return val1 | (uint16_t)(val2 << 8);
 }
 
-static inline uint16_t pk(struct Cpu* cpu, struct Bus* bus) {
+static inline uint16_t peek_stack(struct Cpu* cpu, struct Bus* bus) {
   uint16_t val = pop(cpu, bus);
   push(cpu, bus, val);
   return val;
 }
 
-static inline void st_z(struct Cpu* cpu, uint8_t var) {
+static inline void set_zero_flag(struct Cpu* cpu, uint8_t var) {
   if (var == 0)
     set_flag(cpu, FLG_Z);
   else
     clear_flag(cpu, FLG_Z);
 }
-static inline void st_h_add(struct Cpu* cpu, uint8_t var1, uint8_t var2) {
+static inline void set_half_carry_add(struct Cpu* cpu, uint8_t var1,
+                                      uint8_t var2) {
   if (((var1 & 0xF) + (var2 & 0xF)) & 0x10)
     set_flag(cpu, FLG_H);
   else
     clear_flag(cpu, FLG_H);
 }
-static inline void st_h_add16(struct Cpu* cpu, uint16_t var1, uint16_t var2) {
+static inline void set_half_carry_add16(struct Cpu* cpu, uint16_t var1,
+                                        uint16_t var2) {
   if (((var1 & 0xFFF) + (var2 & 0xFFF)) & 0x1000)
     set_flag(cpu, FLG_H);
   else
     clear_flag(cpu, FLG_H);
 }
-static inline void st_h_sub(struct Cpu* cpu, uint8_t var1, uint8_t var2) {
+static inline void set_half_carry_sub(struct Cpu* cpu, uint8_t var1,
+                                      uint8_t var2) {
   if (((var1 & 0x0F) - (var2 & 0x0F)) & 0x10)
     set_flag(cpu, FLG_H);
   else
     clear_flag(cpu, FLG_H);
 }
-static inline void st_c_rl(struct Cpu* cpu, uint8_t var) {
+static inline void set_carry_rotate_left(struct Cpu* cpu, uint8_t var) {
   if (var >> 7)
     set_flag(cpu, FLG_C);
   else
     clear_flag(cpu, FLG_C);
 }
-static inline void st_c_rr(struct Cpu* cpu, uint8_t var) {
+static inline void set_carry_rotate_right(struct Cpu* cpu, uint8_t var) {
   if (var & 1)
     set_flag(cpu, FLG_C);
   else
     clear_flag(cpu, FLG_C);
 }
-static inline void st_c_add(struct Cpu* cpu, uint8_t var1, uint8_t var2) {
+static inline void set_carry_add(struct Cpu* cpu, uint8_t var1, uint8_t var2) {
   uint16_t res = (uint16_t)var1 + (uint16_t)var2;
   if (res > 0xFF)
     set_flag(cpu, FLG_C);
   else
     clear_flag(cpu, FLG_C);
 }
-static inline void st_c_add16(struct Cpu* cpu, uint16_t var1, uint16_t var2) {
+static inline void set_carry_add16(struct Cpu* cpu, uint16_t var1,
+                                   uint16_t var2) {
   int res = (int)var1 + (int)var2;
   if (res > 0xFFFF)
     set_flag(cpu, FLG_C);
   else
     clear_flag(cpu, FLG_C);
 }
-static inline void st_c_sub(struct Cpu* cpu, uint8_t var1, uint8_t var2) {
+static inline void set_carry_sub(struct Cpu* cpu, uint8_t var1, uint8_t var2) {
   if (var1 < var2)
     set_flag(cpu, FLG_C);
   else
@@ -152,10 +156,10 @@ static inline void req_intr(struct Bus* bus, uint8_t intr) {
 }
 
 static inline int c_add(struct Cpu* cpu, uint8_t reg) {
-  st_h_add(cpu, cpu->A, reg);
-  st_c_add(cpu, cpu->A, reg);
+  set_half_carry_add(cpu, cpu->A, reg);
+  set_carry_add(cpu, cpu->A, reg);
   cpu->A += reg;
-  st_z(cpu, cpu->A);
+  set_zero_flag(cpu, cpu->A);
   clear_flag(cpu, FLG_N);
   return 4;
 }
@@ -164,8 +168,8 @@ static inline int c_adc(struct Cpu* cpu, uint8_t reg) {
   int cy = 0;
   int hy = 0;
   if (get_flag(cpu, FLG_C)) {
-    st_h_add(cpu, cpu->A, 1);
-    st_c_add(cpu, cpu->A, 1);
+    set_half_carry_add(cpu, cpu->A, 1);
+    set_carry_add(cpu, cpu->A, 1);
     cy = get_flag(cpu, FLG_C);
     hy = get_flag(cpu, FLG_H);
     cpu->A++;
@@ -178,7 +182,7 @@ static inline int c_adc(struct Cpu* cpu, uint8_t reg) {
 
 static inline int c_and(struct Cpu* cpu, uint8_t reg) {
   cpu->A &= reg;
-  st_z(cpu, cpu->A);
+  set_zero_flag(cpu, cpu->A);
   clear_flag(cpu, FLG_N);
   set_flag(cpu, FLG_H);
   clear_flag(cpu, FLG_C);
@@ -198,18 +202,18 @@ static inline int c_bit(struct Cpu* cpu, uint8_t reg, uint8_t bit) {
 static inline int c_call(struct Cpu* cpu, struct Bus* bus, int flg) {
   if (flg) {
     push(cpu, bus, (uint16_t)(cpu->PC + 2));
-    cpu->PC = rd16(cpu, bus);
+    cpu->PC = fetch_word(cpu, bus);
     return 24;
   }
-  rd16(cpu, bus);
+  fetch_word(cpu, bus);
   return 12;
 }
 
 static inline int c_cp(struct Cpu* cpu, uint8_t reg) {
-  st_z(cpu, (uint8_t)(cpu->A - reg));
+  set_zero_flag(cpu, (uint8_t)(cpu->A - reg));
   set_flag(cpu, FLG_N);
-  st_h_sub(cpu, cpu->A, reg);
-  st_c_sub(cpu, cpu->A, reg);
+  set_half_carry_sub(cpu, cpu->A, reg);
+  set_carry_sub(cpu, cpu->A, reg);
   return 4;
 }
 
@@ -221,47 +225,47 @@ static inline int c_cpl(struct Cpu* cpu, uint8_t* reg) {
 }
 
 static inline int c_dec(struct Cpu* cpu, uint8_t* reg) {
-  st_h_sub(cpu, *reg, 1);
+  set_half_carry_sub(cpu, *reg, 1);
   *reg = *reg - 1;
-  st_z(cpu, *reg);
+  set_zero_flag(cpu, *reg);
   set_flag(cpu, FLG_N);
   return 4;
 }
 
 static inline int c_dec_mem(struct Cpu* cpu, struct Bus* bus, uint16_t loc) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   uint8_t reg = bus_read(bus, loc);
-  st_h_sub(cpu, reg, 1);
+  set_half_carry_sub(cpu, reg, 1);
   reg = reg - 1;
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   bus_write(bus, loc, reg);
-  st_z(cpu, reg);
+  set_zero_flag(cpu, reg);
   set_flag(cpu, FLG_N);
   return 12;
 }
 
 static inline int c_inc(struct Cpu* cpu, uint8_t* reg) {
-  st_h_add(cpu, *reg, 1);
+  set_half_carry_add(cpu, *reg, 1);
   *reg = *reg + 1;
-  st_z(cpu, *reg);
+  set_zero_flag(cpu, *reg);
   clear_flag(cpu, FLG_N);
   return 4;
 }
 
 static inline int c_inc_mem(struct Cpu* cpu, struct Bus* bus, uint16_t loc) {
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   uint8_t reg = bus_read(bus, loc);
-  st_h_add(cpu, reg, 1);
+  set_half_carry_add(cpu, reg, 1);
   reg = reg + 1;
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   bus_write(bus, loc, reg);
-  st_z(cpu, reg);
+  set_zero_flag(cpu, reg);
   clear_flag(cpu, FLG_N);
   return 12;
 }
 
 static inline int c_jp8(struct Cpu* cpu, struct Bus* bus, int flg) {
-  int8_t offset = (int8_t)rd8(cpu, bus);
+  int8_t offset = (int8_t)fetch_byte(cpu, bus);
   if (flg) {
     cpu->PC = (uint16_t)(cpu->PC + offset);
     return 12;
@@ -271,16 +275,16 @@ static inline int c_jp8(struct Cpu* cpu, struct Bus* bus, int flg) {
 
 static inline int c_jp16(struct Cpu* cpu, struct Bus* bus, int flg) {
   if (flg) {
-    cpu->PC = rd16(cpu, bus);
+    cpu->PC = fetch_word(cpu, bus);
     return 16;
   } else
-    rd16(cpu, bus);
+    fetch_word(cpu, bus);
   return 12;
 }
 
 static inline int c_or(struct Cpu* cpu, uint8_t reg) {
   cpu->A |= reg;
-  st_z(cpu, cpu->A);
+  set_zero_flag(cpu, cpu->A);
   clear_flag(cpu, FLG_N);
   clear_flag(cpu, FLG_H);
   clear_flag(cpu, FLG_C);
@@ -294,10 +298,10 @@ static inline int c_res(uint8_t* reg, uint8_t bit) {
 
 static inline int c_res_mem(struct Cpu* cpu, struct Bus* bus, uint16_t loc,
                             int bit) {
-  mem_tick(cpu, bus, 8);
+  cpu_mem_tick(cpu, bus, 8);
   uint8_t reg = bus_read(bus, loc);
   reg = (uint8_t)(reg & ~(1 << bit));
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   bus_write(bus, loc, reg);
   return 16;
 }
@@ -312,23 +316,23 @@ static inline int c_ret(struct Cpu* cpu, struct Bus* bus, int flg) {
 
 static inline int c_rr(struct Cpu* cpu, uint8_t* reg) {
   uint8_t carry = get_flag(cpu, FLG_C);
-  st_c_rr(cpu, *reg);
+  set_carry_rotate_right(cpu, *reg);
   *reg = (uint8_t)(*reg >> 1) | (uint8_t)(carry << 7);
-  st_z(cpu, *reg);
+  set_zero_flag(cpu, *reg);
   clear_flag(cpu, FLG_N);
   clear_flag(cpu, FLG_H);
   return 8;
 }
 
 static inline int c_rr_mem(struct Cpu* cpu, struct Bus* bus, uint16_t loc) {
-  mem_tick(cpu, bus, 8);
+  cpu_mem_tick(cpu, bus, 8);
   uint8_t reg = bus_read(bus, loc);
   uint8_t carry = get_flag(cpu, FLG_C);
-  st_c_rr(cpu, reg);
+  set_carry_rotate_right(cpu, reg);
   reg = (uint8_t)(reg >> 1) | (uint8_t)(carry << 7);
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   bus_write(bus, loc, reg);
-  st_z(cpu, reg);
+  set_zero_flag(cpu, reg);
   clear_flag(cpu, FLG_N);
   clear_flag(cpu, FLG_H);
   return 16;
@@ -336,23 +340,23 @@ static inline int c_rr_mem(struct Cpu* cpu, struct Bus* bus, uint16_t loc) {
 
 static inline int c_rrc(struct Cpu* cpu, uint8_t* reg) {
   uint8_t carry = *reg & 1;
-  st_c_rr(cpu, *reg);
+  set_carry_rotate_right(cpu, *reg);
   *reg = (uint8_t)(*reg >> 1) | (uint8_t)(carry << 7);
-  st_z(cpu, *reg);
+  set_zero_flag(cpu, *reg);
   clear_flag(cpu, FLG_N);
   clear_flag(cpu, FLG_H);
   return 8;
 }
 
 static inline int c_rrc_mem(struct Cpu* cpu, struct Bus* bus, uint16_t loc) {
-  mem_tick(cpu, bus, 8);
+  cpu_mem_tick(cpu, bus, 8);
   uint8_t reg = bus_read(bus, loc);
   uint8_t carry = reg & 1;
-  st_c_rr(cpu, reg);
+  set_carry_rotate_right(cpu, reg);
   reg = (uint8_t)(reg >> 1) | (uint8_t)(carry << 7);
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   bus_write(bus, loc, reg);
-  st_z(cpu, reg);
+  set_zero_flag(cpu, reg);
   clear_flag(cpu, FLG_N);
   clear_flag(cpu, FLG_H);
   return 16;
@@ -360,23 +364,23 @@ static inline int c_rrc_mem(struct Cpu* cpu, struct Bus* bus, uint16_t loc) {
 
 static inline int c_rl(struct Cpu* cpu, uint8_t* reg) {
   uint8_t carry = get_flag(cpu, FLG_C);
-  st_c_rl(cpu, *reg);
+  set_carry_rotate_left(cpu, *reg);
   *reg = (uint8_t)(*reg << 1) | carry;
-  st_z(cpu, *reg);
+  set_zero_flag(cpu, *reg);
   clear_flag(cpu, FLG_N);
   clear_flag(cpu, FLG_H);
   return 8;
 }
 
 static inline int c_rl_mem(struct Cpu* cpu, struct Bus* bus, uint16_t loc) {
-  mem_tick(cpu, bus, 8);
+  cpu_mem_tick(cpu, bus, 8);
   uint8_t reg = bus_read(bus, loc);
   uint8_t carry = get_flag(cpu, FLG_C);
-  st_c_rl(cpu, reg);
+  set_carry_rotate_left(cpu, reg);
   reg = (uint8_t)(reg << 1) | carry;
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   bus_write(bus, loc, reg);
-  st_z(cpu, reg);
+  set_zero_flag(cpu, reg);
   clear_flag(cpu, FLG_N);
   clear_flag(cpu, FLG_H);
   return 16;
@@ -384,23 +388,23 @@ static inline int c_rl_mem(struct Cpu* cpu, struct Bus* bus, uint16_t loc) {
 
 static inline int c_rlc(struct Cpu* cpu, uint8_t* reg) {
   uint8_t carry = (*reg >> 7) & 1;
-  st_c_rl(cpu, *reg);
+  set_carry_rotate_left(cpu, *reg);
   *reg = (uint8_t)(*reg << 1) | carry;
-  st_z(cpu, *reg);
+  set_zero_flag(cpu, *reg);
   clear_flag(cpu, FLG_N);
   clear_flag(cpu, FLG_H);
   return 8;
 }
 
 static inline int c_rlc_mem(struct Cpu* cpu, struct Bus* bus, uint16_t loc) {
-  mem_tick(cpu, bus, 8);
+  cpu_mem_tick(cpu, bus, 8);
   uint8_t reg = bus_read(bus, loc);
   uint8_t carry = (reg >> 7) & 1;
-  st_c_rl(cpu, reg);
+  set_carry_rotate_left(cpu, reg);
   reg = (uint8_t)(reg << 1) | carry;
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   bus_write(bus, loc, reg);
-  st_z(cpu, reg);
+  set_zero_flag(cpu, reg);
   clear_flag(cpu, FLG_N);
   clear_flag(cpu, FLG_H);
   return 16;
@@ -413,10 +417,10 @@ static inline int c_rst(struct Cpu* cpu, struct Bus* bus, uint8_t loc) {
 }
 
 static inline int c_sub(struct Cpu* cpu, uint8_t reg) {
-  st_h_sub(cpu, cpu->A, reg);
-  st_c_sub(cpu, cpu->A, reg);
+  set_half_carry_sub(cpu, cpu->A, reg);
+  set_carry_sub(cpu, cpu->A, reg);
   cpu->A -= reg;
-  st_z(cpu, cpu->A);
+  set_zero_flag(cpu, cpu->A);
   set_flag(cpu, FLG_N);
   return 4;
 }
@@ -425,8 +429,8 @@ static inline int c_sbc(struct Cpu* cpu, uint8_t reg) {
   int cy = 0;
   int hy = 0;
   if (get_flag(cpu, FLG_C)) {
-    st_h_sub(cpu, cpu->A, 1);
-    st_c_sub(cpu, cpu->A, 1);
+    set_half_carry_sub(cpu, cpu->A, 1);
+    set_carry_sub(cpu, cpu->A, 1);
     cy = get_flag(cpu, FLG_C);
     hy = get_flag(cpu, FLG_H);
     cpu->A--;
@@ -443,23 +447,23 @@ static inline int c_srl(struct Cpu* cpu, uint8_t* reg) {
   else
     clear_flag(cpu, FLG_C);
   *reg = *reg >> 1;
-  st_z(cpu, *reg);
+  set_zero_flag(cpu, *reg);
   clear_flag(cpu, FLG_N);
   clear_flag(cpu, FLG_H);
   return 8;
 }
 
 static inline int c_srl_mem(struct Cpu* cpu, struct Bus* bus, uint16_t loc) {
-  mem_tick(cpu, bus, 8);
+  cpu_mem_tick(cpu, bus, 8);
   uint8_t reg = bus_read(bus, loc);
   if (reg & 1)
     set_flag(cpu, FLG_C);
   else
     clear_flag(cpu, FLG_C);
   reg = reg >> 1;
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   bus_write(bus, loc, reg);
-  st_z(cpu, reg);
+  set_zero_flag(cpu, reg);
   clear_flag(cpu, FLG_N);
   clear_flag(cpu, FLG_H);
   return 16;
@@ -472,55 +476,55 @@ static inline int c_set(uint8_t* reg, uint8_t bit) {
 
 static inline int c_set_mem(struct Cpu* cpu, struct Bus* bus, uint16_t loc,
                             uint8_t bit) {
-  mem_tick(cpu, bus, 8);
+  cpu_mem_tick(cpu, bus, 8);
   uint8_t reg = bus_read(bus, loc);
   set_bit(&reg, bit);
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   bus_write(bus, loc, reg);
   return 16;
 }
 
 static inline int c_sla(struct Cpu* cpu, uint8_t* reg) {
-  st_c_rl(cpu, *reg);
+  set_carry_rotate_left(cpu, *reg);
   *reg = (uint8_t)(*reg << 1);
-  st_z(cpu, *reg);
+  set_zero_flag(cpu, *reg);
   clear_flag(cpu, FLG_N);
   clear_flag(cpu, FLG_H);
   return 8;
 }
 
 static inline int c_sla_mem(struct Cpu* cpu, struct Bus* bus, uint16_t loc) {
-  mem_tick(cpu, bus, 8);
+  cpu_mem_tick(cpu, bus, 8);
   uint8_t reg = bus_read(bus, loc);
-  st_c_rl(cpu, reg);
+  set_carry_rotate_left(cpu, reg);
   reg = (uint8_t)(reg << 1);
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   bus_write(bus, loc, reg);
-  st_z(cpu, reg);
+  set_zero_flag(cpu, reg);
   clear_flag(cpu, FLG_N);
   clear_flag(cpu, FLG_H);
   return 16;
 }
 
 static inline int c_sra(struct Cpu* cpu, uint8_t* reg) {
-  st_c_rr(cpu, *reg);
+  set_carry_rotate_right(cpu, *reg);
   uint8_t bt = (*reg >> 7) & 1;
   *reg = (uint8_t)(*reg >> 1) | (uint8_t)(bt << 7);
-  st_z(cpu, *reg);
+  set_zero_flag(cpu, *reg);
   clear_flag(cpu, FLG_N);
   clear_flag(cpu, FLG_H);
   return 8;
 }
 
 static inline int c_sra_mem(struct Cpu* cpu, struct Bus* bus, uint16_t loc) {
-  mem_tick(cpu, bus, 8);
+  cpu_mem_tick(cpu, bus, 8);
   uint8_t reg = bus_read(bus, loc);
-  st_c_rr(cpu, reg);
+  set_carry_rotate_right(cpu, reg);
   uint8_t bt = (reg >> 7) & 1;
   reg = (uint8_t)(reg >> 1) | (uint8_t)(bt << 7);
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   bus_write(bus, loc, reg);
-  st_z(cpu, reg);
+  set_zero_flag(cpu, reg);
   clear_flag(cpu, FLG_N);
   clear_flag(cpu, FLG_H);
   return 16;
@@ -528,7 +532,7 @@ static inline int c_sra_mem(struct Cpu* cpu, struct Bus* bus, uint16_t loc) {
 
 static inline int c_swp(struct Cpu* cpu, uint8_t* reg) {
   *reg = (uint8_t)(*reg >> 4) | (uint8_t)(*reg << 4);
-  st_z(cpu, *reg);
+  set_zero_flag(cpu, *reg);
   clear_flag(cpu, FLG_N);
   clear_flag(cpu, FLG_H);
   clear_flag(cpu, FLG_C);
@@ -536,12 +540,12 @@ static inline int c_swp(struct Cpu* cpu, uint8_t* reg) {
 }
 
 static inline int c_swp_mem(struct Cpu* cpu, struct Bus* bus, uint16_t loc) {
-  mem_tick(cpu, bus, 8);
+  cpu_mem_tick(cpu, bus, 8);
   uint8_t reg = bus_read(bus, loc);
   reg = (uint8_t)(reg >> 4) | (uint8_t)(reg << 4);
-  mem_tick(cpu, bus, 4);
+  cpu_mem_tick(cpu, bus, 4);
   bus_write(bus, loc, reg);
-  st_z(cpu, reg);
+  set_zero_flag(cpu, reg);
   clear_flag(cpu, FLG_N);
   clear_flag(cpu, FLG_H);
   clear_flag(cpu, FLG_C);
@@ -550,7 +554,7 @@ static inline int c_swp_mem(struct Cpu* cpu, struct Bus* bus, uint16_t loc) {
 
 static inline int c_xor(struct Cpu* cpu, uint8_t reg) {
   cpu->A ^= reg;
-  st_z(cpu, cpu->A);
+  set_zero_flag(cpu, cpu->A);
   clear_flag(cpu, FLG_N);
   clear_flag(cpu, FLG_H);
   clear_flag(cpu, FLG_C);

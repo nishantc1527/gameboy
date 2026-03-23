@@ -6,10 +6,10 @@
 #include "gbemu/util.h"
 #include "ppu_private.h"
 
-uint8_t gt_clr(uint8_t pal, int val) {
-  return (pal >> (val << 1)) & PPU_MODE_MASK;
+uint8_t palette_color(uint8_t pal, int color_idx) {
+  return (pal >> (color_idx << 1)) & PPU_MODE_MASK;
 }
-void w_pxl(struct Ppu* ppu, int y, int x, uint8_t clr) { ppu->dsp[y][x] = clr; }
+void write_pixel(struct Ppu* ppu, int y, int x, uint8_t clr) { ppu->dsp[y][x] = clr; }
 
 static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
   uint8_t ly = ppu->ly;
@@ -68,7 +68,7 @@ static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
       uint8_t wx = ppu->wx;
       if (wx < SCRN_WIDTH + 7 && ppu->wy_triggered) {
         wx -= 7;
-        uint8_t win_ly = ppu->win_cnt;
+        uint8_t win_ly = ppu->window_line;
         uint8_t tiley = win_ly / TILE_HEIGHT;
         int offy = win_ly % TILE_HEIGHT;
         for (uint8_t x = wx; x < SCRN_WIDTH; x++) {
@@ -108,7 +108,7 @@ static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
           uint8_t hi = ppu->bg_pal_ram[pal_num * 8 + clr * 2 + 1];
           ppu->cgb_dsp[ly][x] = (uint16_t)(lo | ((uint16_t)hi << 8));
         }
-        ppu->win_cnt++;
+        ppu->window_line++;
       }
     }
   }
@@ -187,7 +187,7 @@ static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
   }
 }
 
-void do_scanline(struct Ppu* ppu, struct Bus* bus) {
+void ppu_render_line(struct Ppu* ppu, struct Bus* bus) {
   if (get_bit(ppu->lcdc, LCDC_BIT_LCD_ENABLE)) {
     if (ppu->ly < PPU_VISIBLE_LINES) {
       if (ppu->cgb_mode) {
@@ -195,7 +195,7 @@ void do_scanline(struct Ppu* ppu, struct Bus* bus) {
         ppu->ly++;
         if (ppu->ly >= PPU_TOTAL_LINES) {
           ppu->ly = 0;
-          ppu->win_cnt = 0;
+          ppu->window_line = 0;
           ppu->wy_triggered = 0;
           ppu->frame_ready = true;
         }
@@ -233,14 +233,14 @@ void do_scanline(struct Ppu* ppu, struct Bus* bus) {
               mmu_read_vram(bus->mmu, (uint16_t)(idx + (uint16_t)ty + 1));
           offx = TILE_WIDTH - 1 - offx;
           int clr = (get_bit(ms, offx) << 1) | get_bit(ls, offx);
-          w_pxl(ppu, ly, x, gt_clr(pal, clr));
+          write_pixel(ppu, ly, x, palette_color(pal, clr));
         }
         if (get_bit(ppu->lcdc, LCDC_BIT_WIN_ENABLE)) {
           mp_area = get_bit(ppu->lcdc, LCDC_BIT_WIN_MAP);
           uint8_t wx = ppu->wx;
           if (wx < SCRN_WIDTH + 7 && ppu->wy_triggered) {
             wx = wx - 7;
-            uint8_t wy = ppu->win_cnt;
+            uint8_t wy = ppu->window_line;
             uint8_t tiley = wy / TILE_HEIGHT;
             int offy = wy % TILE_HEIGHT;
             int ty = offy << 1;
@@ -267,14 +267,14 @@ void do_scanline(struct Ppu* ppu, struct Bus* bus) {
                   bus->mmu, (uint16_t)(idx + (uint16_t)ty + (uint16_t)1));
               offx = TILE_WIDTH - 1 - offx;
               int clr = (get_bit(ms, offx) << 1) | get_bit(ls, offx);
-              w_pxl(ppu, ly, x, gt_clr(pal, clr));
+              write_pixel(ppu, ly, x, palette_color(pal, clr));
             }
-            ppu->win_cnt++;
+            ppu->window_line++;
           }
         }
       } else {
         for (int x = 0; x < SCRN_WIDTH; x++) {
-          w_pxl(ppu, ppu->ly, x, CLR_WHT);
+          write_pixel(ppu, ppu->ly, x, CLR_WHT);
         }
       }
       if (get_bit(ppu->lcdc, LCDC_BIT_OBJ_ENABLE)) {
@@ -355,10 +355,10 @@ void do_scanline(struct Ppu* ppu, struct Bus* bus) {
             if (flipx) posx = TILE_WIDTH - 1 - posx;
             uint8_t clr = (uint8_t)(get_bit(ms, posx) << 1) | get_bit(ls, posx);
             if (get_bit(flg, OBJ_ATTR_PRIORITY_BIT)) {
-              if (ppu->dsp[ly][x0] == gt_clr(ppu->bgp, 0))
-                w_pxl(ppu, ly, x0, gt_clr(pal, clr));
+              if (ppu->dsp[ly][x0] == palette_color(ppu->bgp, 0))
+                write_pixel(ppu, ly, x0, palette_color(pal, clr));
             } else if (clr != 0)
-              w_pxl(ppu, ly, x0, gt_clr(pal, clr));
+              write_pixel(ppu, ly, x0, palette_color(pal, clr));
           }
         }
       }
@@ -366,17 +366,17 @@ void do_scanline(struct Ppu* ppu, struct Bus* bus) {
     ppu->ly++;
     if (ppu->ly >= PPU_TOTAL_LINES) {
       ppu->ly = 0;
-      ppu->win_cnt = 0;
+      ppu->window_line = 0;
       ppu->wy_triggered = 0;
       ppu->frame_ready = true;
     }
   } else {
     ppu->ly = 0;
-    ppu->win_cnt = 0;
+    ppu->window_line = 0;
     ppu->wy_triggered = 0;
-    ppu->off_scn++;
-    if (ppu->off_scn >= PPU_TOTAL_LINES) {
-      ppu->off_scn = 0;
+    ppu->off_line_count++;
+    if (ppu->off_line_count >= PPU_TOTAL_LINES) {
+      ppu->off_line_count = 0;
       ppu->frame_ready = true;
     }
   }
