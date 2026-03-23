@@ -70,6 +70,12 @@ static void mkdir_config_dir(void) {
 #endif
 }
 
+static void load_key(toml_datum_t tbl, const char* name, char* dst,
+                     size_t len) {
+  toml_datum_t v = toml_get(tbl, name);
+  if (v.type == TOML_STRING) snprintf(dst, len, "%s", v.u.s);
+}
+
 static void write_str(FILE* fp, const char* s) {
   fputc('"', fp);
   for (; *s; s++) {
@@ -171,20 +177,16 @@ void settings_load(struct Settings* s) {
   }
   tbl = toml_get(root, "controls");
   if (tbl.type == TOML_TABLE) {
-#define LOAD_KEY(field, name) \
-  v = toml_get(tbl, name);    \
-  if (v.type == TOML_STRING) snprintf(s->field, sizeof(s->field), "%s", v.u.s);
-    LOAD_KEY(key_a, "a")
-    LOAD_KEY(key_b, "b")
-    LOAD_KEY(key_start, "start")
-    LOAD_KEY(key_select, "select")
-    LOAD_KEY(key_up, "up")
-    LOAD_KEY(key_down, "down")
-    LOAD_KEY(key_left, "left")
-    LOAD_KEY(key_right, "right")
-    LOAD_KEY(key_pause, "pause")
-    LOAD_KEY(key_screenshot, "screenshot")
-#undef LOAD_KEY
+    load_key(tbl, "a", s->key_a, sizeof(s->key_a));
+    load_key(tbl, "b", s->key_b, sizeof(s->key_b));
+    load_key(tbl, "start", s->key_start, sizeof(s->key_start));
+    load_key(tbl, "select", s->key_select, sizeof(s->key_select));
+    load_key(tbl, "up", s->key_up, sizeof(s->key_up));
+    load_key(tbl, "down", s->key_down, sizeof(s->key_down));
+    load_key(tbl, "left", s->key_left, sizeof(s->key_left));
+    load_key(tbl, "right", s->key_right, sizeof(s->key_right));
+    load_key(tbl, "pause", s->key_pause, sizeof(s->key_pause));
+    load_key(tbl, "screenshot", s->key_screenshot, sizeof(s->key_screenshot));
   }
   tbl = toml_get(root, "paths");
   if (tbl.type == TOML_TABLE) {

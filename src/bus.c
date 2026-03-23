@@ -34,6 +34,26 @@ void bus_req_intr(struct Bus* bus, uint8_t intr) {
 
 void bus_notify_div_pulse(struct Bus* bus) { apu_notify_div_tick(bus->apu); }
 
+static uint8_t bus_read_vram(struct Bus* bus, uint16_t addr) {
+  if (ppu_blocks_vram(bus->ppu)) return BUS_OPEN_BUS;
+  return mmu_read_vram(bus->mmu, addr);
+}
+
+static uint8_t bus_read_oam(struct Bus* bus, uint16_t addr) {
+  if (ppu_blocks_oam(bus->ppu)) return BUS_OPEN_BUS;
+  return mmu_read_oam(bus->mmu, (uint16_t)(addr - OAM_START));
+}
+
+static void bus_write_vram(struct Bus* bus, uint16_t addr, uint8_t val) {
+  if (ppu_blocks_vram(bus->ppu)) return;
+  mmu_write_vram(bus->mmu, addr, val);
+}
+
+static void bus_write_oam(struct Bus* bus, uint16_t addr, uint8_t val) {
+  if (ppu_blocks_oam(bus->ppu)) return;
+  mmu_write_oam(bus->mmu, (uint16_t)(addr - OAM_START), val);
+}
+
 static uint8_t io_read(struct Bus* bus, uint16_t addr) {
   if (addr == 0xFF00) return joypad_read(bus->joypad);
   if (addr == 0xFF01 || addr == 0xFF02) return serial_read(bus->serial, addr);
@@ -112,17 +132,11 @@ uint8_t bus_read(struct Bus* bus, uint16_t addr) {
       return mmu_read_boot(bus->mmu, addr);
   }
   if (addr < VRAM_START) return mmu_read_rom(bus->mmu, addr);
-  if (addr < ERAM_START) {
-    if (ppu_blocks_vram(bus->ppu)) return BUS_OPEN_BUS;
-    return mmu_read_vram(bus->mmu, addr);
-  }
+  if (addr < ERAM_START) return bus_read_vram(bus, addr);
   if (addr < WRAM_START) return mmu_read_eram(bus->mmu, addr);
   if (addr < ECHO_START) return mmu_read_wram(bus->mmu, addr);
   if (addr < OAM_START) return bus_read(bus, (uint16_t)(addr - ECHO_OFFSET));
-  if (addr < OAM_END + 1) {
-    if (ppu_blocks_oam(bus->ppu)) return BUS_OPEN_BUS;
-    return mmu_read_oam(bus->mmu, (uint16_t)(addr - OAM_START));
-  }
+  if (addr < OAM_END + 1) return bus_read_oam(bus, addr);
   if (addr < IO_START) return BUS_OPEN_BUS;
   if (addr < HRAM_START) return io_read(bus, addr);
   if (addr == IE_REG_ADDR) return cpu_read_ie(bus->cpu);
@@ -136,8 +150,7 @@ void bus_write(struct Bus* bus, uint16_t addr, uint8_t val) {
     return;
   }
   if (addr < ERAM_START) {
-    if (ppu_blocks_vram(bus->ppu)) return;
-    mmu_write_vram(bus->mmu, addr, val);
+    bus_write_vram(bus, addr, val);
     return;
   }
   if (addr < WRAM_START) {
@@ -153,8 +166,7 @@ void bus_write(struct Bus* bus, uint16_t addr, uint8_t val) {
     return;
   }
   if (addr < OAM_END + 1) {
-    if (ppu_blocks_oam(bus->ppu)) return;
-    mmu_write_oam(bus->mmu, (uint16_t)(addr - OAM_START), val);
+    bus_write_oam(bus, addr, val);
     return;
   }
   if (addr < IO_START) return;

@@ -23,6 +23,15 @@
 #define HDMA_DST_WRAP 0x1FFF
 #define HDMA_INACTIVE 0xFF
 
+static uint16_t hdma_calc_src(const struct Dma* d) {
+  return ((uint16_t)d->hdma1 << 8) | (uint16_t)(d->hdma2 & HDMA_SRC_LO_MASK);
+}
+
+static uint16_t hdma_calc_dst(const struct Dma* d) {
+  return VRAM_START | ((uint16_t)(d->hdma3 & HDMA_DST_HI_MASK) << 8) |
+         (uint16_t)(d->hdma4 & HDMA_DST_LO_MASK);
+}
+
 static uint8_t dma_mem_read(struct Bus* bus, uint16_t addr) {
   if (addr < VRAM_START) return mmu_read_rom(bus->mmu, addr);
   if (addr < ERAM_START) return mmu_read_vram(bus->mmu, addr);
@@ -86,11 +95,8 @@ void dma_hdma_write(struct Dma* d, struct Bus* bus, uint16_t addr,
         d->hdma_active = false;
         d->hdma5 = (1u << HDMA_TYPE_BIT) | d->hdma_remaining;
       } else if ((val & (1u << HDMA_TYPE_BIT)) == 0) {
-        uint16_t src =
-            ((uint16_t)d->hdma1 << 8) | (uint16_t)(d->hdma2 & HDMA_SRC_LO_MASK);
-        uint16_t dst = VRAM_START |
-                       ((uint16_t)(d->hdma3 & HDMA_DST_HI_MASK) << 8) |
-                       (uint16_t)(d->hdma4 & HDMA_DST_LO_MASK);
+        uint16_t src = hdma_calc_src(d);
+        uint16_t dst = hdma_calc_dst(d);
         uint16_t blocks = (uint16_t)(val & 0x7Fu) + 1u;
         for (uint16_t i = 0; i < blocks * HDMA_BLOCK_BYTES; i++) {
           uint8_t byte = dma_mem_read(bus, (uint16_t)(src + i));
@@ -98,11 +104,8 @@ void dma_hdma_write(struct Dma* d, struct Bus* bus, uint16_t addr,
         }
         d->hdma5 = HDMA_INACTIVE;
       } else {
-        d->hdma_src =
-            ((uint16_t)d->hdma1 << 8) | (uint16_t)(d->hdma2 & HDMA_SRC_LO_MASK);
-        d->hdma_dst = VRAM_START |
-                      ((uint16_t)(d->hdma3 & HDMA_DST_HI_MASK) << 8) |
-                      (uint16_t)(d->hdma4 & HDMA_DST_LO_MASK);
+        d->hdma_src = hdma_calc_src(d);
+        d->hdma_dst = hdma_calc_dst(d);
         d->hdma_remaining = val & 0x7Fu;
         d->hdma_active = true;
         d->hdma5 = val & 0x7Fu;

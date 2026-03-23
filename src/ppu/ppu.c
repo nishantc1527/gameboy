@@ -15,6 +15,13 @@ struct Ppu* ppu_init(uint8_t cgb_mode, uint8_t cgb_compat) {
   return ppu;
 }
 
+static void pal_write(uint8_t* pal_idx, uint8_t* pal_ram, uint8_t val) {
+  uint8_t idx = *pal_idx & PAL_IDX_MASK;
+  pal_ram[idx] = val;
+  if (*pal_idx & PAL_AUTO_INC_BIT)
+    *pal_idx = PAL_AUTO_INC_BIT | ((idx + 1) & PAL_IDX_MASK);
+}
+
 uint8_t ppu_read(const struct Ppu* ppu, uint16_t addr) {
   switch (addr) {
     case 0xFF40:
@@ -94,23 +101,15 @@ void ppu_write(struct Ppu* ppu, uint16_t addr, uint8_t val) {
     case 0xFF68:
       ppu->bg_pal_idx = val;
       break;
-    case 0xFF69: {
-      uint8_t idx = ppu->bg_pal_idx & PAL_IDX_MASK;
-      ppu->bg_pal_ram[idx] = val;
-      if (ppu->bg_pal_idx & PAL_AUTO_INC_BIT)
-        ppu->bg_pal_idx = PAL_AUTO_INC_BIT | ((idx + 1) & PAL_IDX_MASK);
+    case 0xFF69:
+      pal_write(&ppu->bg_pal_idx, ppu->bg_pal_ram, val);
       break;
-    }
     case 0xFF6A:
       ppu->obj_pal_idx = val;
       break;
-    case 0xFF6B: {
-      uint8_t idx = ppu->obj_pal_idx & PAL_IDX_MASK;
-      ppu->obj_pal_ram[idx] = val;
-      if (ppu->obj_pal_idx & PAL_AUTO_INC_BIT)
-        ppu->obj_pal_idx = PAL_AUTO_INC_BIT | ((idx + 1) & PAL_IDX_MASK);
+    case 0xFF6B:
+      pal_write(&ppu->obj_pal_idx, ppu->obj_pal_ram, val);
       break;
-    }
     default:
       break;
   }
@@ -171,21 +170,30 @@ static void ppu_check_stat_irq(struct Ppu* ppu, struct Bus* bus,
   ppu->stat_irq_line = new_line;
 }
 
-static const uint16_t scx_mode3_penalty[8] = {0, 0, 0, 0, 4, 4, 4, 8};
+static const uint16_t SCX_MODE3_PENALTY[8] = {0, 0, 0, 0, 4, 4, 4, 8};
+
+static uint16_t scx_mode3_penalty(uint8_t scx) {
+  return SCX_MODE3_PENALTY[scx & 7u];
+}
+
+static uint8_t current_ppu_mode(uint16_t line_cycles, uint8_t ly, uint8_t scx) {
+  uint16_t mode3_end =
+      (uint16_t)(PPU_TRANSFER_BASE_END + scx_mode3_penalty(scx));
+  uint8_t mode;
+  if (line_cycles < PPU_OAM_END_CYCLE)
+    mode = PPU_MODE_OAM;
+  else if (line_cycles < mode3_end)
+    mode = PPU_MODE_TRANSFER;
+  else
+    mode = PPU_MODE_HBLANK;
+  if (ly >= PPU_VISIBLE_LINES) mode = PPU_MODE_VBLANK;
+  return mode;
+}
 
 void ppu_update_mode(struct Ppu* ppu, struct Bus* bus) {
   uint8_t stat = ppu->stat;
   uint8_t prev_mode = stat & PPU_MODE_MASK;
-  uint8_t curr_mode;
-  uint16_t mode3_end =
-      (uint16_t)(PPU_TRANSFER_BASE_END + scx_mode3_penalty[ppu->scx & 7u]);
-  if (ppu->line_cycles < PPU_OAM_END_CYCLE)
-    curr_mode = PPU_MODE_OAM;
-  else if (ppu->line_cycles < mode3_end)
-    curr_mode = PPU_MODE_TRANSFER;
-  else
-    curr_mode = PPU_MODE_HBLANK;
-  if (ppu->ly >= PPU_VISIBLE_LINES) curr_mode = PPU_MODE_VBLANK;
+  uint8_t curr_mode = current_ppu_mode(ppu->line_cycles, ppu->ly, ppu->scx);
   if (prev_mode != PPU_MODE_VBLANK && curr_mode == PPU_MODE_VBLANK)
     bus_req_intr(bus, INTR_VBLANK);
   if (prev_mode != PPU_MODE_OAM && curr_mode == PPU_MODE_OAM &&

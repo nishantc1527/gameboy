@@ -21,6 +21,30 @@
 void disassemble(struct Cpu* cpu, struct Bus* bus, const uint16_t* watch_addrs,
                  uint8_t watch_count, uint64_t total_cycles);
 
+static void init_components(struct GBemu* gb) {
+  uint8_t cgb_mode = mmu_is_cgb(gb->mmu) ? 1 : 0;
+  uint8_t cgb_compat = mmu_is_cgb_compat(gb->mmu) ? 1 : 0;
+  gb->cpu = cpu_init(cgb_mode);
+  gb->apu = apu_init();
+  gb->ppu = ppu_init(cgb_mode, cgb_compat);
+  gb->timer = timer_init();
+  gb->dma = dma_init();
+  gb->joypad = joypad_init();
+  gb->serial = serial_init();
+  gb->bus = bus_init(gb->mmu, gb->cpu, gb->ppu, gb->apu, gb->timer, gb->dma,
+                     gb->joypad, gb->serial);
+  gb->total_cycles = 0;
+  gb->total_frames = 0;
+  gb->paused = 0;
+  mmu_load(gb->mmu);
+  if (mmu_boot_skipped(gb->mmu)) {
+    uint8_t checksum = mmu_read_rom(gb->mmu, ROM_HEADER_CHECKSUM);
+    cpu_post_boot(gb->cpu, gb->cpu->cgb_mode, checksum);
+    timer_post_boot(gb->timer);
+    ppu_post_boot(gb->ppu);
+  }
+}
+
 static void system_tick(struct GBemu* gb, uint8_t cycles) {
   ppu_tick(gb->ppu, gb->bus, cycles);
   if (gb->dma->hdma_block_pending) {
@@ -49,33 +73,12 @@ struct GBemu* gbemu_init(char* rom_name, const char* boot_rom,
   gb->watch_count = watch_addrs ? (watch_count < 8 ? watch_count : 8) : 0;
   for (uint8_t i = 0; i < gb->watch_count; i++)
     gb->watch_addrs[i] = watch_addrs[i];
-
   gb->mmu = mmu_init(rom_name, boot_rom);
   if (!gb->mmu) {
     free(gb);
     return NULL;
   }
-  uint8_t cgb_mode = mmu_is_cgb(gb->mmu) ? 1 : 0;
-  uint8_t cgb_compat = mmu_is_cgb_compat(gb->mmu) ? 1 : 0;
-  gb->cpu = cpu_init(cgb_mode);
-  gb->apu = apu_init();
-  gb->ppu = ppu_init(cgb_mode, cgb_compat);
-  gb->timer = timer_init();
-  gb->dma = dma_init();
-  gb->joypad = joypad_init();
-  gb->serial = serial_init();
-  gb->bus = bus_init(gb->mmu, gb->cpu, gb->ppu, gb->apu, gb->timer, gb->dma,
-                     gb->joypad, gb->serial);
-  gb->total_cycles = 0;
-  gb->total_frames = 0;
-
-  mmu_load(gb->mmu);
-  if (mmu_boot_skipped(gb->mmu)) {
-    uint8_t checksum = mmu_read_rom(gb->mmu, ROM_HEADER_CHECKSUM);
-    cpu_post_boot(gb->cpu, gb->cpu->cgb_mode, checksum);
-    timer_post_boot(gb->timer);
-    ppu_post_boot(gb->ppu);
-  }
+  init_components(gb);
   return gb;
 }
 
@@ -96,27 +99,7 @@ void gbemu_reset(struct GBemu* gb) {
   mmu_free(gb->mmu);
 
   gb->mmu = mmu_init(gb->rom_name, gb->boot_rom);
-  uint8_t cgb_mode = mmu_is_cgb(gb->mmu) ? 1 : 0;
-  uint8_t cgb_compat = mmu_is_cgb_compat(gb->mmu) ? 1 : 0;
-  gb->cpu = cpu_init(cgb_mode);
-  gb->apu = apu_init();
-  gb->ppu = ppu_init(cgb_mode, cgb_compat);
-  gb->timer = timer_init();
-  gb->dma = dma_init();
-  gb->joypad = joypad_init();
-  gb->serial = serial_init();
-  gb->bus = bus_init(gb->mmu, gb->cpu, gb->ppu, gb->apu, gb->timer, gb->dma,
-                     gb->joypad, gb->serial);
-  gb->total_cycles = 0;
-  gb->total_frames = 0;
-  gb->paused = 0;
-  mmu_load(gb->mmu);
-  if (mmu_boot_skipped(gb->mmu)) {
-    uint8_t checksum = mmu_read_rom(gb->mmu, ROM_HEADER_CHECKSUM);
-    cpu_post_boot(gb->cpu, gb->cpu->cgb_mode, checksum);
-    timer_post_boot(gb->timer);
-    ppu_post_boot(gb->ppu);
-  }
+  init_components(gb);
 }
 
 int gbemu_step_frame(struct GBemu* gb) {

@@ -168,44 +168,27 @@ static void apu_clock_sweep(struct Apu* apu) {
   }
 }
 
+static void clock_envelope(uint8_t env_period, uint8_t* timer, uint8_t* vol,
+                           uint8_t add) {
+  if (env_period == 0) return;
+  if (*timer > 0) (*timer)--;
+  if (*timer == 0) {
+    *timer = env_period;
+    if (add) {
+      if (*vol < 15) (*vol)++;
+    } else {
+      if (*vol > 0) (*vol)--;
+    }
+  }
+}
+
 static void apu_clock_envelope(struct Apu* apu) {
-  uint8_t ep;
-  ep = apu->nr12 & 0x07;
-  if (ep != 0) {
-    if (apu->ch1_env_timer > 0) apu->ch1_env_timer--;
-    if (apu->ch1_env_timer == 0) {
-      apu->ch1_env_timer = ep;
-      if (get_bit(apu->nr12, 3)) {
-        if (apu->ch1_env_vol < 15) apu->ch1_env_vol++;
-      } else {
-        if (apu->ch1_env_vol > 0) apu->ch1_env_vol--;
-      }
-    }
-  }
-  ep = apu->nr22 & 0x07;
-  if (ep != 0) {
-    if (apu->ch2_env_timer > 0) apu->ch2_env_timer--;
-    if (apu->ch2_env_timer == 0) {
-      apu->ch2_env_timer = ep;
-      if (get_bit(apu->nr22, 3)) {
-        if (apu->ch2_env_vol < 15) apu->ch2_env_vol++;
-      } else {
-        if (apu->ch2_env_vol > 0) apu->ch2_env_vol--;
-      }
-    }
-  }
-  ep = apu->nr42 & 0x07;
-  if (ep != 0) {
-    if (apu->ch4_env_timer > 0) apu->ch4_env_timer--;
-    if (apu->ch4_env_timer == 0) {
-      apu->ch4_env_timer = ep;
-      if (get_bit(apu->nr42, 3)) {
-        if (apu->ch4_env_vol < 15) apu->ch4_env_vol++;
-      } else {
-        if (apu->ch4_env_vol > 0) apu->ch4_env_vol--;
-      }
-    }
-  }
+  clock_envelope(apu->nr12 & 0x07, &apu->ch1_env_timer, &apu->ch1_env_vol,
+                 get_bit(apu->nr12, 3));
+  clock_envelope(apu->nr22 & 0x07, &apu->ch2_env_timer, &apu->ch2_env_vol,
+                 get_bit(apu->nr22, 3));
+  clock_envelope(apu->nr42 & 0x07, &apu->ch4_env_timer, &apu->ch4_env_vol,
+                 get_bit(apu->nr42, 3));
 }
 
 void apu_notify_div_tick(struct Apu* apu) {
@@ -258,35 +241,7 @@ static void apu_power_off(struct Apu* apu) {
   apu->nr51 = 0;
 }
 
-void apu_write(struct Apu* apu, uint16_t addr, uint8_t val) {
-  if (addr >= 0xFF30 && addr <= 0xFF3F) {
-    apu->wave_ram[addr - 0xFF30] = val;
-    return;
-  }
-  if (!apu->powered) {
-    switch (addr) {
-      case 0xFF11:
-        apu->ch1_len = val & (APU_CH1_LEN_MAX - 1);
-        return;
-      case 0xFF16:
-        apu->ch2_len = val & (APU_CH2_LEN_MAX - 1);
-        return;
-      case 0xFF1B:
-        apu->ch3_len = val;
-        return;
-      case 0xFF20:
-        apu->ch4_len = val & (APU_CH4_LEN_MAX - 1);
-        return;
-      case 0xFF26:
-        if (val & (1u << NR52_POWER_BIT)) {
-          apu->powered = true;
-          apu->seq_step = 0;
-        }
-        return;
-      default:
-        return;
-    }
-  }
+static void apu_write_ch1(struct Apu* apu, uint16_t addr, uint8_t val) {
   switch (addr) {
     case 0xFF10:
       apu->nr10 = val;
@@ -341,6 +296,11 @@ void apu_write(struct Apu* apu, uint16_t addr, uint8_t val) {
       }
       break;
     }
+  }
+}
+
+static void apu_write_ch2(struct Apu* apu, uint16_t addr, uint8_t val) {
+  switch (addr) {
     case 0xFF16:
       apu->nr21 = val;
       apu->ch2_len = val & (APU_CH2_LEN_MAX - 1);
@@ -374,6 +334,11 @@ void apu_write(struct Apu* apu, uint16_t addr, uint8_t val) {
       }
       break;
     }
+  }
+}
+
+static void apu_write_ch3(struct Apu* apu, uint16_t addr, uint8_t val) {
+  switch (addr) {
     case 0xFF1A:
       apu->nr30 = val;
       if (!(val & (1u << NR52_POWER_BIT))) apu->ch3_active = false;
@@ -408,6 +373,11 @@ void apu_write(struct Apu* apu, uint16_t addr, uint8_t val) {
       }
       break;
     }
+  }
+}
+
+static void apu_write_ch4(struct Apu* apu, uint16_t addr, uint8_t val) {
+  switch (addr) {
     case 0xFF20:
       apu->nr41 = val;
       apu->ch4_len = val & (APU_CH4_LEN_MAX - 1);
@@ -445,6 +415,11 @@ void apu_write(struct Apu* apu, uint16_t addr, uint8_t val) {
       }
       break;
     }
+  }
+}
+
+static void apu_write_control(struct Apu* apu, uint16_t addr, uint8_t val) {
+  switch (addr) {
     case 0xFF24:
       apu->nr50 = val;
       break;
@@ -457,34 +432,104 @@ void apu_write(struct Apu* apu, uint16_t addr, uint8_t val) {
         apu->powered = false;
       }
       break;
-    default:
-      break;
   }
 }
 
-#define TICK_FREQ16(timer, cycles, period, advance)    \
-  do {                                                 \
-    int32_t _t = (int32_t)(timer) - (int32_t)(cycles); \
-    while (_t <= 0) {                                  \
-      {                                                \
-        advance;                                       \
-      }                                                \
-      _t += (int32_t)(period);                         \
-    }                                                  \
-    (timer) = (uint16_t)_t;                            \
-  } while (0)
+void apu_write(struct Apu* apu, uint16_t addr, uint8_t val) {
+  if (addr >= 0xFF30 && addr <= 0xFF3F) {
+    apu->wave_ram[addr - 0xFF30] = val;
+    return;
+  }
+  if (!apu->powered) {
+    switch (addr) {
+      case 0xFF11:
+        apu->ch1_len = val & (APU_CH1_LEN_MAX - 1);
+        return;
+      case 0xFF16:
+        apu->ch2_len = val & (APU_CH2_LEN_MAX - 1);
+        return;
+      case 0xFF1B:
+        apu->ch3_len = val;
+        return;
+      case 0xFF20:
+        apu->ch4_len = val & (APU_CH4_LEN_MAX - 1);
+        return;
+      case 0xFF26:
+        if (val & (1u << NR52_POWER_BIT)) {
+          apu->powered = true;
+          apu->seq_step = 0;
+        }
+        return;
+      default:
+        return;
+    }
+  }
+  if (addr >= 0xFF10 && addr <= 0xFF14)
+    apu_write_ch1(apu, addr, val);
+  else if (addr >= 0xFF16 && addr <= 0xFF19)
+    apu_write_ch2(apu, addr, val);
+  else if (addr >= 0xFF1A && addr <= 0xFF1E)
+    apu_write_ch3(apu, addr, val);
+  else if (addr >= 0xFF20 && addr <= 0xFF23)
+    apu_write_ch4(apu, addr, val);
+  else if (addr >= 0xFF24 && addr <= 0xFF26)
+    apu_write_control(apu, addr, val);
+}
 
-#define TICK_FREQ32(timer, cycles, period, advance)    \
-  do {                                                 \
-    int32_t _t = (int32_t)(timer) - (int32_t)(cycles); \
-    while (_t <= 0) {                                  \
-      {                                                \
-        advance;                                       \
-      }                                                \
-      _t += (int32_t)(period);                         \
-    }                                                  \
-    (timer) = (uint32_t)_t;                            \
-  } while (0)
+static void tick_ch1_freq(struct Apu* apu, uint8_t cycles) {
+  uint16_t freq = ((uint16_t)(apu->nr14 & 0x07) << 8) | apu->nr13;
+  uint16_t period = (uint16_t)((2048u - freq) * 4u);
+  if (period == 0) period = 1;
+  int32_t t = (int32_t)apu->ch1_freq_timer - (int32_t)cycles;
+  while (t <= 0) {
+    apu->ch1_duty_pos = (apu->ch1_duty_pos + 1) & 7;
+    t += (int32_t)period;
+  }
+  apu->ch1_freq_timer = (uint16_t)t;
+}
+
+static void tick_ch2_freq(struct Apu* apu, uint8_t cycles) {
+  uint16_t freq = ((uint16_t)(apu->nr24 & 0x07) << 8) | apu->nr23;
+  uint16_t period = (uint16_t)((2048u - freq) * 4u);
+  if (period == 0) period = 1;
+  int32_t t = (int32_t)apu->ch2_freq_timer - (int32_t)cycles;
+  while (t <= 0) {
+    apu->ch2_duty_pos = (apu->ch2_duty_pos + 1) & 7;
+    t += (int32_t)period;
+  }
+  apu->ch2_freq_timer = (uint16_t)t;
+}
+
+static void tick_ch3_freq(struct Apu* apu, uint8_t cycles) {
+  uint16_t freq = ((uint16_t)(apu->nr34 & 0x07) << 8) | apu->nr33;
+  uint16_t period = (uint16_t)((2048u - freq) * 2u);
+  if (period == 0) period = 1;
+  int32_t t = (int32_t)apu->ch3_freq_timer - (int32_t)cycles;
+  while (t <= 0) {
+    apu->ch3_pos = (apu->ch3_pos + 1) & 31;
+    t += (int32_t)period;
+  }
+  apu->ch3_freq_timer = (uint16_t)t;
+}
+
+static void tick_ch4_freq(struct Apu* apu, uint8_t cycles) {
+  uint8_t r4 = apu->nr43 & 0x07;
+  uint8_t s4 = (apu->nr43 >> 4) & 0x0F;
+  uint32_t period = (uint32_t)(r4 == 0 ? 8u : (uint32_t)r4 * 16u) << s4;
+  if (period == 0) period = 1;
+  int32_t t = (int32_t)apu->ch4_freq_timer - (int32_t)cycles;
+  while (t <= 0) {
+    uint8_t xb = (uint8_t)((apu->ch4_lfsr & 1u) ^ ((apu->ch4_lfsr >> 1) & 1u));
+    apu->ch4_lfsr >>= 1;
+    apu->ch4_lfsr |= (uint16_t)(xb << 14);
+    if (apu->nr43 & 0x08) {
+      apu->ch4_lfsr &= (uint16_t)~(1u << 6);
+      apu->ch4_lfsr |= (uint16_t)(xb << 6);
+    }
+    t += (int32_t)period;
+  }
+  apu->ch4_freq_timer = (uint32_t)t;
+}
 
 void apu_tick(struct Apu* apu, uint8_t cycles) {
   if (!apu->powered) {
@@ -506,43 +551,10 @@ void apu_tick(struct Apu* apu, uint8_t cycles) {
     apu->ch1_active = false;
     apu->sweep_neg_used = false;
   }
-  if (apu->ch1_freq_timer > 0) {
-    uint16_t freq1 = ((uint16_t)(apu->nr14 & 0x07) << 8) | apu->nr13;
-    uint16_t period1 = (uint16_t)((2048u - freq1) * 4u);
-    if (period1 == 0) period1 = 1;
-    TICK_FREQ16(apu->ch1_freq_timer, cycles, period1,
-                apu->ch1_duty_pos = (apu->ch1_duty_pos + 1) & 7);
-  }
-  if (apu->ch2_freq_timer > 0) {
-    uint16_t freq2 = ((uint16_t)(apu->nr24 & 0x07) << 8) | apu->nr23;
-    uint16_t period2 = (uint16_t)((2048u - freq2) * 4u);
-    if (period2 == 0) period2 = 1;
-    TICK_FREQ16(apu->ch2_freq_timer, cycles, period2,
-                apu->ch2_duty_pos = (apu->ch2_duty_pos + 1) & 7);
-  }
-  if (apu->ch3_freq_timer > 0) {
-    uint16_t freq3 = ((uint16_t)(apu->nr34 & 0x07) << 8) | apu->nr33;
-    uint16_t period3 = (uint16_t)((2048u - freq3) * 2u);
-    if (period3 == 0) period3 = 1;
-    TICK_FREQ16(apu->ch3_freq_timer, cycles, period3,
-                apu->ch3_pos = (apu->ch3_pos + 1) & 31);
-  }
-  if (apu->ch4_freq_timer > 0) {
-    uint8_t r4 = apu->nr43 & 0x07;
-    uint8_t s4 = (apu->nr43 >> 4) & 0x0F;
-    uint32_t period4 = (uint32_t)(r4 == 0 ? 8u : (uint32_t)r4 * 16u) << s4;
-    if (period4 == 0) period4 = 1;
-    TICK_FREQ32(apu->ch4_freq_timer, cycles, period4, {
-      uint8_t xb =
-          (uint8_t)((apu->ch4_lfsr & 1u) ^ ((apu->ch4_lfsr >> 1) & 1u));
-      apu->ch4_lfsr >>= 1;
-      apu->ch4_lfsr |= (uint16_t)(xb << 14);
-      if (apu->nr43 & 0x08) {
-        apu->ch4_lfsr &= (uint16_t)~(1u << 6);
-        apu->ch4_lfsr |= (uint16_t)(xb << 6);
-      }
-    });
-  }
+  if (apu->ch1_freq_timer > 0) tick_ch1_freq(apu, cycles);
+  if (apu->ch2_freq_timer > 0) tick_ch2_freq(apu, cycles);
+  if (apu->ch3_freq_timer > 0) tick_ch3_freq(apu, cycles);
+  if (apu->ch4_freq_timer > 0) tick_ch4_freq(apu, cycles);
 
   apu->sample_acc += (uint32_t)cycles * 375u;
   const uint32_t cps = 32768u;
