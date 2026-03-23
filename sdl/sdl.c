@@ -102,7 +102,8 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     perf_freq = SDL_GetPerformanceFrequency();
     next_frame_time = SDL_GetPerformanceCounter();
   }
-  const Uint64 frame_cyc = (Uint64)SCANLINE_LEN * (Uint64)SCANLINES;
+  const Uint64 frame_cyc =
+      (Uint64)PPU_CYCLES_PER_LINE * (Uint64)PPU_TOTAL_LINES;
   const Uint64 frame_ticks = (frame_cyc * perf_freq) / CPU_FREQ;
   if (state->gb && !state->gb->paused && state->gb->fast_forward) {
     for (int i = 0; i < 4; i++) {

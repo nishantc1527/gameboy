@@ -12,6 +12,12 @@
 #include "gbemu/serial.h"
 #include "gbemu/timer.h"
 
+#define ROM_HEADER_CGB_FLAG 0x0143
+#define ROM_HEADER_CHECKSUM 0x014D
+#define BROM_DMG_SIZE 0x100
+#define BROM_CGB_SIZE 0x900
+#define BOOT_ROM_DISABLE_REG 0xFF50
+
 void disassemble(struct Cpu* cpu, struct Bus* bus, const uint16_t* watch_addrs,
                  uint8_t watch_count, uint64_t total_cycles);
 
@@ -64,7 +70,7 @@ struct GBemu* gbemu_init(char* rom_name, const char* boot_rom,
 
   mmu_load(gb->mmu);
   if (mmu_boot_skipped(gb->mmu)) {
-    uint8_t checksum = mmu_read_rom(gb->mmu, 0x014D);
+    uint8_t checksum = mmu_read_rom(gb->mmu, ROM_HEADER_CHECKSUM);
     cpu_post_boot(gb->cpu, gb->cpu->cgb_mode, checksum);
     timer_post_boot(gb->timer);
     ppu_post_boot(gb->ppu, gb->cpu->cgb_mode != 0);
@@ -107,7 +113,7 @@ void gbemu_reset(struct GBemu* gb) {
   gb->paused = 0;
   mmu_load(gb->mmu);
   if (mmu_boot_skipped(gb->mmu)) {
-    uint8_t checksum = mmu_read_rom(gb->mmu, 0x014D);
+    uint8_t checksum = mmu_read_rom(gb->mmu, ROM_HEADER_CHECKSUM);
     cpu_post_boot(gb->cpu, gb->cpu->cgb_mode, checksum);
     timer_post_boot(gb->timer);
     ppu_post_boot(gb->ppu, gb->cpu->cgb_mode != 0);

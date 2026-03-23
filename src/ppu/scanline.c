@@ -6,10 +6,9 @@
 #include "gbemu/util.h"
 #include "ppu_private.h"
 
-const uint16_t SCANLINE_LEN = 456;
-const uint16_t SCANLINES = 154;
-
-uint8_t gt_clr(uint8_t pal, int val) { return (pal >> (val << 1)) & 0b11; }
+uint8_t gt_clr(uint8_t pal, int val) {
+  return (pal >> (val << 1)) & PPU_MODE_MASK;
+}
 void w_pxl(struct Ppu* ppu, int y, int x, uint8_t clr) { ppu->dsp[y][x] = clr; }
 
 static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
@@ -22,31 +21,32 @@ static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
     bg_prio_bit[i] = 0;
   }
   {
-    int dat_area = get_bit(lcdc, 4);
-    int mp_area = get_bit(lcdc, 3);
+    int dat_area = get_bit(lcdc, LCDC_BIT_TILE_DATA);
+    int mp_area = get_bit(lcdc, LCDC_BIT_BG_MAP);
     for (int x = 0; x < SCRN_WIDTH; x++) {
-      uint8_t by = (uint8_t)((ly + ppu->scy) % 256);
-      uint8_t tiley = by / 8;
-      int offy = by % 8;
-      uint8_t bx = (uint8_t)((x + ppu->scx) % 256);
-      uint8_t tilex = bx / 8;
-      uint8_t offx = bx % 8;
+      uint8_t by = (uint8_t)((ly + ppu->scy) % TILE_COORD_WRAP);
+      uint8_t tiley = by / TILE_HEIGHT;
+      int offy = by % TILE_HEIGHT;
+      uint8_t bx = (uint8_t)((x + ppu->scx) % TILE_COORD_WRAP);
+      uint8_t tilex = bx / TILE_WIDTH;
+      uint8_t offx = bx % TILE_WIDTH;
       uint16_t tile_map_addr =
-          (uint16_t)((uint16_t)tiley * 32 + (uint16_t)tilex);
-      tile_map_addr = (uint16_t)(tile_map_addr + (mp_area ? 0x9C00 : 0x9800));
+          (uint16_t)((uint16_t)tiley * TILE_MAP_STRIDE + (uint16_t)tilex);
+      tile_map_addr =
+          (uint16_t)(tile_map_addr + (mp_area ? TILE_MAP_1 : TILE_MAP_0));
       uint8_t tile_idx_raw = mmu_read_vram_bank0(bus->mmu, tile_map_addr);
       uint8_t attr = mmu_read_vram_bank1(bus->mmu, tile_map_addr);
       uint8_t pal_num = attr & 7;
-      uint8_t vram_bank = (attr >> 3) & 1;
-      uint8_t xflip = (attr >> 5) & 1;
-      uint8_t yflip = (attr >> 6) & 1;
-      uint8_t bg_prio = (attr >> 7) & 1;
-      int tile_offy = yflip ? (7 - offy) : offy;
+      uint8_t vram_bank = (attr >> OBJ_ATTR_VRAM_BANK_BIT) & 1;
+      uint8_t xflip = (attr >> OBJ_ATTR_FLIP_X_BIT) & 1;
+      uint8_t yflip = (attr >> OBJ_ATTR_FLIP_Y_BIT) & 1;
+      uint8_t bg_prio = (attr >> OBJ_ATTR_PRIORITY_BIT) & 1;
+      int tile_offy = yflip ? (TILE_HEIGHT - 1 - offy) : offy;
       int ty = tile_offy << 1;
       uint16_t idx = tile_idx_raw;
       if (dat_area == 0) idx = (uint16_t)((int8_t)idx + 128);
-      idx = (uint16_t)(idx * 16);
-      idx = (uint16_t)(idx + (dat_area ? 0x8000 : 0x8800));
+      idx = (uint16_t)(idx * TILE_BYTES);
+      idx = (uint16_t)(idx + (dat_area ? TILE_DATA_LO : TILE_DATA_HI));
       uint8_t ls, ms;
       if (vram_bank == 0) {
         ls = mmu_read_vram_bank0(bus->mmu, (uint16_t)(idx + ty));
@@ -55,7 +55,7 @@ static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
         ls = mmu_read_vram_bank1(bus->mmu, (uint16_t)(idx + ty));
         ms = mmu_read_vram_bank1(bus->mmu, (uint16_t)(idx + ty + 1));
       }
-      uint8_t bit_pos = xflip ? offx : (uint8_t)(7 - offx);
+      uint8_t bit_pos = xflip ? offx : (uint8_t)(TILE_WIDTH - 1 - offx);
       int clr = (get_bit(ms, bit_pos) << 1) | get_bit(ls, bit_pos);
       bg_color_idx[x] = (uint8_t)clr;
       bg_prio_bit[x] = bg_prio;
@@ -63,36 +63,36 @@ static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
       uint8_t hi = ppu->bg_pal_ram[pal_num * 8 + clr * 2 + 1];
       ppu->cgb_dsp[ly][x] = (uint16_t)(lo | ((uint16_t)hi << 8));
     }
-    if (get_bit(lcdc, 5)) {
-      int win_mp = get_bit(lcdc, 6);
+    if (get_bit(lcdc, LCDC_BIT_WIN_ENABLE)) {
+      int win_mp = get_bit(lcdc, LCDC_BIT_WIN_MAP);
       uint8_t wx = ppu->wx;
       uint8_t wy = ppu->wy;
       if (wx < SCRN_WIDTH + 7 && wy < SCRN_HEIGHT && ly >= wy) {
         wx -= 7;
         uint8_t win_ly = ppu->win_cnt;
-        uint8_t tiley = win_ly / 8;
-        int offy = win_ly % 8;
+        uint8_t tiley = win_ly / TILE_HEIGHT;
+        int offy = win_ly % TILE_HEIGHT;
         for (uint8_t x = wx; x < SCRN_WIDTH; x++) {
           uint8_t _wx = (uint8_t)(x - wx);
-          uint8_t tilex = _wx / 8;
-          uint8_t offx = _wx % 8;
+          uint8_t tilex = _wx / TILE_WIDTH;
+          uint8_t offx = _wx % TILE_WIDTH;
           uint16_t tile_map_addr =
-              (uint16_t)((uint16_t)tiley * 32 + (uint16_t)tilex);
+              (uint16_t)((uint16_t)tiley * TILE_MAP_STRIDE + (uint16_t)tilex);
           tile_map_addr =
-              (uint16_t)(tile_map_addr + (win_mp ? 0x9C00 : 0x9800));
+              (uint16_t)(tile_map_addr + (win_mp ? TILE_MAP_1 : TILE_MAP_0));
           uint8_t tile_idx_raw = mmu_read_vram_bank0(bus->mmu, tile_map_addr);
           uint8_t attr = mmu_read_vram_bank1(bus->mmu, tile_map_addr);
           uint8_t pal_num = attr & 7;
-          uint8_t vram_bank = (attr >> 3) & 1;
-          uint8_t xflip = (attr >> 5) & 1;
-          uint8_t yflip = (attr >> 6) & 1;
-          uint8_t bg_prio = (attr >> 7) & 1;
-          int tile_offy = yflip ? (7 - offy) : offy;
+          uint8_t vram_bank = (attr >> OBJ_ATTR_VRAM_BANK_BIT) & 1;
+          uint8_t xflip = (attr >> OBJ_ATTR_FLIP_X_BIT) & 1;
+          uint8_t yflip = (attr >> OBJ_ATTR_FLIP_Y_BIT) & 1;
+          uint8_t bg_prio = (attr >> OBJ_ATTR_PRIORITY_BIT) & 1;
+          int tile_offy = yflip ? (TILE_HEIGHT - 1 - offy) : offy;
           int ty = tile_offy << 1;
           uint16_t idx = tile_idx_raw;
           if (dat_area == 0) idx = (uint16_t)((int8_t)idx + 128);
-          idx = (uint16_t)(idx * 16);
-          idx = (uint16_t)(idx + (dat_area ? 0x8000 : 0x8800));
+          idx = (uint16_t)(idx * TILE_BYTES);
+          idx = (uint16_t)(idx + (dat_area ? TILE_DATA_LO : TILE_DATA_HI));
           uint8_t ls, ms;
           if (vram_bank == 0) {
             ls = mmu_read_vram_bank0(bus->mmu, (uint16_t)(idx + ty));
@@ -101,7 +101,7 @@ static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
             ls = mmu_read_vram_bank1(bus->mmu, (uint16_t)(idx + ty));
             ms = mmu_read_vram_bank1(bus->mmu, (uint16_t)(idx + ty + 1));
           }
-          uint8_t bit_pos = xflip ? offx : (uint8_t)(7 - offx);
+          uint8_t bit_pos = xflip ? offx : (uint8_t)(TILE_WIDTH - 1 - offx);
           int clr = (get_bit(ms, bit_pos) << 1) | get_bit(ls, bit_pos);
           bg_color_idx[x] = (uint8_t)clr;
           bg_prio_bit[x] = bg_prio;
@@ -113,42 +113,47 @@ static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
       }
     }
   }
-  if (get_bit(lcdc, 1)) {
-    uint8_t sz = get_bit(lcdc, 2);
+  if (get_bit(lcdc, LCDC_BIT_OBJ_ENABLE)) {
+    uint8_t sz = get_bit(lcdc, LCDC_BIT_OBJ_SIZE);
     int cnt = 0;
-    uint16_t obj[10] = {0};
-    for (uint16_t mem_loc = 0xFE00; mem_loc <= 0xFE9F && cnt < 10;
-         mem_loc += 4) {
-      int y = mmu_read_oam(bus->mmu, (uint16_t)(mem_loc - 0xFE00));
-      y -= 16;
+    uint16_t obj[OAM_LINE_LIMIT] = {0};
+    for (uint16_t mem_loc = OAM_START;
+         mem_loc <= OAM_END && cnt < OAM_LINE_LIMIT;
+         mem_loc += OAM_ENTRY_BYTES) {
+      int y = mmu_read_oam(bus->mmu, (uint16_t)(mem_loc - OAM_START));
+      y -= OBJ_Y_OFFSET;
       if (ly < y) continue;
       if (sz) {
-        if (ly >= y + 16) continue;
-      } else if (ly >= y + 8)
+        if (ly >= y + OBJ_TALL_HEIGHT) continue;
+      } else if (ly >= y + TILE_HEIGHT)
         continue;
       obj[cnt++] = mem_loc;
     }
     for (int i = cnt - 1; i >= 0; i--) {
       uint16_t mem_loc = obj[i];
-      uint8_t y = mmu_read_oam(bus->mmu, (uint16_t)(mem_loc - 0xFE00));
-      int x = mmu_read_oam(bus->mmu, (uint16_t)(mem_loc - 0xFE00 + 1));
-      uint16_t tile_idx =
-          mmu_read_oam(bus->mmu, (uint16_t)(mem_loc - 0xFE00 + 2));
-      uint8_t flg = mmu_read_oam(bus->mmu, (uint16_t)(mem_loc - 0xFE00 + 3));
-      y -= 16;
-      x -= 8;
-      if (sz) tile_idx &= 0xFE;
-      uint8_t vram_bank = (flg >> 3) & 1;
-      uint8_t pal_num = ppu->cgb_compat ? ((flg >> 4) & 1) : (flg & 7);
-      uint8_t flipx = get_bit(flg, 5);
-      uint8_t flipy = get_bit(flg, 6);
-      uint8_t obj_prio = get_bit(flg, 7);
-      uint16_t idx = (uint16_t)(tile_idx * 16 + 0x8000);
+      uint8_t y =
+          mmu_read_oam(bus->mmu, (uint16_t)(mem_loc - OAM_START + OAM_OFF_Y));
+      int x =
+          mmu_read_oam(bus->mmu, (uint16_t)(mem_loc - OAM_START + OAM_OFF_X));
+      uint16_t tile_idx = mmu_read_oam(
+          bus->mmu, (uint16_t)(mem_loc - OAM_START + OAM_OFF_TILE));
+      uint8_t flg = mmu_read_oam(
+          bus->mmu, (uint16_t)(mem_loc - OAM_START + OAM_OFF_ATTR));
+      y -= OBJ_Y_OFFSET;
+      x -= OBJ_X_OFFSET;
+      if (sz) tile_idx &= OBJ_TALL_TILE_MASK;
+      uint8_t vram_bank = (flg >> OBJ_ATTR_VRAM_BANK_BIT) & 1;
+      uint8_t pal_num =
+          ppu->cgb_compat ? ((flg >> OBJ_ATTR_PAL_DMG_BIT) & 1) : (flg & 7);
+      uint8_t flipx = get_bit(flg, OBJ_ATTR_FLIP_X_BIT);
+      uint8_t flipy = get_bit(flg, OBJ_ATTR_FLIP_Y_BIT);
+      uint8_t obj_prio = get_bit(flg, OBJ_ATTR_PRIORITY_BIT);
+      uint16_t idx = (uint16_t)(tile_idx * TILE_BYTES + OBJ_TILE_BASE);
       uint8_t line = (uint8_t)(ly - y);
       if (sz) {
-        if (flipy) line = 15 - line;
+        if (flipy) line = OBJ_TALL_HEIGHT - 1 - line;
       } else {
-        if (flipy) line = 7 - line;
+        if (flipy) line = TILE_HEIGHT - 1 - line;
       }
       line = (uint8_t)(line << 1);
       uint8_t ls, ms;
@@ -159,14 +164,14 @@ static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
         ls = mmu_read_vram_bank1(bus->mmu, (uint16_t)(idx + line));
         ms = mmu_read_vram_bank1(bus->mmu, (uint16_t)(idx + line + 1));
       }
-      for (int x0 = x; x0 < x + 8; x0++) {
+      for (int x0 = x; x0 < x + TILE_WIDTH; x0++) {
         if (x0 < 0 || x0 >= SCRN_WIDTH) continue;
         uint8_t posx = (uint8_t)(x0 - x);
-        if (!flipx) posx = 7 - posx;
+        if (!flipx) posx = TILE_WIDTH - 1 - posx;
         uint8_t clr = (uint8_t)((get_bit(ms, posx) << 1) | get_bit(ls, posx));
         if (clr == 0) continue;
         int bg_wins = 0;
-        if (!get_bit(lcdc, 0)) {
+        if (!get_bit(lcdc, LCDC_BIT_BG_ENABLE)) {
           bg_wins = 0;
         } else if (bg_prio_bit[x0] && bg_color_idx[x0] != 0) {
           bg_wins = 1;
@@ -183,84 +188,85 @@ static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
   }
 }
 
-void do_scanline(struct Ppu* ppu,
-                 struct Bus* bus) {  // TODO magic numbers, split up
-  if (get_bit(ppu->lcdc, 7)) {
-    if (ppu->ly < SCRN_HEIGHT) {
+void do_scanline(struct Ppu* ppu, struct Bus* bus) {
+  if (get_bit(ppu->lcdc, LCDC_BIT_LCD_ENABLE)) {
+    if (ppu->ly < PPU_VISIBLE_LINES) {
       if (ppu->cgb_mode) {
         do_scanline_cgb(ppu, bus);
         ppu->ly++;
-        if (ppu->ly >= SCANLINES) {
+        if (ppu->ly >= PPU_TOTAL_LINES) {
           ppu->ly = 0;
           ppu->win_cnt = 0;
           ppu->frame_ready = true;
         }
         return;
       }
-      if (get_bit(ppu->lcdc, 0)) {
+      if (get_bit(ppu->lcdc, LCDC_BIT_BG_ENABLE)) {
         uint8_t ly = ppu->ly;
-        int dat_area = get_bit(ppu->lcdc, 4);
-        int mp_area = get_bit(ppu->lcdc, 3);
+        int dat_area = get_bit(ppu->lcdc, LCDC_BIT_TILE_DATA);
+        int mp_area = get_bit(ppu->lcdc, LCDC_BIT_BG_MAP);
         uint8_t pal = ppu->bgp;
         for (int x = 0; x < SCRN_WIDTH; x++) {
-          uint8_t by = (ly + ppu->scy) % 256;
-          uint8_t tiley = by / (uint8_t)8;
-          int offy = by % 8;
+          uint8_t by = (ly + ppu->scy) % TILE_COORD_WRAP;
+          uint8_t tiley = by / (uint8_t)TILE_HEIGHT;
+          int offy = by % TILE_HEIGHT;
           int ty = offy << 1;
-          uint8_t bx = (uint8_t)((x + ppu->scx) % 256);
-          uint8_t tilex = bx / 8;
-          uint8_t offx = bx % 8;
+          uint8_t bx = (uint8_t)((x + ppu->scx) % TILE_COORD_WRAP);
+          uint8_t tilex = bx / TILE_WIDTH;
+          uint8_t offx = bx % TILE_WIDTH;
           uint16_t idx =
-              (uint16_t)((uint16_t)tiley * (uint16_t)32) + (uint16_t)tilex;
+              (uint16_t)((uint16_t)tiley * (uint16_t)TILE_MAP_STRIDE) +
+              (uint16_t)tilex;
           if (mp_area == 0)
-            idx += 0x9800;
+            idx += TILE_MAP_0;
           else
-            idx += 0x9C00;
+            idx += TILE_MAP_1;
           idx = mmu_read_vram(bus->mmu, idx);
           if (dat_area == 0) idx = (uint16_t)((int8_t)idx + (uint16_t)128);
-          idx *= 16;
+          idx *= TILE_BYTES;
           if (dat_area == 0)
-            idx += 0x8800;
+            idx += TILE_DATA_HI;
           else
-            idx += 0x8000;
+            idx += TILE_DATA_LO;
           uint8_t ls = mmu_read_vram(bus->mmu, (uint16_t)(idx + (uint16_t)ty));
           uint8_t ms =
               mmu_read_vram(bus->mmu, (uint16_t)(idx + (uint16_t)ty + 1));
-          offx = 7 - offx;
+          offx = TILE_WIDTH - 1 - offx;
           int clr = (get_bit(ms, offx) << 1) | get_bit(ls, offx);
           w_pxl(ppu, ly, x, gt_clr(pal, clr));
         }
-        if (get_bit(ppu->lcdc, 5)) {
-          mp_area = get_bit(ppu->lcdc, 6);
+        if (get_bit(ppu->lcdc, LCDC_BIT_WIN_ENABLE)) {
+          mp_area = get_bit(ppu->lcdc, LCDC_BIT_WIN_MAP);
           uint8_t wx = ppu->wx;
           uint8_t wy = ppu->wy;
           if (wx < SCRN_WIDTH + 7 && wy < SCRN_HEIGHT && ppu->ly >= wy) {
             wx = wx - 7;
             wy = ppu->win_cnt;
-            uint8_t tiley = wy / 8;
-            int offy = wy % 8;
+            uint8_t tiley = wy / TILE_HEIGHT;
+            int offy = wy % TILE_HEIGHT;
             int ty = offy << 1;
             for (uint8_t x = wx; x < SCRN_WIDTH; x++) {
               uint8_t _wx = x - wx;
-              uint8_t tilex = _wx / 8;
-              uint8_t offx = _wx % 8;
+              uint8_t tilex = _wx / TILE_WIDTH;
+              uint8_t offx = _wx % TILE_WIDTH;
               uint16_t idx =
-                  (uint16_t)((uint16_t)tiley * (uint16_t)32) + (uint16_t)tilex;
+                  (uint16_t)((uint16_t)tiley * (uint16_t)TILE_MAP_STRIDE) +
+                  (uint16_t)tilex;
               if (mp_area == 0)
-                idx += 0x9800;
+                idx += TILE_MAP_0;
               else
-                idx += 0x9C00;
+                idx += TILE_MAP_1;
               idx = mmu_read_vram(bus->mmu, idx);
               if (dat_area == 0) idx = (uint16_t)((int8_t)idx + (uint16_t)128);
-              idx *= 16;
+              idx *= TILE_BYTES;
               if (dat_area == 0)
-                idx += 0x8800;
+                idx += TILE_DATA_HI;
               else
-                idx += 0x8000;
+                idx += TILE_DATA_LO;
               uint8_t ls = mmu_read_vram(bus->mmu, idx + (uint16_t)ty);
               uint8_t ms = mmu_read_vram(
                   bus->mmu, (uint16_t)(idx + (uint16_t)ty + (uint16_t)1));
-              offx = 7 - offx;
+              offx = TILE_WIDTH - 1 - offx;
               int clr = (get_bit(ms, offx) << 1) | get_bit(ls, offx);
               w_pxl(ppu, ly, x, gt_clr(pal, clr));
             }
@@ -272,36 +278,37 @@ void do_scanline(struct Ppu* ppu,
           w_pxl(ppu, ppu->ly, x, CLR_WHT);
         }
       }
-      if (get_bit(ppu->lcdc, 1)) {
+      if (get_bit(ppu->lcdc, LCDC_BIT_OBJ_ENABLE)) {
         uint8_t ly = ppu->ly;
-        uint8_t sz = get_bit(ppu->lcdc, 2);
+        uint8_t sz = get_bit(ppu->lcdc, LCDC_BIT_OBJ_SIZE);
         int cnt = 0;
-        uint16_t obj[10] = {0};
-        for (uint16_t mem_loc = 0xFE00; mem_loc <= 0xFE9F && cnt < 10;
-             mem_loc += 4) {
-          int y = mmu_read_oam(bus->mmu, (uint16_t)(mem_loc - 0xFE00));
-          y -= 16;
+        uint16_t obj[OAM_LINE_LIMIT] = {0};
+        for (uint16_t mem_loc = OAM_START;
+             mem_loc <= OAM_END && cnt < OAM_LINE_LIMIT;
+             mem_loc += OAM_ENTRY_BYTES) {
+          int y = mmu_read_oam(bus->mmu, (uint16_t)(mem_loc - OAM_START));
+          y -= OBJ_Y_OFFSET;
           if (ly < y) continue;
           if (sz) {
-            if (ly >= y + 16) continue;
-          } else if (ly >= y + 8)
+            if (ly >= y + OBJ_TALL_HEIGHT) continue;
+          } else if (ly >= y + TILE_HEIGHT)
             continue;
           obj[cnt++] = mem_loc;
         }
-        uint16_t maxx = 0x0100;
+        uint16_t maxx = TILE_COORD_WRAP;
         uint16_t maxm = 0xFFFF;
         while (cnt--) {
           int midx = -1;
-          for (int i = 0; i < 10; i++)
+          for (int i = 0; i < OAM_LINE_LIMIT; i++)
             if (obj[i]) {
-              uint8_t x =
-                  mmu_read_oam(bus->mmu, (uint16_t)(obj[i] - 0xFE00 + 1));
+              uint8_t x = mmu_read_oam(
+                  bus->mmu, (uint16_t)(obj[i] - OAM_START + OAM_OFF_X));
               if (x < maxx || (x == maxx && obj[i] < maxm)) {
                 if (midx == -1)
                   midx = i;
                 else {
                   uint8_t prev = mmu_read_oam(
-                      bus->mmu, (uint16_t)(obj[midx] - 0xFE00 + 1));
+                      bus->mmu, (uint16_t)(obj[midx] - OAM_START + OAM_OFF_X));
                   if (x > prev) midx = i;
                   if (x == prev && obj[i] > obj[midx]) midx = i;
                 }
@@ -310,42 +317,45 @@ void do_scanline(struct Ppu* ppu,
           if (midx == -1) break;
           uint16_t mem_loc = obj[midx];
           obj[midx] = 0;
-          maxx = mmu_read_oam(bus->mmu, (uint16_t)(mem_loc - 0xFE00 + 1));
+          maxx = mmu_read_oam(bus->mmu,
+                              (uint16_t)(mem_loc - OAM_START + OAM_OFF_X));
           maxm = mem_loc;
-          uint8_t y = mmu_read_oam(bus->mmu, (uint16_t)(mem_loc - 0xFE00));
-          int x = mmu_read_oam(bus->mmu, (uint16_t)(mem_loc - 0xFE00 + 1));
-          uint16_t idx =
-              mmu_read_oam(bus->mmu, (uint16_t)(mem_loc - 0xFE00 + 2));
-          uint8_t flg =
-              mmu_read_oam(bus->mmu, (uint16_t)(mem_loc - 0xFE00 + 3));
-          y -= 16;
-          x -= 8;
-          if (sz) idx &= 0xFE;
-          idx *= 16;
-          idx += 0x8000;
-          uint8_t flipx = get_bit(flg, 5);
-          uint8_t flipy = get_bit(flg, 6);
+          uint8_t y = mmu_read_oam(bus->mmu,
+                                   (uint16_t)(mem_loc - OAM_START + OAM_OFF_Y));
+          int x = mmu_read_oam(bus->mmu,
+                               (uint16_t)(mem_loc - OAM_START + OAM_OFF_X));
+          uint16_t idx = mmu_read_oam(
+              bus->mmu, (uint16_t)(mem_loc - OAM_START + OAM_OFF_TILE));
+          uint8_t flg = mmu_read_oam(
+              bus->mmu, (uint16_t)(mem_loc - OAM_START + OAM_OFF_ATTR));
+          y -= OBJ_Y_OFFSET;
+          x -= OBJ_X_OFFSET;
+          if (sz) idx &= OBJ_TALL_TILE_MASK;
+          idx *= TILE_BYTES;
+          idx += OBJ_TILE_BASE;
+          uint8_t flipx = get_bit(flg, OBJ_ATTR_FLIP_X_BIT);
+          uint8_t flipy = get_bit(flg, OBJ_ATTR_FLIP_Y_BIT);
           uint8_t line = ly - y;
           if (sz) {
-            if (flipy) line = 15 - line;
+            if (flipy) line = OBJ_TALL_HEIGHT - 1 - line;
           } else {
-            if (flipy) line = 7 - line;
+            if (flipy) line = TILE_HEIGHT - 1 - line;
           }
           line = (uint8_t)(line << 1);
           uint8_t ls = mmu_read_vram_bank0(bus->mmu, idx + line + 0);
           uint8_t ms = mmu_read_vram_bank0(
               bus->mmu, (uint16_t)(idx + (uint16_t)line + 1));
           uint8_t pal;
-          if (get_bit(flg, 4))
+          if (get_bit(flg, OBJ_ATTR_PAL_DMG_BIT))
             pal = ppu->obp1;
           else
             pal = ppu->obp0;
-          for (int x0 = x; x0 < x + 8; x0++) {
+          for (int x0 = x; x0 < x + TILE_WIDTH; x0++) {
             if (x0 < 0) continue;
-            uint8_t posx = (uint8_t)7 - (uint8_t)(x0 - x);
-            if (flipx) posx = 7 - posx;
+            uint8_t posx = (uint8_t)(TILE_WIDTH - 1) - (uint8_t)(x0 - x);
+            if (flipx) posx = TILE_WIDTH - 1 - posx;
             uint8_t clr = (uint8_t)(get_bit(ms, posx) << 1) | get_bit(ls, posx);
-            if (get_bit(flg, 7)) {
+            if (get_bit(flg, OBJ_ATTR_PRIORITY_BIT)) {
               if (ppu->dsp[ly][x0] == gt_clr(ppu->bgp, 0))
                 w_pxl(ppu, ly, x0, gt_clr(pal, clr));
             } else if (clr != 0)
@@ -355,7 +365,7 @@ void do_scanline(struct Ppu* ppu,
       }
     }
     ppu->ly++;
-    if (ppu->ly >= SCANLINES) {
+    if (ppu->ly >= PPU_TOTAL_LINES) {
       ppu->ly = 0;
       ppu->win_cnt = 0;
       ppu->frame_ready = true;
@@ -364,7 +374,7 @@ void do_scanline(struct Ppu* ppu,
     ppu->ly = 0;
     ppu->win_cnt = 0;
     ppu->off_scn++;
-    if (ppu->off_scn >= SCANLINES) {
+    if (ppu->off_scn >= PPU_TOTAL_LINES) {
       ppu->off_scn = 0;
       ppu->frame_ready = true;
     }

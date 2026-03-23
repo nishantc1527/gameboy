@@ -4,11 +4,8 @@
 #include "gbemu/util.h"
 
 static const uint16_t INTR_VECTORS[5] = {
-    0x0040,  // VBlank
-    0x0048,  // LCD STAT
-    0x0050,  // Timer
-    0x0058,  // Serial
-    0x0060,  // Joypad
+    INTR_VEC_VBLANK, INTR_VEC_LCD,    INTR_VEC_TIMER,
+    INTR_VEC_SERIAL, INTR_VEC_JOYPAD,
 };
 
 int do_intr(struct Cpu* cpu, struct Bus* bus, uint8_t intr) {
@@ -18,14 +15,14 @@ int do_intr(struct Cpu* cpu, struct Bus* bus, uint8_t intr) {
     push(cpu, bus, cpu->PC);
     cpu->PC = INTR_VECTORS[intr];
     cpu->ime = false;
-    return 20;
+    return INTR_DISPATCH_CYCLES;
   }
   return 0;
 }
 
 uint8_t cpu_check_interrupts(struct Cpu* cpu, struct Bus* bus) {
   (void)bus;
-  uint8_t pending = cpu->if_reg & cpu->ie_reg & 0x1Fu;
+  uint8_t pending = cpu->if_reg & cpu->ie_reg & IF_VALID_MASK;
   for (uint8_t intr = 0; intr < 5; intr++) {
     if (pending & (uint8_t)(1u << intr)) {
       return (uint8_t)do_intr(cpu, bus, intr);

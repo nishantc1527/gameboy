@@ -2,31 +2,37 @@
 
 #include <stdlib.h>
 
+#include "gbemu/bus.h"
 #include "gbemu/cpu.h"
 
-#define INTR_SERIAL 3
+#define REG_SB 0xFF01
+#define REG_SC 0xFF02
+#define SC_TRANSFER_TRIGGER 0x81
+#define SC_STORED_MASK 0x7F
+#define SC_UNUSED_BITS 0x7E
+#define SERIAL_BUF_SIZE 0xFF
 
 struct Serial* serial_init(void) { return calloc(1, sizeof(struct Serial)); }
 
 void serial_free(struct Serial* s) { free(s); }
 
 uint8_t serial_read(const struct Serial* s, uint16_t addr) {
-  if (addr == 0xFF01) return s->sb;
-  if (addr == 0xFF02) return s->sc | 0x7E;
-  return 0xFF;
+  if (addr == REG_SB) return s->sb;
+  if (addr == REG_SC) return s->sc | SC_UNUSED_BITS;
+  return BUS_OPEN_BUS;
 }
 
 void serial_write(struct Serial* s, uint16_t addr, uint8_t val,
                   struct Cpu* cpu) {
-  if (addr == 0xFF01) {
+  if (addr == REG_SB) {
     s->sb = val;
     return;
   }
-  if (addr == 0xFF02) {
-    if ((val & 0x81) == 0x81) {
-      s->sc = val & 0x7F;
+  if (addr == REG_SC) {
+    if ((val & SC_TRANSFER_TRIGGER) == SC_TRANSFER_TRIGGER) {
+      s->sc = val & SC_STORED_MASK;
       s->byte_ready = true;
-      uint8_t next = (uint8_t)((s->buf_tail + 1) % 0xFF);
+      uint8_t next = (uint8_t)((s->buf_tail + 1) % SERIAL_BUF_SIZE);
       if (next != s->buf_head) {
         s->buf[s->buf_tail] = s->sb;
         s->buf_tail = next;
@@ -49,7 +55,7 @@ uint8_t serial_take_byte(struct Serial* s) {
     return s->sb;
   }
   uint8_t byte = s->buf[s->buf_head];
-  s->buf_head = (uint8_t)((s->buf_head + 1) % 0xFF);
+  s->buf_head = (uint8_t)((s->buf_head + 1) % SERIAL_BUF_SIZE);
   if (s->buf_head == s->buf_tail) s->byte_ready = false;
   return byte;
 }

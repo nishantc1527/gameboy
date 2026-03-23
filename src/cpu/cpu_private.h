@@ -12,11 +12,35 @@
 #define FLG_H 5
 #define FLG_C 4
 
-#define INTR_VBLANK 0
-#define INTR_LCD 1
-#define INTR_TIMER 2
-#define INTR_SERIAL 3
-#define INTR_JOYPAD 4
+#define IF_REG_ADDR 0xFF0F
+
+#define INTR_DISPATCH_CYCLES 20
+
+#define INTR_VEC_VBLANK 0x0040
+#define INTR_VEC_LCD 0x0048
+#define INTR_VEC_TIMER 0x0050
+#define INTR_VEC_SERIAL 0x0058
+#define INTR_VEC_JOYPAD 0x0060
+
+#define CPU_BOOT_PC 0x0100
+#define CPU_BOOT_SP 0xFFFE
+#define CPU_BOOT_IF 0xE1
+#define CPU_DMG_A 0x01
+#define CPU_DMG_F_WITH_CHKSUM 0xB0
+#define CPU_DMG_F_NO_CHKSUM 0x80
+#define CPU_DMG_B 0x00
+#define CPU_DMG_C 0x13
+#define CPU_DMG_D 0x00
+#define CPU_DMG_E 0xD8
+#define CPU_DMG_H 0x01
+#define CPU_DMG_L 0x4D
+
+#define CPU_CGB_A 0x11
+#define CPU_CGB_F 0x80
+#define CPU_CGB_D 0xFF
+#define CPU_CGB_E 0x56
+#define CPU_CGB_H 0x00
+#define CPU_CGB_L 0x0D
 
 static inline void mem_tick(struct Cpu* cpu, struct Bus* bus,
                             uint8_t pre_cycles) {

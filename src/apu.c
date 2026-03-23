@@ -6,6 +6,30 @@
 
 #define HPF_CHARGE 0.99634f
 
+#define APU_CH1_LEN_MAX 64
+#define APU_CH2_LEN_MAX 64
+#define APU_CH3_LEN_MAX 256
+#define APU_CH4_LEN_MAX 64
+#define APU_LFSR_INIT 0x7FFF
+
+#define NR52_POWER_BIT 7
+#define NR52_UNUSED_BITS 0x70
+
+#define NR10_UNUSED 0x80
+#define NR11_UNUSED 0x3F
+#define NR13_UNUSED 0xFF
+#define NR14_UNUSED 0xBF
+#define NR21_UNUSED 0x3F
+#define NR23_UNUSED 0xFF
+#define NR24_UNUSED 0xBF
+#define NR30_UNUSED 0x7F
+#define NR31_UNUSED 0xFF
+#define NR32_UNUSED 0x9F
+#define NR33_UNUSED 0xFF
+#define NR34_UNUSED 0xBF
+#define NR41_UNUSED 0xC0
+#define NR44_UNUSED 0xBF
+
 static const uint8_t DUTY_TABLE[4][8] = {
     {0, 0, 0, 0, 0, 0, 0, 1},
     {1, 0, 0, 0, 0, 0, 0, 1},
@@ -15,7 +39,7 @@ static const uint8_t DUTY_TABLE[4][8] = {
 
 struct Apu* apu_init(void) {
   struct Apu* apu = calloc(1, sizeof(struct Apu));
-  apu->ch4_lfsr = 0x7FFF;
+  apu->ch4_lfsr = APU_LFSR_INIT;
   return apu;
 }
 
@@ -24,53 +48,54 @@ void apu_free(struct Apu* apu) { free(apu); }
 uint8_t apu_read(const struct Apu* apu, uint16_t addr) {
   switch (addr) {
     case 0xFF10:
-      return apu->nr10 | 0x80;
+      return apu->nr10 | NR10_UNUSED;
     case 0xFF11:
-      return apu->nr11 | 0x3F;
+      return apu->nr11 | NR11_UNUSED;
     case 0xFF12:
       return apu->nr12;
     case 0xFF13:
-      return 0xFF;
+      return NR13_UNUSED;
     case 0xFF14:
-      return apu->nr14 | 0xBF;
+      return apu->nr14 | NR14_UNUSED;
     case 0xFF15:
       return 0xFF;
     case 0xFF16:
-      return apu->nr21 | 0x3F;
+      return apu->nr21 | NR21_UNUSED;
     case 0xFF17:
       return apu->nr22;
     case 0xFF18:
-      return 0xFF;
+      return NR23_UNUSED;
     case 0xFF19:
-      return apu->nr24 | 0xBF;
+      return apu->nr24 | NR24_UNUSED;
     case 0xFF1A:
-      return apu->nr30 | 0x7F;
+      return apu->nr30 | NR30_UNUSED;
     case 0xFF1B:
-      return 0xFF;
+      return NR31_UNUSED;
     case 0xFF1C:
-      return apu->nr32 | 0x9F;
+      return apu->nr32 | NR32_UNUSED;
     case 0xFF1D:
-      return 0xFF;
+      return NR33_UNUSED;
     case 0xFF1E:
-      return apu->nr34 | 0xBF;
+      return apu->nr34 | NR34_UNUSED;
     case 0xFF1F:
       return 0xFF;
     case 0xFF20:
-      return 0xFF;
+      return NR41_UNUSED;
     case 0xFF21:
       return apu->nr42;
     case 0xFF22:
       return apu->nr43;
     case 0xFF23:
-      return apu->nr44 | 0xBF;
+      return apu->nr44 | NR44_UNUSED;
     case 0xFF24:
       return apu->nr50;
     case 0xFF25:
       return apu->nr51;
     case 0xFF26:
-      return (apu->powered ? 0x80u : 0u) | (apu->ch4_active ? 0x08u : 0u) |
-             (apu->ch3_active ? 0x04u : 0u) | (apu->ch2_active ? 0x02u : 0u) |
-             (apu->ch1_active ? 0x01u : 0u) | 0x70u;
+      return (apu->powered ? (1u << NR52_POWER_BIT) : 0u) |
+             (apu->ch4_active ? 0x08u : 0u) | (apu->ch3_active ? 0x04u : 0u) |
+             (apu->ch2_active ? 0x02u : 0u) | (apu->ch1_active ? 0x01u : 0u) |
+             NR52_UNUSED_BITS;
     default:
       if (addr >= 0xFF30 && addr <= 0xFF3F) return apu->wave_ram[addr - 0xFF30];
       return 0xFF;
@@ -104,13 +129,13 @@ static uint16_t sweep_calc(struct Apu* apu, uint8_t* overflow) {
 
 static void apu_clock_length(struct Apu* apu) {
   if (apu->ch1_len_enable)
-    if (clock_length_u8(&apu->ch1_len, 0x40)) apu->ch1_active = false;
+    if (clock_length_u8(&apu->ch1_len, APU_CH1_LEN_MAX)) apu->ch1_active = 0;
   if (apu->ch2_len_enable)
-    if (clock_length_u8(&apu->ch2_len, 0x40)) apu->ch2_active = false;
+    if (clock_length_u8(&apu->ch2_len, APU_CH2_LEN_MAX)) apu->ch2_active = 0;
   if (apu->ch3_len_enable)
-    if (clock_length_u16(&apu->ch3_len, 0x100)) apu->ch3_active = false;
+    if (clock_length_u16(&apu->ch3_len, APU_CH3_LEN_MAX)) apu->ch3_active = 0;
   if (apu->ch4_len_enable)
-    if (clock_length_u8(&apu->ch4_len, 0x40)) apu->ch4_active = false;
+    if (clock_length_u8(&apu->ch4_len, APU_CH4_LEN_MAX)) apu->ch4_active = 0;
 }
 
 static void apu_clock_sweep(struct Apu* apu) {
@@ -206,7 +231,7 @@ static void apu_power_off(struct Apu* apu) {
   apu->ch1_duty_pos = 0;
   apu->ch2_duty_pos = 0;
   apu->ch3_pos = 0;
-  apu->ch4_lfsr = 0x7FFF;
+  apu->ch4_lfsr = APU_LFSR_INIT;
   apu->ch1_env_vol = 0;
   apu->ch2_env_vol = 0;
   apu->ch4_env_vol = 0;
@@ -241,19 +266,19 @@ void apu_write(struct Apu* apu, uint16_t addr, uint8_t val) {
   if (!apu->powered) {
     switch (addr) {
       case 0xFF11:
-        apu->ch1_len = val & 0x3F;
+        apu->ch1_len = val & (APU_CH1_LEN_MAX - 1);
         return;
       case 0xFF16:
-        apu->ch2_len = val & 0x3F;
+        apu->ch2_len = val & (APU_CH2_LEN_MAX - 1);
         return;
       case 0xFF1B:
         apu->ch3_len = val;
         return;
       case 0xFF20:
-        apu->ch4_len = val & 0x3F;
+        apu->ch4_len = val & (APU_CH4_LEN_MAX - 1);
         return;
       case 0xFF26:
-        if (val & 0x80) {
+        if (val & (1u << NR52_POWER_BIT)) {
           apu->powered = true;
           apu->seq_step = 0;
         }
@@ -272,7 +297,7 @@ void apu_write(struct Apu* apu, uint16_t addr, uint8_t val) {
       break;
     case 0xFF11:
       apu->nr11 = val;
-      apu->ch1_len = val & 0x3F;
+      apu->ch1_len = val & (APU_CH1_LEN_MAX - 1);
       break;
     case 0xFF12:
       apu->nr12 = val;
@@ -285,11 +310,12 @@ void apu_write(struct Apu* apu, uint16_t addr, uint8_t val) {
       uint8_t old_len_enable = apu->ch1_len_enable;
       apu->ch1_len_enable = (val >> 6) & 1;
       if (!old_len_enable && apu->ch1_len_enable && (apu->seq_step & 1) == 0) {
-        if (clock_length_u8(&apu->ch1_len, 0x40)) apu->ch1_active = false;
+        if (clock_length_u8(&apu->ch1_len, APU_CH1_LEN_MAX))
+          apu->ch1_active = false;
       }
       apu->nr14 = val & 0x7F;
-      if (val & 0x80) {
-        if (apu->ch1_len >= 0x40) {
+      if (val & (1u << NR52_POWER_BIT)) {
+        if (apu->ch1_len >= APU_CH1_LEN_MAX) {
           apu->ch1_len =
               (apu->ch1_len_enable && (apu->seq_step & 1) == 0) ? 1 : 0;
         }
@@ -317,7 +343,7 @@ void apu_write(struct Apu* apu, uint16_t addr, uint8_t val) {
     }
     case 0xFF16:
       apu->nr21 = val;
-      apu->ch2_len = val & 0x3F;
+      apu->ch2_len = val & (APU_CH2_LEN_MAX - 1);
       break;
     case 0xFF17:
       apu->nr22 = val;
@@ -330,11 +356,12 @@ void apu_write(struct Apu* apu, uint16_t addr, uint8_t val) {
       uint8_t old_len_enable = apu->ch2_len_enable;
       apu->ch2_len_enable = (val >> 6) & 1;
       if (!old_len_enable && apu->ch2_len_enable && (apu->seq_step & 1) == 0) {
-        if (clock_length_u8(&apu->ch2_len, 0x40)) apu->ch2_active = false;
+        if (clock_length_u8(&apu->ch2_len, APU_CH2_LEN_MAX))
+          apu->ch2_active = false;
       }
       apu->nr24 = val & 0x7F;
-      if (val & 0x80) {
-        if (apu->ch2_len >= 0x40) {
+      if (val & (1u << NR52_POWER_BIT)) {
+        if (apu->ch2_len >= APU_CH2_LEN_MAX) {
           apu->ch2_len =
               (apu->ch2_len_enable && (apu->seq_step & 1) == 0) ? 1 : 0;
         }
@@ -349,7 +376,7 @@ void apu_write(struct Apu* apu, uint16_t addr, uint8_t val) {
     }
     case 0xFF1A:
       apu->nr30 = val;
-      if (!(val & 0x80)) apu->ch3_active = false;
+      if (!(val & (1u << NR52_POWER_BIT))) apu->ch3_active = false;
       break;
     case 0xFF1B:
       apu->nr31 = val;
@@ -365,15 +392,16 @@ void apu_write(struct Apu* apu, uint16_t addr, uint8_t val) {
       uint8_t old_len_enable = apu->ch3_len_enable;
       apu->ch3_len_enable = (val >> 6) & 1;
       if (!old_len_enable && apu->ch3_len_enable && (apu->seq_step & 1) == 0) {
-        if (clock_length_u16(&apu->ch3_len, 0x100)) apu->ch3_active = false;
+        if (clock_length_u16(&apu->ch3_len, APU_CH3_LEN_MAX))
+          apu->ch3_active = false;
       }
       apu->nr34 = val & 0x7F;
-      if (val & 0x80) {
-        if (apu->ch3_len >= 0x100) {
+      if (val & (1u << NR52_POWER_BIT)) {
+        if (apu->ch3_len >= APU_CH3_LEN_MAX) {
           apu->ch3_len =
               (apu->ch3_len_enable && (apu->seq_step & 1) == 0) ? 1 : 0;
         }
-        if (apu->nr30 & 0x80) apu->ch3_active = true;
+        if (apu->nr30 & (1u << NR52_POWER_BIT)) apu->ch3_active = true;
         uint16_t freq3 = ((uint16_t)(apu->nr34 & 0x07) << 8) | apu->nr33;
         apu->ch3_freq_timer = (uint16_t)((2048u - freq3) * 2u);
         apu->ch3_pos = 0;
@@ -382,7 +410,7 @@ void apu_write(struct Apu* apu, uint16_t addr, uint8_t val) {
     }
     case 0xFF20:
       apu->nr41 = val;
-      apu->ch4_len = val & 0x3F;
+      apu->ch4_len = val & (APU_CH4_LEN_MAX - 1);
       break;
     case 0xFF21:
       apu->nr42 = val;
@@ -395,16 +423,17 @@ void apu_write(struct Apu* apu, uint16_t addr, uint8_t val) {
       uint8_t old_len_enable = apu->ch4_len_enable;
       apu->ch4_len_enable = (val >> 6) & 1;
       if (!old_len_enable && apu->ch4_len_enable && (apu->seq_step & 1) == 0) {
-        if (clock_length_u8(&apu->ch4_len, 0x40)) apu->ch4_active = false;
+        if (clock_length_u8(&apu->ch4_len, APU_CH4_LEN_MAX))
+          apu->ch4_active = false;
       }
       apu->nr44 = val & 0x7F;
-      if (val & 0x80) {
-        if (apu->ch4_len >= 0x40) {
+      if (val & (1u << NR52_POWER_BIT)) {
+        if (apu->ch4_len >= APU_CH4_LEN_MAX) {
           apu->ch4_len =
               (apu->ch4_len_enable && (apu->seq_step & 1) == 0) ? 1 : 0;
         }
         if (apu->nr42 & 0xF8) apu->ch4_active = true;
-        apu->ch4_lfsr = 0x7FFF;
+        apu->ch4_lfsr = APU_LFSR_INIT;
         apu->ch4_env_vol = (apu->nr42 >> 4) & 0x0F;
         uint8_t ep4 = apu->nr42 & 0x07;
         apu->ch4_env_timer = ep4 ? ep4 : 8;
@@ -423,7 +452,7 @@ void apu_write(struct Apu* apu, uint16_t addr, uint8_t val) {
       apu->nr51 = val;
       break;
     case 0xFF26:
-      if (!(val & 0x80) && apu->powered) {
+      if (!(val & (1u << NR52_POWER_BIT)) && apu->powered) {
         apu_power_off(apu);
         apu->powered = false;
       }
@@ -471,7 +500,7 @@ void apu_tick(struct Apu* apu, uint8_t cycles) {
   }
   if (!(apu->nr12 & 0xF8)) apu->ch1_active = false;
   if (!(apu->nr22 & 0xF8)) apu->ch2_active = false;
-  if (!(apu->nr30 & 0x80)) apu->ch3_active = false;
+  if (!(apu->nr30 & (1u << NR52_POWER_BIT))) apu->ch3_active = false;
   if (!(apu->nr42 & 0xF8)) apu->ch4_active = false;
   if (apu->sweep_neg_used && !get_bit(apu->nr10, 3)) {
     apu->ch1_active = false;

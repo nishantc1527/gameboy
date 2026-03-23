@@ -8,6 +8,16 @@
 #include "gbemu/settings.h"
 #include "sdl_private.h"
 
+#define RGB555_MASK 0x1F
+#define RGB555_RED_SHIFT 0
+#define RGB555_GREEN_SHIFT 5
+#define RGB555_BLUE_SHIFT 10
+#define RGB555_EXPAND_SHIFT 3
+#define RGB555_FILL_SHIFT 2
+#define RGBA_R_SHIFT 24
+#define RGBA_G_SHIFT 16
+#define RGBA_B_SHIFT 8
+
 uint32_t buf[SCRN_HEIGHT][SCRN_WIDTH];
 
 void render(struct Ppu* ppu) {
@@ -15,13 +25,17 @@ void render(struct Ppu* ppu) {
     for (int i = 0; i < SCRN_HEIGHT; i++)
       for (int j = 0; j < SCRN_WIDTH; j++) {
         uint16_t rgb555 = ppu->cgb_dsp[i][j];
-        uint8_t r5 = rgb555 & 0x1F;
-        uint8_t g5 = (rgb555 >> 5) & 0x1F;
-        uint8_t b5 = (rgb555 >> 10) & 0x1F;
-        uint32_t r = (r5 << 3) | (r5 >> 2);
-        uint32_t g = (g5 << 3) | (g5 >> 2);
-        uint32_t b = (b5 << 3) | (b5 >> 2);
-        buf[i][j] = (r << 24) | (g << 16) | (b << 8) | SDL_ALPHA_OPAQUE;
+        uint8_t r5 = (rgb555 >> RGB555_RED_SHIFT) & RGB555_MASK;
+        uint8_t g5 = (rgb555 >> RGB555_GREEN_SHIFT) & RGB555_MASK;
+        uint8_t b5 = (rgb555 >> RGB555_BLUE_SHIFT) & RGB555_MASK;
+        uint32_t r = (uint32_t)(r5 << RGB555_EXPAND_SHIFT) |
+                     (uint32_t)(r5 >> RGB555_FILL_SHIFT);
+        uint32_t g = (uint32_t)(g5 << RGB555_EXPAND_SHIFT) |
+                     (uint32_t)(g5 >> RGB555_FILL_SHIFT);
+        uint32_t b = (uint32_t)(b5 << RGB555_EXPAND_SHIFT) |
+                     (uint32_t)(b5 >> RGB555_FILL_SHIFT);
+        buf[i][j] = (r << RGBA_R_SHIFT) | (g << RGBA_G_SHIFT) |
+                    (b << RGBA_B_SHIFT) | SDL_ALPHA_OPAQUE;
       }
   } else {
     uint32_t pal[4];

@@ -12,7 +12,6 @@ def _stem(rom):
 params = [
     (rom, boot, frame, f"tests/refs/{_stem(rom)}/frame_{frame:03d}.png")
     for rom, boot, start, end in BOOT_ROMS + ROMS
-    if os.path.exists(rom)
     for frame in range(start, end + 1)
 ]
 
@@ -20,4 +19,6 @@ params = [
 @pytest.mark.timeout(60)
 @pytest.mark.parametrize("rom,boot,frame,ref", params)
 def test_visual(rom, boot, frame, ref):
+    if not os.path.exists(rom):
+        pytest.skip()
     check_screenshot_at_frame(rom, ref, frame, boot_rom=boot)
