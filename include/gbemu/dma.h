@@ -11,6 +11,7 @@ struct Dma {
   uint8_t hdma_remaining;
   uint8_t hdma1, hdma2, hdma3, hdma4;
   uint8_t hdma5;
+  uint8_t hdma_block_pending;
 };
 
 struct Bus;

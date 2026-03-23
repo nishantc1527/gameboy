@@ -727,9 +727,9 @@ static uint8_t op_75(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x76 HALT */
 static uint8_t op_76(struct Cpu* cpu, struct Bus* bus) {
-  (void)bus;
-  if (!cpu->ime && (cpu->ie_reg & cpu->if_reg & 0x1F)) {
-    cpu->halt_bug = true;
+  if (!cpu->ime && (cpu->ie_reg & cpu->if_reg & IF_VALID_MASK)) {
+    uint8_t op = bus_read(bus, cpu->PC);
+    cpu_ops[op](cpu, bus);
   } else {
     cpu->halted = true;
   }

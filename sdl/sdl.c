@@ -109,7 +109,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     for (int i = 0; i < 4; i++) {
       if (gbemu_step_frame(state->gb) == -1) return SDL_APP_FAILURE;
     }
-    state->gb->apu->sample_count = 0;
+    apu_discard_samples(state->gb->apu);
     next_frame_time = SDL_GetPerformanceCounter();
   } else {
     Uint64 now = SDL_GetPerformanceCounter();

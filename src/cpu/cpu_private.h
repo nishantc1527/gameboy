@@ -44,9 +44,9 @@
 
 static inline void mem_tick(struct Cpu* cpu, struct Bus* bus,
                             uint8_t pre_cycles) {
-  timer_tick(bus->timer, pre_cycles, bus->apu, cpu);
-  bus->timer->sub_instr_cycles =
-      (uint8_t)(bus->timer->sub_instr_cycles + pre_cycles);
+  (void)cpu;
+  timer_tick(bus->timer, pre_cycles, bus);
+  timer_record_sub_cycles(bus->timer, pre_cycles);
 }
 
 static inline uint8_t get_flag(struct Cpu* cpu, uint8_t flg) {

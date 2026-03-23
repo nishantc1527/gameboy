@@ -2,9 +2,7 @@
 
 #include <stdlib.h>
 
-#include "gbemu/apu.h"
 #include "gbemu/bus.h"
-#include "gbemu/cpu.h"
 
 #define REG_DIV 0xFF04
 #define REG_TIMA 0xFF05
@@ -65,15 +63,14 @@ uint8_t timer_read(const struct Timer* t, uint16_t addr) {
   return BUS_OPEN_BUS;
 }
 
-void timer_write(struct Timer* t, uint16_t addr, uint8_t val, struct Apu* apu,
-                 struct Cpu* cpu) {
+void timer_write(struct Timer* t, uint16_t addr, uint8_t val, struct Bus* bus) {
   if (addr == REG_DIV) {
     uint8_t sel_bit = timer_selected_bit(t);
     if ((t->tac & (1u << TAC_ENABLE_BIT)) && ((t->sys_ctr >> sel_bit) & 1)) {
       timer_increment_tima(t);
     }
     if ((t->sys_ctr >> TIMER_APU_BIT) & 1) {
-      apu_notify_div_tick(apu);
+      bus_notify_div_pulse(bus);
     }
     t->sys_ctr = 0;
     return;
@@ -103,19 +100,28 @@ void timer_write(struct Timer* t, uint16_t addr, uint8_t val, struct Apu* apu,
   }
 }
 
-void timer_tick(struct Timer* t, uint8_t cycles, struct Apu* apu,
-                struct Cpu* cpu) {
+uint8_t timer_consume_sub_cycles(struct Timer* t) {
+  uint8_t v = t->sub_instr_cycles;
+  t->sub_instr_cycles = 0;
+  return v;
+}
+
+void timer_record_sub_cycles(struct Timer* t, uint8_t cycles) {
+  t->sub_instr_cycles = (uint8_t)(t->sub_instr_cycles + cycles);
+}
+
+void timer_tick(struct Timer* t, uint8_t cycles, struct Bus* bus) {
   if (t->tima_overflow_pending) {
     t->tima_overflow_pending = false;
     t->tima = t->tma;
-    cpu->if_reg |= (uint8_t)(1u << INTR_TIMER);
+    bus_req_intr(bus, INTR_TIMER);
   }
 
   for (uint8_t i = 0; i < cycles; i++) {
     uint16_t old = t->sys_ctr;
     t->sys_ctr = (uint16_t)(t->sys_ctr + 1);
     if ((old >> TIMER_APU_BIT) & 1 && !((t->sys_ctr >> TIMER_APU_BIT) & 1)) {
-      apu_notify_div_tick(apu);
+      bus_notify_div_pulse(bus);
     }
     if (t->tac & (1u << TAC_ENABLE_BIT)) {
       uint8_t bit = timer_selected_bit(t);

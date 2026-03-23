@@ -24,6 +24,7 @@ struct Ppu {
   uint16_t scn;
   uint8_t frame_ready;
   uint8_t lcdc_reenable;
+  uint8_t stat_irq_line;
   uint8_t off_scn;
   uint8_t cgb_mode;
   uint8_t cgb_compat;
@@ -43,8 +44,12 @@ struct Ppu {
   uint8_t obj_pal_ram[64];
 };
 
-struct Ppu* ppu_init(void);
+struct Ppu* ppu_init(uint8_t cgb_mode, uint8_t cgb_compat);
 uint8_t ppu_read(const struct Ppu* ppu, uint16_t addr);
 void ppu_write(struct Ppu* ppu, uint16_t addr, uint8_t val);
-void ppu_post_boot(struct Ppu* ppu, uint8_t cgb_mode);
+void ppu_post_boot(struct Ppu* ppu);
 void ppu_tick(struct Ppu* ppu, struct Bus* bus, uint8_t cycles);
+uint8_t ppu_frame_ready(const struct Ppu* ppu);
+void ppu_begin_frame(struct Ppu* ppu);
+uint8_t ppu_blocks_vram(const struct Ppu* ppu);
+uint8_t ppu_blocks_oam(const struct Ppu* ppu);

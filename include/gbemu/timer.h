@@ -1,8 +1,7 @@
 #pragma once
 #include <stdint.h>
 
-struct Apu;
-struct Cpu;
+struct Bus;
 
 struct Timer {
   uint16_t sys_ctr;
@@ -17,7 +16,7 @@ struct Timer* timer_init(void);
 void timer_free(struct Timer* t);
 void timer_post_boot(struct Timer* t);
 uint8_t timer_read(const struct Timer* t, uint16_t addr);
-void timer_write(struct Timer* t, uint16_t addr, uint8_t val, struct Apu* apu,
-                 struct Cpu* cpu);
-void timer_tick(struct Timer* t, uint8_t cycles, struct Apu* apu,
-                struct Cpu* cpu);
+void timer_write(struct Timer* t, uint16_t addr, uint8_t val, struct Bus* bus);
+void timer_tick(struct Timer* t, uint8_t cycles, struct Bus* bus);
+uint8_t timer_consume_sub_cycles(struct Timer* t);
+void timer_record_sub_cycles(struct Timer* t, uint8_t cycles);

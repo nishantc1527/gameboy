@@ -1,7 +1,6 @@
 #include "cpu_private.h"
 #include "gbemu/bus.h"
 #include "gbemu/cpu.h"
-#include "gbemu/util.h"
 
 static const uint16_t INTR_VECTORS[5] = {
     INTR_VEC_VBLANK, INTR_VEC_LCD,    INTR_VEC_TIMER,
@@ -29,21 +28,4 @@ uint8_t cpu_check_interrupts(struct Cpu* cpu, struct Bus* bus) {
     }
   }
   return 0;
-}
-
-void check_interrupt_vblank_lcd(struct Bus* bus, uint8_t stat, int prev_mode,
-                                int curr_mode) {
-  int req_vblank = 0;
-  int req_lcd = 0;
-  if (prev_mode != curr_mode) {
-    if (curr_mode == 1) req_vblank = 1;
-    if (curr_mode == 0 && get_bit(stat, 3)) req_lcd = 1;
-    if (curr_mode == 1 && get_bit(stat, 4)) req_lcd = 1;
-    if (curr_mode == 2 && get_bit(stat, 5)) req_lcd = 1;
-  }
-  int prev_lyc = get_bit(stat, 2);
-  int curr_lyc = (bus_read(bus, 0xFF44) == bus_read(bus, 0xFF45));
-  if (prev_lyc != curr_lyc && curr_lyc && get_bit(stat, 6)) req_lcd = 1;
-  if (req_vblank) bus_req_intr(bus, INTR_VBLANK);
-  if (req_lcd) bus_req_intr(bus, INTR_LCD);
 }

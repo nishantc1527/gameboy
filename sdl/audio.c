@@ -34,5 +34,5 @@ void push_audio(struct Apu* apu) {
   if (!audio_stream || apu->sample_count == 0) return;
   SDL_PutAudioStreamData(audio_stream, apu->sample_buf,
                          (int)(apu->sample_count * 2u * sizeof(float)));
-  apu->sample_count = 0;
+  apu_discard_samples(apu);
 }

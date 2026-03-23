@@ -56,3 +56,4 @@ void bus_free(struct Bus* b);
 uint8_t bus_read(struct Bus* bus, uint16_t addr);
 void bus_write(struct Bus* bus, uint16_t addr, uint8_t val);
 void bus_req_intr(struct Bus* bus, uint8_t intr);
+void bus_notify_div_pulse(struct Bus* bus);

@@ -8,11 +8,6 @@ uint8_t cpu_step(struct Cpu* cpu, struct Bus* bus) {
     cpu->ime = true;
     cpu->ime_pending = false;
   }
-  if (cpu->halt_bug) {
-    cpu->halt_bug = false;
-    uint8_t op = bus_read(bus, cpu->PC);  // no PC increment
-    return cpu_ops[op](cpu, bus);
-  }
   uint8_t op = bus_read(bus, cpu->PC++);
   if (op == 0xCB) {
     uint8_t prefix = bus_read(bus, cpu->PC++);

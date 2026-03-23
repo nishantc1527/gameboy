@@ -616,3 +616,5 @@ void apu_tick(struct Apu* apu, uint8_t cycles) {
     apu->sample_count++;
   }
 }
+
+void apu_discard_samples(struct Apu* apu) { apu->sample_count = 0; }

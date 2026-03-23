@@ -3,7 +3,6 @@
 #include <stdlib.h>
 
 #include "gbemu/bus.h"
-#include "gbemu/cpu.h"
 
 #define REG_P1 0xFF00
 #define P1_DPAD_SELECT 4
@@ -42,7 +41,7 @@ uint8_t joypad_read(const struct Joypad* j) {
 void joypad_write(struct Joypad* j, uint8_t val) { j->select = val; }
 
 void joypad_set_button(struct Joypad* j, int btn, uint8_t pressed,
-                       struct Cpu* cpu) {
+                       struct Bus* bus) {
   uint8_t was_pressed = j->buttons[btn];
   j->buttons[btn] = pressed;
   if (pressed && !was_pressed) {
@@ -54,6 +53,6 @@ void joypad_set_button(struct Joypad* j, int btn, uint8_t pressed,
         (btn == BTN_RIGHT || btn == BTN_LEFT || btn == BTN_UP ||
          btn == BTN_DOWN))
       relevant = true;
-    if (relevant) cpu->if_reg |= (uint8_t)(1u << INTR_JOYPAD);
+    if (relevant) bus_req_intr(bus, INTR_JOYPAD);
   }
 }

@@ -3,7 +3,6 @@
 #include <stdlib.h>
 
 #include "gbemu/bus.h"
-#include "gbemu/cpu.h"
 
 #define REG_SB 0xFF01
 #define REG_SC 0xFF02
@@ -23,7 +22,7 @@ uint8_t serial_read(const struct Serial* s, uint16_t addr) {
 }
 
 void serial_write(struct Serial* s, uint16_t addr, uint8_t val,
-                  struct Cpu* cpu) {
+                  struct Bus* bus) {
   if (addr == REG_SB) {
     s->sb = val;
     return;
@@ -37,7 +36,7 @@ void serial_write(struct Serial* s, uint16_t addr, uint8_t val,
         s->buf[s->buf_tail] = s->sb;
         s->buf_tail = next;
       }
-      cpu->if_reg |= (uint8_t)(1u << INTR_SERIAL);
+      bus_req_intr(bus, INTR_SERIAL);
     } else {
       s->sc = val;
     }
