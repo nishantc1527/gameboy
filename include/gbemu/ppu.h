@@ -29,6 +29,7 @@ struct Ppu {
   uint8_t cgb_mode;
   uint8_t cgb_compat;
   uint8_t win_cnt;
+  uint8_t wy_triggered;
   uint8_t lcdc;
   uint8_t stat;
   uint8_t scy, scx;

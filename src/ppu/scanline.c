@@ -66,8 +66,7 @@ static void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
     if (get_bit(lcdc, LCDC_BIT_WIN_ENABLE)) {
       int win_mp = get_bit(lcdc, LCDC_BIT_WIN_MAP);
       uint8_t wx = ppu->wx;
-      uint8_t wy = ppu->wy;
-      if (wx < SCRN_WIDTH + 7 && wy < SCRN_HEIGHT && ly >= wy) {
+      if (wx < SCRN_WIDTH + 7 && ppu->wy_triggered) {
         wx -= 7;
         uint8_t win_ly = ppu->win_cnt;
         uint8_t tiley = win_ly / TILE_HEIGHT;
@@ -197,6 +196,7 @@ void do_scanline(struct Ppu* ppu, struct Bus* bus) {
         if (ppu->ly >= PPU_TOTAL_LINES) {
           ppu->ly = 0;
           ppu->win_cnt = 0;
+          ppu->wy_triggered = 0;
           ppu->frame_ready = true;
         }
         return;
@@ -238,10 +238,9 @@ void do_scanline(struct Ppu* ppu, struct Bus* bus) {
         if (get_bit(ppu->lcdc, LCDC_BIT_WIN_ENABLE)) {
           mp_area = get_bit(ppu->lcdc, LCDC_BIT_WIN_MAP);
           uint8_t wx = ppu->wx;
-          uint8_t wy = ppu->wy;
-          if (wx < SCRN_WIDTH + 7 && wy < SCRN_HEIGHT && ppu->ly >= wy) {
+          if (wx < SCRN_WIDTH + 7 && ppu->wy_triggered) {
             wx = wx - 7;
-            wy = ppu->win_cnt;
+            uint8_t wy = ppu->win_cnt;
             uint8_t tiley = wy / TILE_HEIGHT;
             int offy = wy % TILE_HEIGHT;
             int ty = offy << 1;
@@ -368,11 +367,13 @@ void do_scanline(struct Ppu* ppu, struct Bus* bus) {
     if (ppu->ly >= PPU_TOTAL_LINES) {
       ppu->ly = 0;
       ppu->win_cnt = 0;
+      ppu->wy_triggered = 0;
       ppu->frame_ready = true;
     }
   } else {
     ppu->ly = 0;
     ppu->win_cnt = 0;
+    ppu->wy_triggered = 0;
     ppu->off_scn++;
     if (ppu->off_scn >= PPU_TOTAL_LINES) {
       ppu->off_scn = 0;

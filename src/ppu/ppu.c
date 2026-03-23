@@ -188,6 +188,9 @@ void update_lcd(struct Ppu* ppu, struct Bus* bus) {
   if (ppu->ly >= PPU_VISIBLE_LINES) curr_mode = PPU_MODE_VBLANK;
   if (prev_mode != PPU_MODE_VBLANK && curr_mode == PPU_MODE_VBLANK)
     bus_req_intr(bus, INTR_VBLANK);
+  if (prev_mode != PPU_MODE_OAM && curr_mode == PPU_MODE_OAM &&
+      ppu->ly < PPU_VISIBLE_LINES && ppu->wy == ppu->ly)
+    ppu->wy_triggered = 1;
   ppu_check_stat_irq(ppu, bus, curr_mode);
   if (prev_mode != PPU_MODE_HBLANK && curr_mode == PPU_MODE_HBLANK)
     bus->dma->hdma_block_pending = 1;
