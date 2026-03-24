@@ -70,8 +70,17 @@ struct Bus;
 
 // Writes to pixel buffer
 void write_pixel(struct Ppu* ppu, int y, int x, uint8_t clr);
-
 uint8_t palette_color(uint8_t pal, int color_idx);
+
+uint16_t tile_map_base(uint8_t lcdc, int use_window_map);
+uint16_t tile_data_addr(uint8_t tile_idx, int dat_area);
+int collect_sprites(struct Bus* bus, uint8_t ly, uint8_t sz, uint16_t* obj);
+
+void render_bg_dmg(struct Ppu* ppu, struct Bus* bus, uint8_t ly);
+void render_window_dmg(struct Ppu* ppu, struct Bus* bus, uint8_t ly);
+void render_sprites_dmg(struct Ppu* ppu, struct Bus* bus, uint8_t ly);
+
+void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus);
 
 void ppu_update_mode(struct Ppu* ppu, struct Bus* bus);
 void ppu_render_line(struct Ppu* ppu, struct Bus* bus);
