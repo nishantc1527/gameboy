@@ -3,10 +3,21 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "../bus_private.h"
 #include "gbemu/bus.h"
 #include "gbemu/dma.h"
 #include "gbemu/util.h"
 #include "ppu_private.h"
+
+uint8_t ppu_get_cgb_mode(const struct Ppu* ppu) { return ppu->cgb_mode; }
+
+const uint8_t* ppu_get_dmg_framebuffer(const struct Ppu* ppu) {
+  return &ppu->dsp[0][0];
+}
+
+const uint16_t* ppu_get_cgb_framebuffer(const struct Ppu* ppu) {
+  return &ppu->cgb_dsp[0][0];
+}
 
 struct Ppu* ppu_init(uint8_t cgb_mode, uint8_t cgb_compat) {
   struct Ppu* ppu = calloc(1, sizeof(struct Ppu));
@@ -201,7 +212,7 @@ void ppu_update_mode(struct Ppu* ppu, struct Bus* bus) {
     ppu->wy_triggered = 1;
   ppu_check_stat_irq(ppu, bus, curr_mode);
   if (prev_mode != PPU_MODE_HBLANK && curr_mode == PPU_MODE_HBLANK)
-    bus->dma->hdma_block_pending = 1;
+    dma_notify_hblank(bus->dma);
   stat &= (uint8_t)~PPU_MODE_MASK;
   stat |= curr_mode;
   if (ppu->ly == ppu->lyc)

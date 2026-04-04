@@ -2,7 +2,17 @@
 
 #include <stdlib.h>
 
+#include "bus_private.h"
 #include "gbemu/bus.h"
+
+struct Serial {
+  uint8_t sb;
+  uint8_t sc;
+  uint8_t byte_ready;
+  uint8_t buf[0xFF];
+  uint8_t buf_head;
+  uint8_t buf_tail;
+};
 
 #define REG_SB 0xFF01
 #define REG_SC 0xFF02

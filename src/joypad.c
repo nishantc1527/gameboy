@@ -2,7 +2,13 @@
 
 #include <stdlib.h>
 
+#include "bus_private.h"
 #include "gbemu/bus.h"
+
+struct Joypad {
+  uint8_t buttons[8];
+  uint8_t select;
+};
 
 #define REG_P1 0xFF00
 #define P1_DPAD_SELECT 4
@@ -39,6 +45,10 @@ uint8_t joypad_read(const struct Joypad* j) {
 }
 
 void joypad_write(struct Joypad* j, uint8_t val) { j->select = val; }
+
+void joypad_force_button(struct Joypad* j, int btn, uint8_t pressed) {
+  j->buttons[btn] = pressed;
+}
 
 void joypad_set_button(struct Joypad* j, int btn, uint8_t pressed,
                        struct Bus* bus) {

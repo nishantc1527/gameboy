@@ -2,8 +2,22 @@
 
 #include <stdlib.h>
 
+#include "bus_private.h"
 #include "gbemu/bus.h"
 #include "gbemu/mmu.h"
+
+struct Dma {
+  uint8_t active;
+  uint16_t src;
+  uint8_t pos;
+  uint8_t hdma_active;
+  uint16_t hdma_src;
+  uint16_t hdma_dst;
+  uint8_t hdma_remaining;
+  uint8_t hdma1, hdma2, hdma3, hdma4;
+  uint8_t hdma5;
+  uint8_t hdma_block_pending;
+};
 
 #define DMA_REG_ADDR 0xFF46
 #define DMA_SRC_ADDR_SHIFT 8
@@ -74,6 +88,16 @@ void dma_tick(struct Dma* d, struct Bus* bus, uint8_t cycles) {
 }
 
 uint8_t dma_blocks_cpu(const struct Dma* d) { return d->active; }
+
+void dma_notify_hblank(struct Dma* d) { d->hdma_block_pending = 1; }
+
+uint8_t dma_hdma_block_pending(const struct Dma* d) {
+  return d->hdma_block_pending;
+}
+
+void dma_clear_hdma_block_pending(struct Dma* d) {
+  d->hdma_block_pending = 0;
+}
 
 void dma_hdma_write(struct Dma* d, struct Bus* bus, uint16_t addr,
                     uint8_t val) {

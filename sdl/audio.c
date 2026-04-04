@@ -31,8 +31,8 @@ int audio_queued_bytes(void) {
 }
 
 void push_audio(struct Apu* apu) {
-  if (!audio_stream || apu->sample_count == 0) return;
-  SDL_PutAudioStreamData(audio_stream, apu->sample_buf,
-                         (int)(apu->sample_count * 2u * sizeof(float)));
+  if (!audio_stream || apu_get_sample_count(apu) == 0) return;
+  SDL_PutAudioStreamData(audio_stream, apu_get_sample_buf(apu),
+                         (int)(apu_get_sample_count(apu) * 2u * sizeof(float)));
   apu_discard_samples(apu);
 }

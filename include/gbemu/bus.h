@@ -37,17 +37,7 @@ struct Dma;
 struct Joypad;
 struct Serial;
 struct Mmu;
-
-struct Bus {
-  struct Mmu* mmu;
-  struct Cpu* cpu;
-  struct Ppu* ppu;
-  struct Apu* apu;
-  struct Timer* timer;
-  struct Dma* dma;
-  struct Joypad* joypad;
-  struct Serial* serial;
-};
+struct Bus;
 
 struct Bus* bus_init(struct Mmu* mmu, struct Cpu* cpu, struct Ppu* ppu,
                      struct Apu* apu, struct Timer* timer, struct Dma* dma,

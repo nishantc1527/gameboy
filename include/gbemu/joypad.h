@@ -11,11 +11,7 @@
 #define BTN_RIGHT 7
 
 struct Bus;
-
-struct Joypad {
-  uint8_t buttons[8];
-  uint8_t select;
-};
+struct Joypad;
 
 struct Joypad* joypad_init(void);
 void joypad_free(struct Joypad* j);
@@ -23,3 +19,4 @@ uint8_t joypad_read(const struct Joypad* j);
 void joypad_write(struct Joypad* j, uint8_t val);
 void joypad_set_button(struct Joypad* j, int btn, uint8_t pressed,
                        struct Bus* bus);
+void joypad_force_button(struct Joypad* j, int btn, uint8_t pressed);

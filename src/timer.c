@@ -2,7 +2,17 @@
 
 #include <stdlib.h>
 
+#include "bus_private.h"
 #include "gbemu/bus.h"
+
+struct Timer {
+  uint16_t sys_ctr;
+  uint8_t tima;
+  uint8_t tma;
+  uint8_t tac;
+  uint8_t tima_overflow_pending;
+  uint8_t sub_instr_cycles;
+};
 
 #define REG_DIV 0xFF04
 #define REG_TIMA 0xFF05

@@ -21,10 +21,11 @@
 uint32_t buf[SCRN_HEIGHT][SCRN_WIDTH];
 
 void render(struct Ppu* ppu) {
-  if (ppu->cgb_mode) {
+  if (ppu_get_cgb_mode(ppu)) {
+    const uint16_t* cgb_fb = ppu_get_cgb_framebuffer(ppu);
     for (int i = 0; i < SCRN_HEIGHT; i++)
       for (int j = 0; j < SCRN_WIDTH; j++) {
-        uint16_t rgb555 = ppu->cgb_dsp[i][j];
+        uint16_t rgb555 = cgb_fb[i * SCRN_WIDTH + j];
         uint8_t r5 = (rgb555 >> RGB555_RED_SHIFT) & RGB555_MASK;
         uint8_t g5 = (rgb555 >> RGB555_GREEN_SHIFT) & RGB555_MASK;
         uint8_t b5 = (rgb555 >> RGB555_BLUE_SHIFT) & RGB555_MASK;
@@ -38,11 +39,13 @@ void render(struct Ppu* ppu) {
                     (b << RGBA_B_SHIFT) | SDL_ALPHA_OPAQUE;
       }
   } else {
+    const uint8_t* dmg_fb = ppu_get_dmg_framebuffer(ppu);
     uint32_t pal[4];
     for (int i = 0; i < 4; i++)
       pal[i] = (g_settings.dmg_palette[i] << 8) | (uint32_t)SDL_ALPHA_OPAQUE;
     for (int i = 0; i < SCRN_HEIGHT; i++)
-      for (int j = 0; j < SCRN_WIDTH; j++) buf[i][j] = pal[ppu->dsp[i][j]];
+      for (int j = 0; j < SCRN_WIDTH; j++)
+        buf[i][j] = pal[dmg_fb[i * SCRN_WIDTH + j]];
   }
   SDL_UpdateTexture(txt, NULL, buf, SCRN_WIDTH * sizeof(uint32_t));
   SDL_RenderTexture(rnd, txt, NULL, NULL);

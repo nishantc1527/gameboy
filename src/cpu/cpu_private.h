@@ -2,10 +2,23 @@
 
 #include <stdint.h>
 
+#include "../bus_private.h"
 #include "gbemu/bus.h"
 #include "gbemu/cpu.h"
 #include "gbemu/timer.h"
 #include "gbemu/util.h"
+
+struct Cpu {
+  uint8_t A, B, C, D, E, F, H, L;
+  uint16_t PC, SP;
+  uint8_t halted;
+  uint8_t ime;
+  uint8_t ime_pending;
+  uint8_t if_reg;
+  uint8_t ie_reg;
+  uint8_t cgb_mode;
+  uint8_t ld_b_b_fired;  // Many tests exit by executing LD B, B
+};
 
 #define FLG_Z 7
 #define FLG_N 6

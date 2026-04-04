@@ -39,7 +39,7 @@ static void init_components(struct GBemu* gb) {
   mmu_load(gb->mmu);
   if (mmu_boot_skipped(gb->mmu)) {
     uint8_t checksum = mmu_read_rom(gb->mmu, ROM_HEADER_CHECKSUM);
-    cpu_post_boot(gb->cpu, gb->cpu->cgb_mode, checksum);
+    cpu_post_boot(gb->cpu, cpu_get_cgb_mode(gb->cpu), checksum);
     timer_post_boot(gb->timer);
     ppu_post_boot(gb->ppu);
   }
@@ -47,8 +47,8 @@ static void init_components(struct GBemu* gb) {
 
 static void system_tick(struct GBemu* gb, uint8_t cycles) {
   ppu_tick(gb->ppu, gb->bus, cycles);
-  if (gb->dma->hdma_block_pending) {
-    gb->dma->hdma_block_pending = 0;
+  if (dma_hdma_block_pending(gb->dma)) {
+    dma_clear_hdma_block_pending(gb->dma);
     dma_hdma_block(gb->dma, gb->bus);
   }
   dma_tick(gb->dma, gb->bus, cycles);

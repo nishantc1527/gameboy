@@ -2,14 +2,7 @@
 
 #include <stdlib.h>
 
-#include "gbemu/apu.h"
-#include "gbemu/cpu.h"
-#include "gbemu/dma.h"
-#include "gbemu/joypad.h"
-#include "gbemu/mmu.h"
-#include "gbemu/ppu.h"
-#include "gbemu/serial.h"
-#include "gbemu/timer.h"
+#include "bus_private.h"
 
 struct Bus* bus_init(struct Mmu* mmu, struct Cpu* cpu, struct Ppu* ppu,
                      struct Apu* apu, struct Timer* timer, struct Dma* dma,
@@ -29,7 +22,7 @@ struct Bus* bus_init(struct Mmu* mmu, struct Cpu* cpu, struct Ppu* ppu,
 void bus_free(struct Bus* b) { free(b); }
 
 void bus_req_intr(struct Bus* bus, uint8_t intr) {
-  bus->cpu->if_reg |= (uint8_t)(1u << intr);
+  cpu_req_intr(bus->cpu, intr);
 }
 
 void bus_notify_div_pulse(struct Bus* bus) { apu_notify_div_tick(bus->apu); }

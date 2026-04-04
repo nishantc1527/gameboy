@@ -22,11 +22,12 @@ typedef struct TestState {
 static const uint8_t ACID_COLORS[5] = {0xFF, 0xAA, 0x55, 0x00, 0x00};
 
 static int write_screenshot(struct Ppu* ppu, const char* path) {
-  if (ppu->cgb_mode) {
+  if (ppu_get_cgb_mode(ppu)) {
+    const uint16_t* cgb_fb = ppu_get_cgb_framebuffer(ppu);
     uint8_t buf[144][160][3];
     for (int y = 0; y < 144; y++)
       for (int x = 0; x < 160; x++) {
-        uint16_t rgb555 = ppu->cgb_dsp[y][x];
+        uint16_t rgb555 = cgb_fb[y * 160 + x];
         uint8_t r5 = rgb555 & 0x1F;
         uint8_t g5 = (rgb555 >> 5) & 0x1F;
         uint8_t b5 = (rgb555 >> 10) & 0x1F;
@@ -39,9 +40,10 @@ static int write_screenshot(struct Ppu* ppu, const char* path) {
       return -1;
     }
   } else {
+    const uint8_t* dmg_fb = ppu_get_dmg_framebuffer(ppu);
     uint8_t buf[144][160];
     for (int y = 0; y < 144; y++)
-      for (int x = 0; x < 160; x++) buf[y][x] = ACID_COLORS[ppu->dsp[y][x]];
+      for (int x = 0; x < 160; x++) buf[y][x] = ACID_COLORS[dmg_fb[y * 160 + x]];
     if (!stbi_write_png(path, 160, 144, 1, buf, 160)) {
       fprintf(stderr, "Failed to write screenshot: %s\n", path);
       return -1;
@@ -67,11 +69,11 @@ static void handle_test_frame(struct GBemu* gb, TestState* ts) {
     while (serial_has_byte(gb->serial))
       printf("%c", (char)serial_take_byte(gb->serial));
   }
-  if (gb->cpu->ld_b_b_fired) {
-    gb->cpu->ld_b_b_fired = false;
+  if (cpu_check_ld_b_b(gb->cpu)) {
     if (cat == TestAge || cat == TestMooneye || cat == TestSame) {
-      if (gb->cpu->B == 3 && gb->cpu->C == 5 && gb->cpu->D == 8 &&
-          gb->cpu->E == 13 && gb->cpu->H == 21 && gb->cpu->L == 34)
+      if (cpu_get_b(gb->cpu) == 3 && cpu_get_c(gb->cpu) == 5 &&
+          cpu_get_d(gb->cpu) == 8 && cpu_get_e(gb->cpu) == 13 &&
+          cpu_get_h(gb->cpu) == 21 && cpu_get_l(gb->cpu) == 34)
         printf("Passed\n");
       else
         printf("Failed\n");
@@ -114,8 +116,8 @@ static void handle_test_frame(struct GBemu* gb, TestState* ts) {
       btn_down = ((f >= 12 && f < 22) || (f >= 32 && f < 42)) ? 1 : 0;
       btn_a = (f >= 52 && f < 62) ? 1 : 0;
     }
-    gb->joypad->buttons[BTN_DOWN] = btn_down != 0;
-    gb->joypad->buttons[BTN_A] = btn_a != 0;
+    joypad_force_button(gb->joypad, BTN_DOWN, btn_down != 0);
+    joypad_force_button(gb->joypad, BTN_A, btn_a != 0);
     if ((cat == TestRtc3Basic &&
          gb->total_frames >= BROM_FRAMES + 22 + 13 * 60) ||
         (cat == TestRtc3Range &&

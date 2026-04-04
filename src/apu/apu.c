@@ -239,3 +239,11 @@ void apu_tick(struct Apu* apu, uint8_t cycles) {
 }
 
 void apu_discard_samples(struct Apu* apu) { apu->sample_count = 0; }
+
+uint32_t apu_get_sample_count(const struct Apu* apu) {
+  return apu->sample_count;
+}
+
+const float (*apu_get_sample_buf(const struct Apu* apu))[2] {
+  return apu->sample_buf;
+}

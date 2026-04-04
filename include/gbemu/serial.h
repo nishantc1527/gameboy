@@ -2,15 +2,7 @@
 #include <stdint.h>
 
 struct Bus;
-
-struct Serial {
-  uint8_t sb;
-  uint8_t sc;
-  uint8_t byte_ready;
-  uint8_t buf[0xFF];
-  uint8_t buf_head;
-  uint8_t buf_tail;
-};
+struct Serial;
 
 struct Serial* serial_init(void);
 void serial_free(struct Serial* s);

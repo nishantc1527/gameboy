@@ -1,5 +1,6 @@
 #include <stdint.h>
 
+#include "../bus_private.h"
 #include "gbemu/bus.h"
 #include "gbemu/mmu.h"
 #include "gbemu/ppu.h"

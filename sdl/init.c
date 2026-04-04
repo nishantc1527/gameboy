@@ -5,6 +5,7 @@
 #include "gbemu/ppu.h"
 #include "gbemu/sdl.h"
 #include "gbemu/settings.h"
+#include "sdl_private.h"
 
 // TODO sdl state
 int win_width, win_height;

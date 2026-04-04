@@ -7,3 +7,5 @@
 
 extern uint32_t buf[SCRN_HEIGHT][SCRN_WIDTH];
 extern SDL_Texture* txt;
+
+void populate_controls(void);

@@ -12,10 +12,11 @@ void take_screenshot(struct Ppu* ppu) {
   SDL_snprintf(path, sizeof(path), "screenshot_%04d.png", ++counter);
 
   uint8_t buf[SCRN_HEIGHT][SCRN_WIDTH][3];
-  if (ppu->cgb_mode) {
+  if (ppu_get_cgb_mode(ppu)) {
+    const uint16_t* cgb_fb = ppu_get_cgb_framebuffer(ppu);
     for (int y = 0; y < SCRN_HEIGHT; y++)
       for (int x = 0; x < SCRN_WIDTH; x++) {
-        uint16_t rgb555 = ppu->cgb_dsp[y][x];
+        uint16_t rgb555 = cgb_fb[y * SCRN_WIDTH + x];
         uint8_t r5 = rgb555 & 0x1F;
         uint8_t g5 = (rgb555 >> 5) & 0x1F;
         uint8_t b5 = (rgb555 >> 10) & 0x1F;
@@ -24,9 +25,10 @@ void take_screenshot(struct Ppu* ppu) {
         buf[y][x][2] = (b5 << 3) | (b5 >> 2);
       }
   } else {
+    const uint8_t* dmg_fb = ppu_get_dmg_framebuffer(ppu);
     for (int y = 0; y < SCRN_HEIGHT; y++)
       for (int x = 0; x < SCRN_WIDTH; x++) {
-        uint32_t c = g_settings.dmg_palette[ppu->dsp[y][x]];
+        uint32_t c = g_settings.dmg_palette[dmg_fb[y * SCRN_WIDTH + x]];
         buf[y][x][0] = (uint8_t)(c >> 16);
         buf[y][x][1] = (uint8_t)(c >> 8);
         buf[y][x][2] = (uint8_t)(c);
