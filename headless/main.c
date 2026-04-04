@@ -43,7 +43,8 @@ static int write_screenshot(struct Ppu* ppu, const char* path) {
     const uint8_t* dmg_fb = ppu_get_dmg_framebuffer(ppu);
     uint8_t buf[144][160];
     for (int y = 0; y < 144; y++)
-      for (int x = 0; x < 160; x++) buf[y][x] = ACID_COLORS[dmg_fb[y * 160 + x]];
+      for (int x = 0; x < 160; x++)
+        buf[y][x] = ACID_COLORS[dmg_fb[y * 160 + x]];
     if (!stbi_write_png(path, 160, 144, 1, buf, 160)) {
       fprintf(stderr, "Failed to write screenshot: %s\n", path);
       return -1;

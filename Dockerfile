@@ -4,6 +4,7 @@ RUN wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && ./llvm.sh 21 && apt
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 RUN cargo install cbindgen
+RUN curl -L https://github.com/gbdev/rgbds/releases/download/v1.0.1/rgbds-linux-x86_64.tar.xz | tar -xJ -C /usr/local/bin rgbasm rgbfix rgbgfx rgblink
 WORKDIR /gbemu
 COPY . .
 CMD make verify

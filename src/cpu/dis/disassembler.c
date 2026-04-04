@@ -2,10 +2,9 @@
 #include <stdio.h>
 
 #include "../cpu_private.h"
+#include "dis_private.h"
 #include "gbemu/bus.h"
 #include "gbemu/cpu.h"
-
-#include "dis_private.h"
 
 void disassemble(struct Cpu* cpu, struct Bus* bus, const uint16_t* watch_addrs,
                  uint8_t watch_count, uint64_t total_cycles) {

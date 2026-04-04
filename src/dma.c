@@ -95,9 +95,7 @@ uint8_t dma_hdma_block_pending(const struct Dma* d) {
   return d->hdma_block_pending;
 }
 
-void dma_clear_hdma_block_pending(struct Dma* d) {
-  d->hdma_block_pending = 0;
-}
+void dma_clear_hdma_block_pending(struct Dma* d) { d->hdma_block_pending = 0; }
 
 void dma_hdma_write(struct Dma* d, struct Bus* bus, uint16_t addr,
                     uint8_t val) {

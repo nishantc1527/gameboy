@@ -11,6 +11,9 @@ PYTHON        := $(VENV)/bin/python3
 PIP           := $(VENV)/bin/pip3
 REQS          := requirements.txt
 
+POKERED_DIR   := pokered
+POKERED_ROM   := $(POKERED_DIR)/pokered.gbc
+
 RUST_DIR      := rust
 RUST_LIB      := $(RUST_DIR)/target/release/librust.a
 RUST_HDR      := include/rust.h
@@ -95,7 +98,7 @@ $(RUST_LIB): $(RUST_MANIFEST) $(RUST_SRCS)
 	$(CBINDS) $(RUST_DIR) --crate $(RUST_CRATE) --output $(RUST_HDR)
 
 clean:
-	rm -rf $(BUILD_DIR) $(RUST_HDR) $(VENV)
+	rm -rf $(BUILD_DIR) $(RUST_HDR) $(VENV) $(POKERED_ROM)
 	$(CARGO) clean --manifest-path $(RUST_MANIFEST)
 
 format:
@@ -109,10 +112,10 @@ $(PYTHON):
 $(ALL_REFS) &: | $(PYTHON) $(BUILD_DIR)/gbemu_headless
 	$(PYTHON) scripts/gen_boot_refs.py
 
-pokered/pokered.gbc:
-	$(MAKE) -C pokered red
+$(POKERED_ROM):
+	$(MAKE) -C $(POKERED_DIR) red
 
-test: $(PYTHON) $(BUILD_DIR)/gbemu_headless $(ALL_REFS) pokered/pokered.gbc
+test: $(PYTHON) $(BUILD_DIR)/gbemu_headless $(ALL_REFS) $(POKERED_ROM)
 	$(PYTHON) -m pytest
 
 verify: clean $(RUST_HDR) $(PYTHON)
@@ -124,6 +127,7 @@ verify: clean $(RUST_HDR) $(PYTHON)
 	$(MAKE) gbemu_headless CFLAGS="$(CFLAGS) $(VERIFY_FLAGS)"
 	$(PYTHON) tests/check_coverage.py
 	$(MAKE) test ASAN=1
+	$(MAKE) clean
 
 compile_commands: clean
 	bear -- $(MAKE) all

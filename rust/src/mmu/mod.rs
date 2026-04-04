@@ -168,12 +168,11 @@ impl Mmu {
                     return None;
                 }
             }
-            0x05 | 0x06 => {
-                if rom_size > 0x03 {
-                    eprintln!("ROM SIZE NOT AVAILABLE\n");
-                    return None;
-                }
+            0x05 | 0x06 if rom_size > 0x03 => {
+                eprintln!("ROM SIZE NOT AVAILABLE\n");
+                return None;
             }
+            0x05 | 0x06 => {}
             0x0F | 0x10 | 0x11 | 0x12 | 0x13 => {
                 if rom_size > 0x07 {
                     eprintln!("ROM SIZE NOT AVAILABLE\n");
