@@ -4,6 +4,5 @@ BOOT_ROMS = [
 ]
 
 ROMS = [
-    ("roms/pokered.gb", "boot.rom", 186, 185 + 60 * 15),
-    ("roms/tetris.gb", "boot.rom", 186, 185 + 60 * 5),
+    ("pokered/pokered.gbc", "boot.rom", 186, 185 + 60 * 15),
 ]

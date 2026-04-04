@@ -1,0 +1,3 @@
+[submodule "pokered"]
+	path = pokered
+	url = git@github.com:pret/pokered.git

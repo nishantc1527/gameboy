@@ -109,7 +109,10 @@ $(PYTHON):
 $(ALL_REFS) &: | $(PYTHON) $(BUILD_DIR)/gbemu_headless
 	$(PYTHON) scripts/gen_boot_refs.py
 
-test: $(PYTHON) $(BUILD_DIR)/gbemu_headless $(ALL_REFS)
+pokered/pokered.gbc:
+	$(MAKE) -C pokered red
+
+test: $(PYTHON) $(BUILD_DIR)/gbemu_headless $(ALL_REFS) pokered/pokered.gbc
 	$(PYTHON) -m pytest
 
 verify: clean $(RUST_HDR) $(PYTHON)

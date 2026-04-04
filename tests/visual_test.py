@@ -19,6 +19,4 @@ params = [
 @pytest.mark.timeout(60)
 @pytest.mark.parametrize("rom,boot,frame,ref", params)
 def test_visual(rom, boot, frame, ref):
-    if not os.path.exists(rom):
-        pytest.skip()
     check_screenshot_at_frame(rom, ref, frame, boot_rom=boot)
