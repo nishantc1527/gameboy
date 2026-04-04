@@ -35,7 +35,6 @@ void settings_defaults(struct Settings* s) {
   snprintf(s->key_right, sizeof(s->key_right), "Right");
   snprintf(s->key_pause, sizeof(s->key_pause), "P");
   snprintf(s->key_screenshot, sizeof(s->key_screenshot), "F2");
-  snprintf(s->boot_rom, sizeof(s->boot_rom), "boot.rom");
   s->last_rom[0] = '\0';
   s->recent_rom_count = 0;
 }
@@ -123,9 +122,7 @@ void settings_save(const struct Settings* s) {
   write_str(fp, s->key_screenshot);
   fputc('\n', fp);
   fprintf(fp, "\n[paths]\n");
-  fprintf(fp, "boot_rom = ");
-  write_str(fp, s->boot_rom);
-  fprintf(fp, "\nlast_rom = ");
+  fprintf(fp, "last_rom = ");
   write_str(fp, s->last_rom);
   fputc('\n', fp);
   fprintf(fp, "\n[ui]\n");
@@ -190,9 +187,6 @@ void settings_load(struct Settings* s) {
   }
   tbl = toml_get(root, "paths");
   if (tbl.type == TOML_TABLE) {
-    v = toml_get(tbl, "boot_rom");
-    if (v.type == TOML_STRING)
-      snprintf(s->boot_rom, sizeof(s->boot_rom), "%s", v.u.s);
     v = toml_get(tbl, "last_rom");
     if (v.type == TOML_STRING)
       snprintf(s->last_rom, sizeof(s->last_rom), "%s", v.u.s);

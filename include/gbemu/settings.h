@@ -15,7 +15,6 @@ struct Settings {
   char key_right[64];
   char key_pause[64];
   char key_screenshot[64];
-  char boot_rom[512];
   char last_rom[512];
   char recent_roms[10][512];
   int recent_rom_count;

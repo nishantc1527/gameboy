@@ -64,6 +64,5 @@ def check_screenshot(rom_path, ref_path, test_category):
     run_with_screenshot(rom_path, ref_path, ["-t", test_category])
 
 
-def check_screenshot_at_frame(rom_path, ref_path, frame, boot_rom=None):
-    extra = (["-b", boot_rom] if boot_rom else []) + ["--stop-frame", str(frame)]
-    run_with_screenshot(rom_path, ref_path, extra)
+def check_screenshot_at_frame(rom_path, ref_path, frame):
+    run_with_screenshot(rom_path, ref_path, ["--stop-frame", str(frame)])

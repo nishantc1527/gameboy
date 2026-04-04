@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #include "gbemu/apu.h"
+#include "gbemu/boot_roms.h"
 #include "gbemu/bus.h"
 #include "gbemu/cpu.h"
 #include "gbemu/dma.h"
@@ -12,10 +13,7 @@
 #include "gbemu/serial.h"
 #include "gbemu/timer.h"
 
-#define ROM_HEADER_CGB_FLAG 0x0143
 #define ROM_HEADER_CHECKSUM 0x014D
-#define BROM_DMG_SIZE 0x100
-#define BROM_CGB_SIZE 0x900
 #define BOOT_ROM_DISABLE_REG 0xFF50
 
 void disassemble(struct Cpu* cpu, struct Bus* bus, const uint16_t* watch_addrs,
@@ -60,20 +58,19 @@ static void system_tick(struct GBemu* gb, uint8_t cycles) {
   gb->total_cycles += (uint64_t)cycles;
 }
 
-struct GBemu* gbemu_init(char* rom_name, const char* boot_rom,
-                         uint8_t disassemble_enable,
+struct GBemu* gbemu_init(char* rom_name, uint8_t disassemble_enable,
                          const uint16_t* watch_addrs, uint8_t watch_count) {
   struct GBemu* gb = malloc(sizeof(struct GBemu));
   if (!gb) return NULL;
   gb->rom_name = rom_name;
-  gb->boot_rom = boot_rom;
   gb->disassemble_enable = disassemble_enable;
   gb->paused = 0;
   gb->fast_forward = 0;
   gb->watch_count = watch_addrs ? (watch_count < 8 ? watch_count : 8) : 0;
   for (uint8_t i = 0; i < gb->watch_count; i++)
     gb->watch_addrs[i] = watch_addrs[i];
-  gb->mmu = mmu_init(rom_name, boot_rom);
+  gb->mmu = mmu_init(rom_name, dmg_boot_rom, sizeof(dmg_boot_rom), cgb_boot_rom,
+                     sizeof(cgb_boot_rom));
   if (!gb->mmu) {
     free(gb);
     return NULL;
@@ -98,7 +95,8 @@ void gbemu_reset(struct GBemu* gb) {
   gbemu_free_components(gb);
   mmu_free(gb->mmu);
 
-  gb->mmu = mmu_init(gb->rom_name, gb->boot_rom);
+  gb->mmu = mmu_init(gb->rom_name, dmg_boot_rom, sizeof(dmg_boot_rom),
+                     cgb_boot_rom, sizeof(cgb_boot_rom));
   init_components(gb);
 }
 

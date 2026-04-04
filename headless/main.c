@@ -156,7 +156,6 @@ static void handle_test_frame(struct GBemu* gb, TestState* ts) {
 
 int main(int argc, char* argv[]) {
   char* rom_name = NULL;
-  char* boot_rom = "";
   char* screenshot_path = NULL;
   int test_category = -1;
   int disassemble_enable = 0;
@@ -171,7 +170,6 @@ int main(int argc, char* argv[]) {
       printf("Usage: gbemu_headless -r <rom.gb> [options]\n\n");
       printf("Options:\n");
       printf("  -r, --rom <file>        ROM file to run\n");
-      printf("  -b, --boot-rom <file>   Boot ROM file (default: boot.rom)\n");
       printf("  -t, --test <category>   Test category for automated testing\n");
       printf("  -s, --screenshot <file> Save screenshot to PNG file\n");
       printf("  -f, --stop-frame <N>    Stop after N total frames\n");
@@ -190,9 +188,6 @@ int main(int argc, char* argv[]) {
     } else if ((!strcmp(argv[i], "-r") || !strcmp(argv[i], "--rom")) &&
                i + 1 < argc)
       rom_name = argv[++i];
-    else if ((!strcmp(argv[i], "-b") || !strcmp(argv[i], "--boot-rom")) &&
-             i + 1 < argc)
-      boot_rom = argv[++i];
     else if ((!strcmp(argv[i], "-t") || !strcmp(argv[i], "--test")) &&
              i + 1 < argc) {
       char* s = argv[++i];
@@ -273,7 +268,7 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "MUST PROVIDE ROM FILE\n");
     return 1;
   }
-  struct GBemu* gb = gbemu_init(rom_name, boot_rom, (uint8_t)disassemble_enable,
+  struct GBemu* gb = gbemu_init(rom_name, (uint8_t)disassemble_enable,
                                 watch_addrs, watch_count);
   if (!gb) return 1;
   TestState ts = test_init(test_category);

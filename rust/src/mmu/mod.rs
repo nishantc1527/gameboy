@@ -48,7 +48,11 @@ pub struct Mmu {
 
 #[allow(clippy::manual_range_patterns)]
 impl Mmu {
-    pub fn new(rom_file_name: &str, boot_rom_file_name: &str) -> Option<Mmu> {
+    pub fn new(
+        rom_file_name: &str,
+        dmg_boot: Option<&[u8]>,
+        cgb_boot: Option<&[u8]>,
+    ) -> Option<Mmu> {
         let mut rom_title = String::new();
         let vram = vec![0u8; 0x2000];
         let wram = vec![0u8; 0x1000];
@@ -80,36 +84,21 @@ impl Mmu {
         let new_licensee_nintendo =
             rom[0x014B] == 0x33 && rom[0x0144] == b'0' && rom[0x0145] == b'1';
         let cgb_mode = cgb_flag || old_licensee_nintendo || new_licensee_nintendo;
-        let actual_boot_rom = if cgb_mode {
-            let p = Path::new(boot_rom_file_name);
-            let dir = p.parent().unwrap_or(Path::new("."));
-            dir.join("cgb_boot.bin").to_string_lossy().into_owned()
-        } else {
-            boot_rom_file_name.to_owned()
-        };
-        let boot_skipped = if boot_rom_file_name.is_empty() {
-            true
-        } else {
-            match File::open(Path::new(&actual_boot_rom)) {
-                Ok(mut f) => {
-                    let brom_bytes = f.read(&mut brom).ok()?;
-                    if cgb_mode && brom_bytes != 0x900 {
-                        eprintln!("CGB boot ROM must be 0x900 bytes (got {})", brom_bytes);
-                        return None;
-                    } else if !cgb_mode && brom_bytes != 0x100 {
-                        eprintln!("COULD NOT READ FULL BOOT ROM");
-                        return None;
-                    }
-                    false
-                }
-                Err(_) => {
-                    eprintln!(
-                        "Boot ROM not found: \"{}\". Running without boot ROM.",
-                        actual_boot_rom
-                    );
-                    true
-                }
+        let boot_data = if cgb_mode { cgb_boot } else { dmg_boot };
+        let expected_size = if cgb_mode { 0x900usize } else { 0x100usize };
+        let boot_skipped = if let Some(data) = boot_data {
+            if data.len() != expected_size {
+                eprintln!(
+                    "Boot ROM has wrong size: expected {}, got {}",
+                    expected_size,
+                    data.len()
+                );
+                return None;
             }
+            brom[..data.len()].copy_from_slice(data);
+            false
+        } else {
+            true
         };
         let mut checksum: u8 = 0u8;
         for byte in rom.iter().take(0x014C + 1).skip(0x0134usize) {
@@ -121,7 +110,6 @@ impl Mmu {
                 checksum, rom[0x014D]
             );
         }
-
         (0x0134usize..=0x0142usize).for_each(|i| {
             rom_title.push(rom[i] as char);
         });
@@ -154,7 +142,6 @@ impl Mmu {
         let rom_bank: u8 = 1;
         let rom_bank_hi: u8 = 0;
         let ram_enable = false;
-
         match cart_type {
             0x01 | 0x02 | 0x03 => {
                 mbc1_1mb_mode = false;

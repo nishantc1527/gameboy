@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 import os
-import sys
 import subprocess
+import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tests"))
-from visual_roms import BOOT_ROMS, ROMS
+from visual_roms import ROMS
 
 
 def _stem(rom):
@@ -13,14 +13,14 @@ def _stem(rom):
 
 
 def _all_tasks():
-    for rom, boot, start, end in BOOT_ROMS + ROMS:
+    for rom, start, end in ROMS:
         stem = _stem(rom)
         for frame in range(start, end + 1):
-            yield rom, boot, frame, f"tests/refs/{stem}/frame_{frame:03d}.png"
+            yield rom, frame, f"tests/refs/{stem}/frame_{frame:03d}.png"
 
 
 def _list():
-    for _, _, _, ref in _all_tasks():
+    for _, _, ref in _all_tasks():
         print(ref)
 
 
@@ -28,16 +28,22 @@ def _generate():
     tasks = list(_all_tasks())
     total = len(tasks)
 
-    for rom, boot, _, _ in BOOT_ROMS + ROMS:
+    for rom, _, _ in ROMS:
         os.makedirs(f"tests/refs/{_stem(rom)}", exist_ok=True)
 
     completed = 0
 
     def run(task):
-        rom, boot, frame, ref = task
-        cmd = ["./build/gbemu_headless", "-r", rom, "--stop-frame", str(frame), "--screenshot", ref]
-        if boot:
-            cmd += ["-b", boot]
+        rom, frame, ref = task
+        cmd = [
+            "./build/gbemu_headless",
+            "-r",
+            rom,
+            "--stop-frame",
+            str(frame),
+            "--screenshot",
+            ref,
+        ]
         subprocess.run(cmd, check=True, capture_output=True)
 
     with ThreadPoolExecutor(max_workers=os.cpu_count()) as pool:

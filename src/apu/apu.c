@@ -164,7 +164,7 @@ static void apu_write_control(struct Apu* apu, uint16_t addr, uint8_t val) {
     case 0xFF26:
       if (!(val & (1u << NR52_POWER_BIT)) && apu->powered) {
         apu_power_off(apu);
-        apu->powered = false;
+        apu->powered = 0;
       }
       break;
   }
@@ -191,7 +191,7 @@ void apu_write(struct Apu* apu, uint16_t addr, uint8_t val) {
         return;
       case 0xFF26:
         if (val & (1u << NR52_POWER_BIT)) {
-          apu->powered = true;
+          apu->powered = 1;
           apu->seq_step = 0;
         }
         return;

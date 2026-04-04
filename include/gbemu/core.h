@@ -15,7 +15,6 @@ struct GBemu {
   struct Serial* serial;
   struct Bus* bus;
   char* rom_name;
-  const char* boot_rom;
   uint8_t disassemble_enable;
   uint8_t paused;
   uint8_t fast_forward;
@@ -25,8 +24,7 @@ struct GBemu {
   uint64_t total_frames;
 };
 
-struct GBemu* gbemu_init(char* rom_name, const char* boot_rom,
-                         uint8_t disassemble_enable,
+struct GBemu* gbemu_init(char* rom_name, uint8_t disassemble_enable,
                          const uint16_t* watch_addrs, uint8_t watch_count);
 int gbemu_step_frame(struct GBemu* gb);
 void gbemu_free(struct GBemu* gb);

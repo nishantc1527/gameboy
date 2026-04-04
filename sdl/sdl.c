@@ -30,7 +30,7 @@ static int load_rom(struct AppState* state, const char* path, uint8_t dis) {
   fclose(f);
   state->rom_error[0] = '\0';
   gbemu_free(state->gb);
-  state->gb = gbemu_init((char*)path, g_settings.boot_rom, dis, NULL, 0);
+  state->gb = gbemu_init((char*)path, dis, NULL, 0);
   if (!state->gb) {
     SDL_snprintf(state->rom_error, sizeof(state->rom_error),
                  "Failed to load ROM: %s", path);

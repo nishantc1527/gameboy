@@ -7,19 +7,27 @@ use std::ffi::{CStr, c_char};
 #[unsafe(no_mangle)]
 extern "C" fn mmu_init(
     rom_file_name: *const c_char,
-    boot_rom_file_name: *const c_char,
+    dmg_boot: *const u8,
+    dmg_len: usize,
+    cgb_boot: *const u8,
+    cgb_len: usize,
 ) -> *mut Mmu {
     let rom_str = unsafe {
         CStr::from_ptr(rom_file_name)
             .to_str()
             .expect("Could not read rom file name")
     };
-    let boot_rom_str = unsafe {
-        CStr::from_ptr(boot_rom_file_name)
-            .to_str()
-            .expect("Could not read boot rom file name")
+    let dmg = if dmg_boot.is_null() || dmg_len == 0 {
+        None
+    } else {
+        Some(unsafe { std::slice::from_raw_parts(dmg_boot, dmg_len) })
     };
-    match Mmu::new(rom_str, boot_rom_str) {
+    let cgb = if cgb_boot.is_null() || cgb_len == 0 {
+        None
+    } else {
+        Some(unsafe { std::slice::from_raw_parts(cgb_boot, cgb_len) })
+    };
+    match Mmu::new(rom_str, dmg, cgb) {
         Some(mmu) => Box::into_raw(Box::new(mmu)),
         None => std::ptr::null_mut(),
     }
