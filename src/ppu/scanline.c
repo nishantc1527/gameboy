@@ -59,21 +59,11 @@ void ppu_render_line(struct Ppu* ppu, struct Bus* bus) {
   if (get_bit(ppu->lcdc, LCDC_BIT_LCD_ENABLE)) {
     if (ppu->ly < PPU_VISIBLE_LINES) {
       if (ppu->cgb_mode) {
-        do_scanline_cgb(ppu, bus);
+        render_line_cgb(ppu, bus);
         advance_line(ppu);
         return;
       }
-      if (get_bit(ppu->lcdc, LCDC_BIT_BG_ENABLE)) {
-        render_bg_dmg(ppu, bus, ppu->ly);
-        if (get_bit(ppu->lcdc, LCDC_BIT_WIN_ENABLE))
-          render_window_dmg(ppu, bus, ppu->ly);
-      } else {
-        for (int x = 0; x < SCRN_WIDTH; x++) {
-          write_pixel(ppu, ppu->ly, x, CLR_WHT);
-        }
-      }
-      if (get_bit(ppu->lcdc, LCDC_BIT_OBJ_ENABLE))
-        render_sprites_dmg(ppu, bus, ppu->ly);
+      render_line_dmg(ppu, bus, ppu->ly);
     }
     advance_line(ppu);
   } else {

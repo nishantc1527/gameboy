@@ -8,6 +8,7 @@ struct Ppu {
   uint16_t line_cycles;
   uint8_t frame_ready;
   uint8_t lcd_turning_on;
+  uint8_t first_line_after_lcd_on;
   uint8_t stat_irq_line;
   uint8_t off_line_count;
   uint8_t cgb_mode;
@@ -17,6 +18,7 @@ struct Ppu {
   uint8_t lcdc;
   uint8_t stat;
   uint8_t scy, scx;
+  uint8_t render_scx;
   uint8_t ly;
   uint8_t lyc;
   uint8_t bgp;
@@ -93,6 +95,8 @@ struct Ppu {
 #define OAM_OFF_TILE 2
 #define OAM_OFF_ATTR 3
 
+#define FIFO_CAPACITY 8
+
 struct Bus;
 
 // Writes to pixel buffer
@@ -103,11 +107,8 @@ uint16_t tile_map_base(uint8_t lcdc, int use_window_map);
 uint16_t tile_data_addr(uint8_t tile_idx, int dat_area);
 int collect_sprites(struct Bus* bus, uint8_t ly, uint8_t sz, uint16_t* obj);
 
-void render_bg_dmg(struct Ppu* ppu, struct Bus* bus, uint8_t ly);
-void render_window_dmg(struct Ppu* ppu, struct Bus* bus, uint8_t ly);
-void render_sprites_dmg(struct Ppu* ppu, struct Bus* bus, uint8_t ly);
-
-void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus);
+void render_line_dmg(struct Ppu* ppu, struct Bus* bus, uint8_t ly);
+void render_line_cgb(struct Ppu* ppu, struct Bus* bus);
 
 void ppu_update_mode(struct Ppu* ppu, struct Bus* bus);
 void ppu_render_line(struct Ppu* ppu, struct Bus* bus);

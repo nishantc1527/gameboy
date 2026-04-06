@@ -7,55 +7,147 @@
 #include "gbemu/util.h"
 #include "ppu_private.h"
 
-static void dmg_draw_bg_pixel(struct Ppu* ppu, struct Bus* bus, uint8_t ly,
-                              int x, uint8_t tilex, uint8_t tiley, uint8_t offx,
-                              int offy, uint16_t map_base, int dat_area,
-                              uint8_t pal) {
-  uint16_t map_offs =
-      (uint16_t)((uint16_t)tiley * (uint16_t)TILE_MAP_STRIDE) + (uint16_t)tilex;
-  uint8_t tile_idx = mmu_read_vram(bus->mmu, (uint16_t)(map_base + map_offs));
-  uint16_t idx = tile_data_addr(tile_idx, dat_area);
-  int ty = offy << 1;
-  uint8_t ls = mmu_read_vram(bus->mmu, (uint16_t)(idx + (uint16_t)ty));
-  uint8_t ms = mmu_read_vram(bus->mmu, (uint16_t)(idx + (uint16_t)ty + 1));
-  offx = TILE_WIDTH - 1 - offx;
-  int clr = (get_bit(ms, offx) << 1) | get_bit(ls, offx);
-  write_pixel(ppu, ly, x, palette_color(pal, clr));
+typedef struct {
+  uint8_t color;
+} BgPixel;
+
+typedef struct {
+  BgPixel buf[FIFO_CAPACITY];
+  int head, size;
+} BgFifo;
+
+static void fifo_clear(BgFifo* f) {
+  f->head = 0;
+  f->size = 0;
 }
 
-void render_bg_dmg(struct Ppu* ppu, struct Bus* bus, uint8_t ly) {
-  int dat_area = get_bit(ppu->lcdc, LCDC_BIT_TILE_DATA);
-  uint16_t map_base = tile_map_base(ppu->lcdc, 0);
-  uint8_t pal = ppu->bgp;
-  uint8_t by = (ly + ppu->scy) % TILE_COORD_WRAP;
-  uint8_t tiley = by / (uint8_t)TILE_HEIGHT;
-  int offy = by % TILE_HEIGHT;
-  for (int x = 0; x < SCRN_WIDTH; x++) {
-    uint8_t bx = (uint8_t)((x + ppu->scx) % TILE_COORD_WRAP);
-    dmg_draw_bg_pixel(ppu, bus, ly, x, bx / TILE_WIDTH, tiley, bx % TILE_WIDTH,
-                      offy, map_base, dat_area, pal);
+static void fifo_push(BgFifo* f, uint8_t lo, uint8_t hi) {
+  for (int b = 7; b >= 0; b--)
+    f->buf[(f->head + f->size++) & (FIFO_CAPACITY - 1)].color =
+        (uint8_t)(((hi >> b) & 1) << 1 | ((lo >> b) & 1));
+}
+
+static BgPixel fifo_pop(BgFifo* f) {
+  BgPixel px = f->buf[f->head & (FIFO_CAPACITY - 1)];
+  f->head = (f->head + 1) & (FIFO_CAPACITY - 1);
+  f->size--;
+  return px;
+}
+
+typedef struct {
+  int step;
+  int tx;
+  int tiley;
+  int offy;
+  uint16_t map;
+  int dat_area;
+  uint8_t tile_idx, lo, hi;
+} Fetcher;
+
+static void fetcher_init(Fetcher* f, int tx, int tiley, int offy, uint16_t map,
+                         int dat_area) {
+  f->step = 0;
+  f->tx = tx & (TILE_MAP_STRIDE - 1);
+  f->tiley = tiley;
+  f->offy = offy;
+  f->map = map;
+  f->dat_area = dat_area;
+  f->tile_idx = f->lo = f->hi = 0;
+}
+
+static void fetcher_tick(Fetcher* f, BgFifo* fifo, struct Bus* bus) {
+  switch (f->step) {
+    case 0:
+      f->step = 1;
+      break;
+    case 1: {
+      uint16_t offs =
+          (uint16_t)((uint16_t)f->tiley * TILE_MAP_STRIDE + (uint16_t)f->tx);
+      f->tile_idx = mmu_read_vram(bus->mmu, (uint16_t)(f->map + offs));
+      f->step = 2;
+      break;
+    }
+    case 2:
+      f->step = 3;
+      break;
+    case 3: {
+      uint16_t addr = tile_data_addr(f->tile_idx, f->dat_area);
+      f->lo =
+          mmu_read_vram(bus->mmu, (uint16_t)(addr + (uint16_t)(f->offy << 1)));
+      f->step = 4;
+      break;
+    }
+    case 4:
+      f->step = 5;
+      break;
+    case 5: {
+      uint16_t addr = tile_data_addr(f->tile_idx, f->dat_area);
+      f->hi = mmu_read_vram(bus->mmu,
+                            (uint16_t)(addr + (uint16_t)(f->offy << 1) + 1u));
+      f->step = 6;
+      break;
+    }
+    case 6:
+      if (fifo->size == 0) {
+        fifo_push(fifo, f->lo, f->hi);
+        f->tx = (f->tx + 1) & (TILE_MAP_STRIDE - 1);
+        f->step = 0;
+      }
+      break;
   }
 }
 
-void render_window_dmg(struct Ppu* ppu, struct Bus* bus, uint8_t ly) {
-  uint8_t wx = ppu->wx;
-  if (wx >= SCRN_WIDTH + 7 || !ppu->wy_triggered) return;
-  wx = wx - 7;
-  int dat_area = get_bit(ppu->lcdc, LCDC_BIT_TILE_DATA);
-  uint16_t map_base = tile_map_base(ppu->lcdc, 1);
-  uint8_t pal = ppu->bgp;
-  uint8_t wy = ppu->window_line;
-  uint8_t tiley = wy / TILE_HEIGHT;
-  int offy = wy % TILE_HEIGHT;
-  for (uint8_t x = wx; x < SCRN_WIDTH; x++) {
-    uint8_t _wx = x - wx;
-    dmg_draw_bg_pixel(ppu, bus, ly, x, _wx / TILE_WIDTH, tiley,
-                      _wx % TILE_WIDTH, offy, map_base, dat_area, pal);
+static void render_bg_window_dmg(struct Ppu* ppu, struct Bus* bus, uint8_t ly) {
+  uint8_t lcdc = ppu->lcdc;
+  uint8_t scx = ppu->render_scx;
+  int dat_area = get_bit(lcdc, LCDC_BIT_TILE_DATA);
+  uint8_t bg_y = (uint8_t)((ly + ppu->scy) % TILE_COORD_WRAP);
+  int bg_tiley = bg_y / TILE_HEIGHT;
+  int bg_offy = bg_y % TILE_HEIGHT;
+  uint16_t bg_map = tile_map_base(lcdc, 0);
+  int init_tx = (scx >> 3) & (TILE_MAP_STRIDE - 1);
+  int win_enabled = get_bit(lcdc, LCDC_BIT_WIN_ENABLE) && ppu->wy_triggered;
+  int wx = 0;
+  int win_tiley = 0, win_offy = 0;
+  uint16_t win_map = 0;
+  int win_started = 0;
+  if (win_enabled) {
+    if (ppu->wx < 7 || ppu->wx >= SCRN_WIDTH + 7) {
+      win_enabled = 0;
+    } else {
+      wx = (int)ppu->wx - 7;
+      win_tiley = ppu->window_line / TILE_HEIGHT;
+      win_offy = ppu->window_line % TILE_HEIGHT;
+      win_map = tile_map_base(lcdc, 1);
+    }
   }
-  ppu->window_line++;
+  Fetcher fetcher;
+  fetcher_init(&fetcher, init_tx, bg_tiley, bg_offy, bg_map, dat_area);
+  BgFifo fifo;
+  fifo_clear(&fifo);
+  int discard = scx & 7;
+  int px_out = 0;
+  while (px_out < SCRN_WIDTH) {
+    if (win_enabled && !win_started && discard == 0 && px_out == wx) {
+      fifo_clear(&fifo);
+      fetcher_init(&fetcher, 0, win_tiley, win_offy, win_map, dat_area);
+      win_started = 1;
+    }
+    fetcher_tick(&fetcher, &fifo, bus);
+    if (fifo.size > 0) {
+      BgPixel px = fifo_pop(&fifo);
+      if (discard > 0) {
+        discard--;
+      } else {
+        write_pixel(ppu, ly, px_out, palette_color(ppu->bgp, px.color));
+        px_out++;
+      }
+    }
+  }
+  if (win_started) ppu->window_line++;
 }
 
-void render_sprites_dmg(struct Ppu* ppu, struct Bus* bus, uint8_t ly) {
+static void render_sprites_dmg(struct Ppu* ppu, struct Bus* bus, uint8_t ly) {
   uint8_t sz = get_bit(ppu->lcdc, LCDC_BIT_OBJ_SIZE);
   uint16_t obj[OAM_LINE_LIMIT] = {0};
   int cnt = collect_sprites(bus, ly, sz, obj);
@@ -120,4 +212,14 @@ void render_sprites_dmg(struct Ppu* ppu, struct Bus* bus, uint8_t ly) {
         write_pixel(ppu, ly, x0, palette_color(pal, clr));
     }
   }
+}
+
+void render_line_dmg(struct Ppu* ppu, struct Bus* bus, uint8_t ly) {
+  if (get_bit(ppu->lcdc, LCDC_BIT_BG_ENABLE)) {
+    render_bg_window_dmg(ppu, bus, ly);
+  } else {
+    uint8_t blank = palette_color(ppu->bgp, 0);
+    for (int x = 0; x < SCRN_WIDTH; x++) write_pixel(ppu, ly, x, blank);
+  }
+  if (get_bit(ppu->lcdc, LCDC_BIT_OBJ_ENABLE)) render_sprites_dmg(ppu, bus, ly);
 }

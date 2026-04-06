@@ -7,77 +7,120 @@
 #include "gbemu/util.h"
 #include "ppu_private.h"
 
-static void read_tile_row_banked(struct Bus* bus, uint16_t idx, int ty,
-                                 uint8_t vram_bank, uint8_t* ls, uint8_t* ms) {
-  if (vram_bank == 0) {
-    *ls = mmu_read_vram_bank0(bus->mmu, (uint16_t)(idx + ty));
-    *ms = mmu_read_vram_bank0(bus->mmu, (uint16_t)(idx + ty + 1));
-  } else {
-    *ls = mmu_read_vram_bank1(bus->mmu, (uint16_t)(idx + ty));
-    *ms = mmu_read_vram_bank1(bus->mmu, (uint16_t)(idx + ty + 1));
+typedef struct {
+  uint8_t color;
+  uint8_t pal_num;
+  uint8_t bg_prio;
+} CgbBgPixel;
+
+typedef struct {
+  CgbBgPixel buf[FIFO_CAPACITY];
+  int head, size;
+} CgbFifo;
+
+static void cgb_fifo_clear(CgbFifo* f) {
+  f->head = 0;
+  f->size = 0;
+}
+
+static void cgb_fifo_push(CgbFifo* f, uint8_t lo, uint8_t hi, uint8_t pal_num,
+                          uint8_t bg_prio, uint8_t xflip) {
+  for (int i = 0; i < 8; i++) {
+    int bit = xflip ? i : (7 - i);
+    f->buf[(f->head + f->size++) & (FIFO_CAPACITY - 1)] = (CgbBgPixel){
+        .color = (uint8_t)(((hi >> bit) & 1) << 1 | ((lo >> bit) & 1)),
+        .pal_num = pal_num,
+        .bg_prio = bg_prio,
+    };
   }
 }
 
-static void cgb_draw_bg_pixel(struct Ppu* ppu, struct Bus* bus, uint8_t ly,
-                              int x, uint8_t tilex, uint8_t tiley, uint8_t offx,
-                              int offy, uint16_t map_base, int dat_area,
-                              uint8_t* bg_color_idx, uint8_t* bg_prio_bit) {
-  uint16_t map_offs =
-      (uint16_t)((uint16_t)tiley * TILE_MAP_STRIDE + (uint16_t)tilex);
-  uint16_t tile_map_vaddr = (uint16_t)(map_base + map_offs);
-  uint8_t tile_idx_raw = mmu_read_vram_bank0(bus->mmu, tile_map_vaddr);
-  uint8_t attr = mmu_read_vram_bank1(bus->mmu, tile_map_vaddr);
-  uint8_t pal_num = attr & 7;
-  uint8_t vram_bank = (attr >> OBJ_ATTR_VRAM_BANK_BIT) & 1;
-  uint8_t xflip = (attr >> OBJ_ATTR_FLIP_X_BIT) & 1;
-  uint8_t yflip = (attr >> OBJ_ATTR_FLIP_Y_BIT) & 1;
-  uint8_t bg_prio = (attr >> OBJ_ATTR_PRIORITY_BIT) & 1;
-  int tile_offy = yflip ? (TILE_HEIGHT - 1 - offy) : offy;
-  uint16_t idx = tile_data_addr(tile_idx_raw, dat_area);
-  uint8_t ls, ms;
-  read_tile_row_banked(bus, idx, tile_offy << 1, vram_bank, &ls, &ms);
-  uint8_t bit_pos = xflip ? offx : (uint8_t)(TILE_WIDTH - 1 - offx);
-  int clr = (get_bit(ms, bit_pos) << 1) | get_bit(ls, bit_pos);
-  bg_color_idx[x] = (uint8_t)clr;
-  bg_prio_bit[x] = bg_prio;
-  uint8_t lo = ppu->bg_pal_ram[pal_num * 8 + clr * 2];
-  uint8_t hi = ppu->bg_pal_ram[pal_num * 8 + clr * 2 + 1];
-  ppu->cgb_dsp[ly][x] = (uint16_t)(lo | ((uint16_t)hi << 8));
+static CgbBgPixel cgb_fifo_pop(CgbFifo* f) {
+  CgbBgPixel px = f->buf[f->head & (FIFO_CAPACITY - 1)];
+  f->head = (f->head + 1) & (FIFO_CAPACITY - 1);
+  f->size--;
+  return px;
 }
 
-static void render_bg_cgb(struct Ppu* ppu, struct Bus* bus, uint8_t ly,
-                          uint8_t* bg_color_idx, uint8_t* bg_prio_bit) {
-  uint8_t lcdc = ppu->lcdc;
-  int dat_area = get_bit(lcdc, LCDC_BIT_TILE_DATA);
-  uint16_t map_base = tile_map_base(lcdc, 0);
-  uint8_t by = (uint8_t)((ly + ppu->scy) % TILE_COORD_WRAP);
-  uint8_t tiley = by / TILE_HEIGHT;
-  int offy = by % TILE_HEIGHT;
-  for (int x = 0; x < SCRN_WIDTH; x++) {
-    uint8_t bx = (uint8_t)((x + ppu->scx) % TILE_COORD_WRAP);
-    cgb_draw_bg_pixel(ppu, bus, ly, x, bx / TILE_WIDTH, tiley, bx % TILE_WIDTH,
-                      offy, map_base, dat_area, bg_color_idx, bg_prio_bit);
-  }
+typedef struct {
+  int step;
+  int tx;
+  int tiley;
+  int offy;
+  uint16_t map;
+  int dat_area;
+  uint8_t tile_idx;
+  uint8_t pal_num;
+  uint8_t vram_bank;
+  uint8_t xflip;
+  uint8_t yflip;
+  uint8_t bg_prio;
+  uint8_t lo, hi;
+} CgbFetcher;
+
+static void cgb_fetcher_init(CgbFetcher* f, int tx, int tiley, int offy,
+                             uint16_t map, int dat_area) {
+  f->step = 0;
+  f->tx = tx & (TILE_MAP_STRIDE - 1);
+  f->tiley = tiley;
+  f->offy = offy;
+  f->map = map;
+  f->dat_area = dat_area;
+  f->tile_idx = f->pal_num = f->vram_bank = 0;
+  f->xflip = f->yflip = f->bg_prio = f->lo = f->hi = 0;
 }
 
-static void render_window_cgb(struct Ppu* ppu, struct Bus* bus, uint8_t ly,
-                              uint8_t* bg_color_idx, uint8_t* bg_prio_bit) {
-  uint8_t lcdc = ppu->lcdc;
-  uint8_t wx = ppu->wx;
-  if (wx >= SCRN_WIDTH + 7 || !ppu->wy_triggered) return;
-  wx -= 7;
-  int dat_area = get_bit(lcdc, LCDC_BIT_TILE_DATA);
-  uint16_t map_base = tile_map_base(lcdc, 1);
-  uint8_t win_ly = ppu->window_line;
-  uint8_t tiley = win_ly / TILE_HEIGHT;
-  int offy = win_ly % TILE_HEIGHT;
-  for (uint8_t x = wx; x < SCRN_WIDTH; x++) {
-    uint8_t _wx = (uint8_t)(x - wx);
-    cgb_draw_bg_pixel(ppu, bus, ly, x, _wx / TILE_WIDTH, tiley,
-                      _wx % TILE_WIDTH, offy, map_base, dat_area, bg_color_idx,
-                      bg_prio_bit);
+static void cgb_fetcher_tick(CgbFetcher* f, CgbFifo* fifo, struct Bus* bus) {
+  switch (f->step) {
+    case 0:
+      f->step = 1;
+      break;
+    case 1: {
+      uint16_t offs =
+          (uint16_t)((uint16_t)f->tiley * TILE_MAP_STRIDE + (uint16_t)f->tx);
+      uint16_t vaddr = (uint16_t)(f->map + offs);
+      f->tile_idx = mmu_read_vram_bank0(bus->mmu, vaddr);
+      uint8_t attr = mmu_read_vram_bank1(bus->mmu, vaddr);
+      f->pal_num = attr & 7u;
+      f->vram_bank = (attr >> OBJ_ATTR_VRAM_BANK_BIT) & 1u;
+      f->xflip = (attr >> OBJ_ATTR_FLIP_X_BIT) & 1u;
+      f->yflip = (attr >> OBJ_ATTR_FLIP_Y_BIT) & 1u;
+      f->bg_prio = (attr >> OBJ_ATTR_PRIORITY_BIT) & 1u;
+      f->step = 2;
+      break;
+    }
+    case 2:
+      f->step = 3;
+      break;
+    case 3: {
+      int row = f->yflip ? (TILE_HEIGHT - 1 - f->offy) : f->offy;
+      uint16_t addr = tile_data_addr(f->tile_idx, f->dat_area);
+      uint16_t off = (uint16_t)(addr + (uint16_t)(row << 1));
+      f->lo = f->vram_bank ? mmu_read_vram_bank1(bus->mmu, off)
+                           : mmu_read_vram_bank0(bus->mmu, off);
+      f->step = 4;
+      break;
+    }
+    case 4:
+      f->step = 5;
+      break;
+    case 5: {
+      int row = f->yflip ? (TILE_HEIGHT - 1 - f->offy) : f->offy;
+      uint16_t addr = tile_data_addr(f->tile_idx, f->dat_area);
+      uint16_t off = (uint16_t)(addr + (uint16_t)(row << 1) + 1u);
+      f->hi = f->vram_bank ? mmu_read_vram_bank1(bus->mmu, off)
+                           : mmu_read_vram_bank0(bus->mmu, off);
+      f->step = 6;
+      break;
+    }
+    case 6:
+      if (fifo->size == 0) {
+        cgb_fifo_push(fifo, f->lo, f->hi, f->pal_num, f->bg_prio, f->xflip);
+        f->tx = (f->tx + 1) & (TILE_MAP_STRIDE - 1);
+        f->step = 0;
+      }
+      break;
   }
-  ppu->window_line++;
 }
 
 static void render_sprites_cgb(struct Ppu* ppu, struct Bus* bus, uint8_t ly,
@@ -114,7 +157,13 @@ static void render_sprites_cgb(struct Ppu* ppu, struct Bus* bus, uint8_t ly,
     }
     line = (uint8_t)(line << 1);
     uint8_t ls, ms;
-    read_tile_row_banked(bus, idx, line, vram_bank, &ls, &ms);
+    if (vram_bank == 0) {
+      ls = mmu_read_vram_bank0(bus->mmu, (uint16_t)(idx + line));
+      ms = mmu_read_vram_bank0(bus->mmu, (uint16_t)(idx + line + 1));
+    } else {
+      ls = mmu_read_vram_bank1(bus->mmu, (uint16_t)(idx + line));
+      ms = mmu_read_vram_bank1(bus->mmu, (uint16_t)(idx + line + 1));
+    }
     for (int x0 = x; x0 < x + TILE_WIDTH; x0++) {
       if (x0 < 0 || x0 >= SCRN_WIDTH) continue;
       uint8_t posx = (uint8_t)(x0 - x);
@@ -138,17 +187,61 @@ static void render_sprites_cgb(struct Ppu* ppu, struct Bus* bus, uint8_t ly,
   }
 }
 
-void do_scanline_cgb(struct Ppu* ppu, struct Bus* bus) {
+void render_line_cgb(struct Ppu* ppu, struct Bus* bus) {
   uint8_t ly = ppu->ly;
+  uint8_t lcdc = ppu->lcdc;
+  uint8_t scx = ppu->render_scx;
+  int dat_area = get_bit(lcdc, LCDC_BIT_TILE_DATA);
+  uint8_t bg_y = (uint8_t)((ly + ppu->scy) % TILE_COORD_WRAP);
+  int bg_tiley = bg_y / TILE_HEIGHT;
+  int bg_offy = bg_y % TILE_HEIGHT;
+  uint16_t bg_map = tile_map_base(lcdc, 0);
+  int init_tx = (scx >> 3) & (TILE_MAP_STRIDE - 1);
+  int win_enabled = get_bit(lcdc, LCDC_BIT_WIN_ENABLE) && ppu->wy_triggered;
+  int wx = 0;
+  int win_tiley = 0, win_offy = 0;
+  uint16_t win_map = 0;
+  int win_started = 0;
+  if (win_enabled) {
+    if (ppu->wx < 7 || ppu->wx >= SCRN_WIDTH + 7) {
+      win_enabled = 0;
+    } else {
+      wx = (int)ppu->wx - 7;
+      win_tiley = ppu->window_line / TILE_HEIGHT;
+      win_offy = ppu->window_line % TILE_HEIGHT;
+      win_map = tile_map_base(lcdc, 1);
+    }
+  }
+  CgbFetcher fetcher;
+  cgb_fetcher_init(&fetcher, init_tx, bg_tiley, bg_offy, bg_map, dat_area);
+  CgbFifo fifo;
+  cgb_fifo_clear(&fifo);
+  int discard = scx & 7;
+  int px_out = 0;
   uint8_t bg_color_idx[SCRN_WIDTH];
   uint8_t bg_prio_bit[SCRN_WIDTH];
-  for (int i = 0; i < SCRN_WIDTH; i++) {
-    bg_color_idx[i] = 0;
-    bg_prio_bit[i] = 0;
+  while (px_out < SCRN_WIDTH) {
+    if (win_enabled && !win_started && discard == 0 && px_out == wx) {
+      cgb_fifo_clear(&fifo);
+      cgb_fetcher_init(&fetcher, 0, win_tiley, win_offy, win_map, dat_area);
+      win_started = 1;
+    }
+    cgb_fetcher_tick(&fetcher, &fifo, bus);
+    if (fifo.size > 0) {
+      CgbBgPixel px = cgb_fifo_pop(&fifo);
+      if (discard > 0) {
+        discard--;
+      } else {
+        bg_color_idx[px_out] = px.color;
+        bg_prio_bit[px_out] = px.bg_prio;
+        uint8_t lo = ppu->bg_pal_ram[px.pal_num * 8 + px.color * 2];
+        uint8_t hi = ppu->bg_pal_ram[px.pal_num * 8 + px.color * 2 + 1];
+        ppu->cgb_dsp[ly][px_out] = (uint16_t)(lo | ((uint16_t)hi << 8));
+        px_out++;
+      }
+    }
   }
-  render_bg_cgb(ppu, bus, ly, bg_color_idx, bg_prio_bit);
-  if (get_bit(ppu->lcdc, LCDC_BIT_WIN_ENABLE))
-    render_window_cgb(ppu, bus, ly, bg_color_idx, bg_prio_bit);
-  if (get_bit(ppu->lcdc, LCDC_BIT_OBJ_ENABLE))
+  if (win_started) ppu->window_line++;
+  if (get_bit(lcdc, LCDC_BIT_OBJ_ENABLE))
     render_sprites_cgb(ppu, bus, ly, bg_color_idx, bg_prio_bit);
 }

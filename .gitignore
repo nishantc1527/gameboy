@@ -13,3 +13,4 @@ compile_commands.json
 .zed/
 *.log
 include/rust.h
+src/boot_roms.c

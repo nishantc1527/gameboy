@@ -76,7 +76,10 @@ void ppu_write(struct Ppu* ppu, uint16_t addr, uint8_t val) {
       uint8_t was_on = (ppu->lcdc & (1u << LCDC_BIT_LCD_ENABLE)) != 0;
       uint8_t now_on = (val & (1u << LCDC_BIT_LCD_ENABLE)) != 0;
       if (was_on && !now_on) ppu->window_line = 0;
-      if (!was_on && now_on) ppu->lcd_turning_on = true;
+      if (!was_on && now_on) {
+        ppu->lcd_turning_on = true;
+        ppu->first_line_after_lcd_on = true;
+      }
       ppu->lcdc = val;
       break;
     }
@@ -131,6 +134,7 @@ void ppu_post_boot(struct Ppu* ppu) {
   ppu->stat = PPU_BOOT_STAT;
   ppu->scy = 0x00;
   ppu->scx = 0x00;
+  ppu->render_scx = 0x00;
   ppu->ly = 0x00;
   ppu->lyc = 0x00;
   ppu->bgp = PPU_BOOT_BGP;
@@ -161,7 +165,7 @@ void ppu_tick(struct Ppu* ppu, struct Bus* bus, uint8_t cycles) {
   }
   if (ppu->lcd_turning_on) {
     ppu->lcd_turning_on = false;
-    ppu->line_cycles = 4;
+    ppu->line_cycles = 8;
     ppu->ly = 0;
   }
   ppu_update_mode(ppu, bus);
@@ -181,15 +185,8 @@ static void ppu_check_stat_irq(struct Ppu* ppu, struct Bus* bus,
   ppu->stat_irq_line = new_line;
 }
 
-static const uint16_t SCX_MODE3_PENALTY[8] = {0, 0, 0, 0, 4, 4, 4, 8};
-
-static uint16_t scx_mode3_penalty(uint8_t scx) {
-  return SCX_MODE3_PENALTY[scx & 7u];
-}
-
 static uint8_t current_ppu_mode(uint16_t line_cycles, uint8_t ly, uint8_t scx) {
-  uint16_t mode3_end =
-      (uint16_t)(PPU_TRANSFER_BASE_END + scx_mode3_penalty(scx));
+  uint16_t mode3_end = (uint16_t)(PPU_TRANSFER_BASE_END + (scx & 7u));
   uint8_t mode;
   if (line_cycles < PPU_OAM_END_CYCLE)
     mode = PPU_MODE_OAM;
@@ -204,12 +201,22 @@ static uint8_t current_ppu_mode(uint16_t line_cycles, uint8_t ly, uint8_t scx) {
 void ppu_update_mode(struct Ppu* ppu, struct Bus* bus) {
   uint8_t stat = ppu->stat;
   uint8_t prev_mode = stat & PPU_MODE_MASK;
-  uint8_t curr_mode = current_ppu_mode(ppu->line_cycles, ppu->ly, ppu->scx);
+  uint8_t curr_mode =
+      current_ppu_mode(ppu->line_cycles, ppu->ly, ppu->render_scx);
+  if (ppu->first_line_after_lcd_on) {
+    if (curr_mode == PPU_MODE_OAM) {
+      curr_mode = PPU_MODE_HBLANK;
+    } else {
+      ppu->first_line_after_lcd_on = false;
+    }
+  }
   if (prev_mode != PPU_MODE_VBLANK && curr_mode == PPU_MODE_VBLANK)
     bus_req_intr(bus, INTR_VBLANK);
   if (prev_mode != PPU_MODE_OAM && curr_mode == PPU_MODE_OAM &&
       ppu->ly < PPU_VISIBLE_LINES && ppu->wy == ppu->ly)
     ppu->wy_triggered = 1;
+  if (prev_mode == PPU_MODE_OAM && curr_mode == PPU_MODE_TRANSFER)
+    ppu->render_scx = ppu->scx;
   ppu_check_stat_irq(ppu, bus, curr_mode);
   if (prev_mode != PPU_MODE_HBLANK && curr_mode == PPU_MODE_HBLANK)
     dma_notify_hblank(bus->dma);
