@@ -113,7 +113,7 @@ $(RUST_LIB): $(RUST_MANIFEST) $(RUST_SRCS)
 	$(CBINDS) $(RUST_DIR) --crate $(RUST_CRATE) --output $(RUST_HDR)
 
 clean:
-	rm -rf $(BUILD_DIR) $(RUST_HDR) $(VENV) $(POKERED_ROM) $(BOOT_ROMS_SRC)
+	rm -rf $(BUILD_DIR) $(RUST_HDR) $(VENV) $(BOOT_ROMS_SRC)
 	$(CARGO) clean --manifest-path $(RUST_MANIFEST)
 	$(MAKE) -C $(BOOTROMS_DIR) clean
 
