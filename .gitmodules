@@ -1,6 +1,3 @@
-[submodule "pokered"]
-	path = pokered
-	url = git@github.com:pret/pokered.git
 [submodule "gb-bootroms"]
 	path = gb-bootroms
 	url = https://codeberg.org/ISSOtm/gb-bootroms.git
