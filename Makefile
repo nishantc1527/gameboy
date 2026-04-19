@@ -1,47 +1,48 @@
-VERSION := 1.0.0
+VERSION        := 1.0.0
 
-CC       ?= gcc
-CXX      ?= g++
-PYTHON3  ?= python3
-CARGO    ?= cargo
-CBINDS   ?= cbindgen
-FORMAT   ?= clang-format
-TIDY     ?= clang-tidy
-CPPCHECK ?= cppcheck
+CC             ?= gcc
+CXX            ?= g++
+PYTHON3        ?= python3
+CARGO          ?= cargo
+CBINDS         ?= cbindgen
+FORMAT         ?= clang-format
+TIDY           ?= clang-tidy
+CPPCHECK       ?= cppcheck
 
-VENV   := .venv
-PYTHON := $(VENV)/bin/python3
-PIP    := $(VENV)/bin/pip3
-REQS   := requirements.txt
+VENV           := .venv
+PYTHON         := $(VENV)/bin/python3
+PIP            := $(VENV)/bin/pip3
+REQS           := requirements.txt
 
-POKERED_DIR := pokered
-POKERED_ROM := $(POKERED_DIR)/pokered.gbc
+POKERED_DIR    := pokered
+POKERED_ROM    := $(POKERED_DIR)/pokered.gbc
 
-BOOTROMS_DIR  := gb-bootroms
-DMG_BIN       := $(BOOTROMS_DIR)/bin/dmg.bin
-CGB_BIN       := $(BOOTROMS_DIR)/bin/cgb.bin
-BOOT_ROMS_SRC := src/boot_roms.c
+BOOTROMS_DIR   := gb-bootroms
+DMG_BIN        := $(BOOTROMS_DIR)/bin/dmg.bin
+CGB_BIN        := $(BOOTROMS_DIR)/bin/cgb.bin
+BOOT_ROMS_SRC  := src/boot_roms.c
 
-RUST_DIR      := rust
-RUST_LIB      := $(RUST_DIR)/target/release/librust.a
-RUST_HDR      := include/rust.h
-RUST_MANIFEST := $(RUST_DIR)/Cargo.toml
-RUST_CRATE    := rust
+RUST_DIR       := rust
+RUST_LIB       := $(RUST_DIR)/target/release/librust.a
+RUST_HDR       := include/rust.h
+RUST_MANIFEST  := $(RUST_DIR)/Cargo.toml
+RUST_CRATE     := rust
 
-BUILD_DIR    := build
-SRC_DIR      := src
-INC_DIRS     := include
-LIB_DIR      := vendor
-SDL_DIR      := sdl
-HEADLESS_DIR := headless
-CFLAGS     := -O2 -std=c2x
-CPPFLAGS   := $(foreach d, $(INC_DIRS), -I$(d)) $(foreach d, $(LIB_DIR), -isystem $(d))
-SDL_CFLAGS := $(shell pkg-config --cflags sdl3)
-SDL_LDLIBS := $(shell pkg-config --libs sdl3)
-CXXFLAGS   := -std=c++17 -O2 -isystem $(LIB_DIR) $(SDL_CFLAGS) $(foreach d, $(INC_DIRS), -I$(d))
-LDFLAGS       :=
-VERIFY_FLAGS  := -Wall -Wextra -Wpedantic -Werror -Wshadow -Wconversion \
-                 -Wno-unused-parameter -Wno-sign-conversion
+BUILD_DIR      := build
+SRC_DIR        := src
+INC_DIRS       := include
+LIB_DIR        := vendor
+SDL_DIR        := sdl
+HEADLESS_DIR   := headless
+
+CFLAGS         := -O2 -std=c2x
+CPPFLAGS       := $(foreach d,$(INC_DIRS),-I$(d)) $(foreach d,$(LIB_DIR),-isystem $(d))
+SDL_CFLAGS     := $(shell pkg-config --cflags sdl3)
+SDL_LDLIBS     := $(shell pkg-config --libs sdl3)
+CXXFLAGS       := -std=c++17 -O2 -isystem $(LIB_DIR) $(SDL_CFLAGS) $(foreach d,$(INC_DIRS),-I$(d))
+LDFLAGS        :=
+VERIFY_FLAGS   := -Wall -Wextra -Wpedantic -Werror -Wshadow -Wconversion \
+                  -Wno-unused-parameter -Wno-sign-conversion
 
 ifdef DEBUG
   CFLAGS += -O0 -g -DDEBUG
@@ -51,26 +52,27 @@ ifdef ASAN
   LDFLAGS += -fsanitize=address,undefined
 endif
 
-CORE_SRCS     := $(filter-out $(BOOT_ROMS_SRC),$(wildcard $(SRC_DIR)/*.c $(SRC_DIR)/*/*.c $(SRC_DIR)/*/*/*.c))
-VENDOR_SRCS   := $(wildcard $(LIB_DIR)/*.c)
+CORE_SRCS      := $(filter-out $(BOOT_ROMS_SRC),$(wildcard $(SRC_DIR)/*.c $(SRC_DIR)/*/*.c $(SRC_DIR)/*/*/*.c))
+VENDOR_SRCS    := $(wildcard $(LIB_DIR)/*.c)
 VENDOR_CXXSRCS := $(wildcard $(LIB_DIR)/*.cpp)
-SDL_SRCS      := $(wildcard $(SDL_DIR)/*.c)
-SDL_CXXSRCS   := $(wildcard $(SDL_DIR)/*.cpp)
-HEADLESS_SRC  := $(HEADLESS_DIR)/main.c
+SDL_SRCS       := $(wildcard $(SDL_DIR)/*.c)
+SDL_CXXSRCS    := $(wildcard $(SDL_DIR)/*.cpp)
+HEADLESS_SRC   := $(HEADLESS_DIR)/main.c
 
-C_HDRS        := $(wildcard include/gbemu/*.h)
-RUST_SRCS     := $(wildcard $(RUST_DIR)/src/*.rs $(RUST_DIR)/src/*/*.rs)
+C_HDRS         := $(wildcard include/gbemu/*.h)
+RUST_SRCS      := $(wildcard $(RUST_DIR)/src/*.rs $(RUST_DIR)/src/*/*.rs)
 
-CORE_OBJS     := $(CORE_SRCS:%.c=$(BUILD_DIR)/%.o)
-VENDOR_OBJS   := $(VENDOR_SRCS:%.c=$(BUILD_DIR)/%.o) $(VENDOR_CXXSRCS:%.cpp=$(BUILD_DIR)/%.o)
-SDL_OBJS      := $(SDL_SRCS:%.c=$(BUILD_DIR)/%.o) $(SDL_CXXSRCS:%.cpp=$(BUILD_DIR)/%.o)
-HEADLESS_OBJ  := $(HEADLESS_SRC:%.c=$(BUILD_DIR)/%.o)
-BOOT_ROMS_OBJ := $(BOOT_ROMS_SRC:%.c=$(BUILD_DIR)/%.o)
+CORE_OBJS      := $(CORE_SRCS:%.c=$(BUILD_DIR)/%.o)
+VENDOR_OBJS    := $(VENDOR_SRCS:%.c=$(BUILD_DIR)/%.o)
+VENDOR_CXXOBJS := $(VENDOR_CXXSRCS:%.cpp=$(BUILD_DIR)/%.o)
+SDL_OBJS       := $(SDL_SRCS:%.c=$(BUILD_DIR)/%.o) $(SDL_CXXSRCS:%.cpp=$(BUILD_DIR)/%.o)
+HEADLESS_OBJ   := $(HEADLESS_SRC:%.c=$(BUILD_DIR)/%.o)
+BOOT_ROMS_OBJ  := $(BOOT_ROMS_SRC:%.c=$(BUILD_DIR)/%.o)
 
-ALL_OBJS      := $(CORE_OBJS) $(VENDOR_OBJS) $(SDL_OBJS) $(HEADLESS_OBJ) $(BOOT_ROMS_OBJ)
-DEPS          := $(ALL_OBJS:.o=.d)
+ALL_OBJS       := $(CORE_OBJS) $(VENDOR_OBJS) $(VENDOR_CXXOBJS) $(SDL_OBJS) $(HEADLESS_OBJ) $(BOOT_ROMS_OBJ)
+DEPS           := $(ALL_OBJS:.o=.d)
 
-ALL_REFS := $(shell python3 scripts/gen_boot_refs.py --list)
+ALL_REFS       := $(shell python3 scripts/gen_boot_refs.py --list)
 
 .PHONY: all gbemu gbemu_headless clean format test verify compile_commands
 
@@ -79,8 +81,8 @@ all: gbemu gbemu_headless $(PYTHON)
 gbemu: $(BUILD_DIR)/gbemu
 gbemu_headless: $(BUILD_DIR)/gbemu_headless
 
-$(BUILD_DIR)/gbemu: $(RUST_LIB) $(CORE_OBJS) $(VENDOR_OBJS) $(SDL_OBJS) $(BOOT_ROMS_OBJ)
-	$(CXX) $(CORE_OBJS) $(VENDOR_OBJS) $(SDL_OBJS) $(BOOT_ROMS_OBJ) $(RUST_LIB) $(LDFLAGS) -o $@ $(SDL_LDLIBS)
+$(BUILD_DIR)/gbemu: $(RUST_LIB) $(CORE_OBJS) $(VENDOR_OBJS) $(VENDOR_CXXOBJS) $(SDL_OBJS) $(BOOT_ROMS_OBJ)
+	$(CXX) $(CORE_OBJS) $(VENDOR_OBJS) $(VENDOR_CXXOBJS) $(SDL_OBJS) $(BOOT_ROMS_OBJ) $(RUST_LIB) $(LDFLAGS) -o $@ $(SDL_LDLIBS)
 
 $(BUILD_DIR)/gbemu_headless: $(RUST_LIB) $(CORE_OBJS) $(VENDOR_OBJS) $(HEADLESS_OBJ) $(BOOT_ROMS_OBJ)
 	$(CC) $(CORE_OBJS) $(VENDOR_OBJS) $(HEADLESS_OBJ) $(BOOT_ROMS_OBJ) $(RUST_LIB) $(LDFLAGS) -o $@
