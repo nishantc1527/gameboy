@@ -13,7 +13,6 @@ SDL_Texture* txt = NULL;
 
 SDL_Window* win;
 SDL_Renderer* rnd;
-struct nk_context* ctx;
 
 SDL_Keycode g_controls[CTRL_COUNT];
 
@@ -57,8 +56,7 @@ int init_window(const char* rom_title) {
     SDL_LogError(SDL_LOG_CATEGORY_ERROR, "UNABLE TO CREATE TEXTURE\n");
     return 0;
   }
-  ctx = nk_sdl_init(win, rnd, nk_sdl_allocator());
-  nk_sdl_style_set_debug_font(ctx);
+  imgui_init(win, rnd);
   init_audio();
   return 0;
 }

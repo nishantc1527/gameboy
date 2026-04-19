@@ -149,5 +149,6 @@ void SDL_AppQuit(void* appstate, SDL_AppResult result) {
   if (!state) return;
   settings_save(&g_settings);
   gbemu_free(state->gb);
+  imgui_shutdown();
   free(state);
 }

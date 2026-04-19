@@ -30,7 +30,7 @@ void open_rom_dialog(struct AppState* state) {
 }
 
 int handle_input(struct AppState* state, SDL_Event* event) {
-  nk_sdl_handle_event(ctx, event);
+  imgui_process_event(event);
 
   struct Joypad* joypad = state->gb ? state->gb->joypad : NULL;
 

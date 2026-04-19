@@ -22,16 +22,14 @@ enum {
 
 extern SDL_Keycode g_controls[CTRL_COUNT];
 
-#define NK_INCLUDE_COMMAND_USERDATA
-#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
-#include "nuklear.h"
-#include "nuklear_sdl3_renderer.h"
-
 extern int win_width, win_height;
 
 extern SDL_Window* win;
 extern SDL_Renderer* rnd;
-extern struct nk_context* ctx;
+
+void imgui_init(SDL_Window* window, SDL_Renderer* renderer);
+void imgui_shutdown(void);
+void imgui_process_event(SDL_Event* event);
 
 struct AppState {
   struct GBemu* gb;
