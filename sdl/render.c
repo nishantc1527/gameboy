@@ -46,5 +46,15 @@ void render(struct Ppu* ppu) {
         buf[i][j] = pal[dmg_fb[i * SCRN_WIDTH + j]];
   }
   SDL_UpdateTexture(txt, NULL, buf, SCRN_WIDTH * sizeof(uint32_t));
-  SDL_RenderTexture(rnd, txt, NULL, NULL);
+  int avail_h = win_height - menu_bar_height;
+  int scale = win_width / SCRN_WIDTH;
+  if (avail_h / SCRN_HEIGHT < scale) scale = avail_h / SCRN_HEIGHT;
+  if (scale < 1) scale = 1;
+  SDL_FRect dest = {
+      (float)((win_width - SCRN_WIDTH * scale) / 2),
+      (float)(menu_bar_height + (avail_h - SCRN_HEIGHT * scale) / 2),
+      (float)(SCRN_WIDTH * scale),
+      (float)(SCRN_HEIGHT * scale),
+  };
+  SDL_RenderTexture(rnd, txt, NULL, &dest);
 }

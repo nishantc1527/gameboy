@@ -3,7 +3,7 @@
 #include "imgui_impl_sdlrenderer3.h"
 
 extern "C" {
-#include "gbemu/ppu.h"
+#include "gbemu/core.h"
 #include "gbemu/sdl.h"
 #include "gbemu/settings.h"
 }
@@ -28,6 +28,63 @@ extern "C" void imgui_shutdown(void) {
 
 extern "C" void imgui_process_event(SDL_Event* event) {
   ImGui_ImplSDL3_ProcessEvent(event);
+}
+
+
+static void draw_menu_bar(struct AppState* state) {
+  static bool open_close_modal = false;
+  static bool open_quit_modal = false;
+
+  if (ImGui::BeginMainMenuBar()) {
+    if (ImGui::BeginMenu("File")) {
+      if (ImGui::MenuItem("Open...", "Ctrl+O")) open_rom_dialog(state);
+      if (ImGui::MenuItem("Close", nullptr, false, state->gb != nullptr))
+        open_close_modal = true;
+      ImGui::Separator();
+      if (ImGui::MenuItem("Quit")) open_quit_modal = true;
+      ImGui::EndMenu();
+    }
+    if (ImGui::BeginMenu("Game", state->gb != nullptr)) {
+      bool paused = state->gb->is_paused;
+      if (ImGui::MenuItem("Paused", nullptr, &paused))
+        state->gb->is_paused = paused;
+      ImGui::EndMenu();
+    }
+    ImGui::EndMainMenuBar();
+  }
+
+  if (open_close_modal) { ImGui::OpenPopup("Close?"); open_close_modal = false; }
+  if (open_quit_modal)  { ImGui::OpenPopup("Quit?");  open_quit_modal  = false; }
+
+  ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+
+  ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+  if (ImGui::BeginPopupModal("Close?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+    ImGui::Text("Close the current game?");
+    ImGui::Spacing();
+    if (ImGui::Button("Yes", ImVec2(80, 0))) {
+      state->close_requested = true;
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("No", ImVec2(80, 0))) ImGui::CloseCurrentPopup();
+    ImGui::EndPopup();
+  }
+
+  ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+  if (ImGui::BeginPopupModal("Quit?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+    ImGui::Text("Quit gbemu?");
+    ImGui::Spacing();
+    if (ImGui::Button("Yes", ImVec2(80, 0))) {
+      SDL_Event e = {};
+      e.type = SDL_EVENT_QUIT;
+      SDL_PushEvent(&e);
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("No", ImVec2(80, 0))) ImGui::CloseCurrentPopup();
+    ImGui::EndPopup();
+  }
 }
 
 static void draw_ui_idle(struct AppState* state) {
@@ -75,14 +132,11 @@ static void draw_ui_idle(struct AppState* state) {
 }
 
 extern "C" void draw_ui(struct AppState* state) {
-  SDL_SetRenderLogicalPresentation(rnd, win_width, win_height,
-                                   SDL_LOGICAL_PRESENTATION_DISABLED);
   ImGui_ImplSDLRenderer3_NewFrame();
   ImGui_ImplSDL3_NewFrame();
   ImGui::NewFrame();
+  draw_menu_bar(state);
   if (!state->gb) draw_ui_idle(state);
   ImGui::Render();
   ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), rnd);
-  SDL_SetRenderLogicalPresentation(rnd, SCRN_WIDTH, SCRN_HEIGHT,
-                                   SDL_LOGICAL_PRESENTATION_LETTERBOX);
 }

@@ -9,6 +9,7 @@
 
 // TODO sdl state
 int win_width, win_height;
+int menu_bar_height = 19;
 SDL_Texture* txt = NULL;
 
 SDL_Window* win;
@@ -37,17 +38,15 @@ int init_window(const char* rom_title) {
                  SDL_GetError());
     return 1;
   }
-  if (!SDL_CreateWindowAndRenderer(rom_title, SCRN_WIDTH * g_settings.scale,
-                                   SCRN_HEIGHT * g_settings.scale, 0, &win,
-                                   &rnd)) {
+  if (!SDL_CreateWindowAndRenderer(
+          rom_title, SCRN_WIDTH * g_settings.scale,
+          SCRN_HEIGHT * g_settings.scale + menu_bar_height, 0, &win, &rnd)) {
     SDL_LogError(SDL_LOG_CATEGORY_VIDEO,
                  "ERROR CREATING WINDOW & RENDERER: %s\n", SDL_GetError());
     return 1;
   }
   if (g_settings.fullscreen) SDL_SetWindowFullscreen(win, true);
   SDL_SetRenderVSync(rnd, 0);
-  SDL_SetRenderLogicalPresentation(rnd, SCRN_WIDTH, SCRN_HEIGHT,
-                                   SDL_LOGICAL_PRESENTATION_LETTERBOX);
   SDL_GetWindowSize(win, &win_width, &win_height);
   txt = SDL_CreateTexture(rnd, SDL_PIXELFORMAT_RGBA8888,
                           SDL_TEXTUREACCESS_STREAMING, SCRN_WIDTH, SCRN_HEIGHT);

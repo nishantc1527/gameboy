@@ -25,6 +25,8 @@ static int load_rom(struct AppState* state, const char* path, uint8_t dis) {
   if (!f) {
     SDL_snprintf(state->rom_error, sizeof(state->rom_error),
                  "ROM not found: %s", path);
+    settings_remove_recent_rom(&g_settings, path);
+    settings_save(&g_settings);
     return 1;
   }
   fclose(f);
@@ -88,6 +90,13 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
 
 SDL_AppResult SDL_AppIterate(void* appstate) {
   struct AppState* state = appstate;
+
+  if (state->close_requested) {
+    state->close_requested = false;
+    gbemu_free(state->gb);
+    state->gb = NULL;
+    SDL_SetWindowTitle(win, "gbemu");
+  }
 
   if (state->pending_rom[0]) {
     char path[512];

@@ -27,3 +27,4 @@ void settings_defaults(struct Settings* s);
 void settings_load(struct Settings* s);
 void settings_save(const struct Settings* s);
 void settings_add_recent_rom(struct Settings* s, const char* path);
+void settings_remove_recent_rom(struct Settings* s, const char* path);

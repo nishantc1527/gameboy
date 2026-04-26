@@ -119,7 +119,7 @@ clean:
 
 format:
 	$(FORMAT) -i $(CORE_SRCS) $(SDL_SRCS) $(HEADLESS_SRC) $(C_HDRS)
-	cargo fmt --manifest-path rust/Cargo.toml
+	$(CARGO) fmt --manifest-path rust/Cargo.toml
 
 $(PYTHON):
 	$(PYTHON3) -m venv $(VENV)

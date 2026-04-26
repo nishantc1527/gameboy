@@ -207,6 +207,17 @@ void settings_load(struct Settings* s) {
   toml_free(res);
 }
 
+void settings_remove_recent_rom(struct Settings* s, const char* path) {
+  for (int i = 0; i < s->recent_rom_count; i++) {
+    if (strcmp(s->recent_roms[i], path) == 0) {
+      for (int j = i; j < s->recent_rom_count - 1; j++)
+        memcpy(s->recent_roms[j], s->recent_roms[j + 1], 512);
+      s->recent_rom_count--;
+      return;
+    }
+  }
+}
+
 void settings_add_recent_rom(struct Settings* s, const char* path) {
   for (int i = 0; i < s->recent_rom_count; i++) {
     if (strcmp(s->recent_roms[i], path) == 0) {

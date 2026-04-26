@@ -24,6 +24,7 @@ enum {
 extern SDL_Keycode g_controls[CTRL_COUNT];
 
 extern int win_width, win_height;
+extern int menu_bar_height;
 
 extern SDL_Window* win;
 extern SDL_Renderer* rnd;
@@ -36,6 +37,7 @@ struct AppState {
   struct GBemu* gb;
   char pending_rom[512];
   bool dialog_open;
+  bool close_requested;
   char rom_error[512];
 };
 
