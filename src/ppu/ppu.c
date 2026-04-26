@@ -1,15 +1,15 @@
 #include "gbemu/ppu.h"
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "../bus_private.h"
 #include "gbemu/bus.h"
 #include "gbemu/dma.h"
 #include "gbemu/util.h"
 #include "ppu_private.h"
 
-uint8_t ppu_get_cgb_mode(const struct Ppu* ppu) { return ppu->cgb_mode; }
+bool ppu_get_cgb_mode(const struct Ppu* ppu) { return ppu->cgb_mode; }
 
 const uint8_t* ppu_get_dmg_framebuffer(const struct Ppu* ppu) {
   return &ppu->dsp[0][0];
@@ -19,7 +19,7 @@ const uint16_t* ppu_get_cgb_framebuffer(const struct Ppu* ppu) {
   return &ppu->cgb_dsp[0][0];
 }
 
-struct Ppu* ppu_init(uint8_t cgb_mode, uint8_t cgb_compat) {
+struct Ppu* ppu_init(bool cgb_mode, bool cgb_compat) {
   struct Ppu* ppu = calloc(1, sizeof(struct Ppu));
   ppu->cgb_mode = cgb_mode;
   ppu->cgb_compat = cgb_compat;
@@ -73,8 +73,8 @@ uint8_t ppu_read(const struct Ppu* ppu, uint16_t addr) {
 void ppu_write(struct Ppu* ppu, uint16_t addr, uint8_t val) {
   switch (addr) {
     case 0xFF40: {
-      uint8_t was_on = (ppu->lcdc & (1u << LCDC_BIT_LCD_ENABLE)) != 0;
-      uint8_t now_on = (val & (1u << LCDC_BIT_LCD_ENABLE)) != 0;
+      bool was_on = (ppu->lcdc & (1u << LCDC_BIT_LCD_ENABLE)) != 0;
+      bool now_on = (val & (1u << LCDC_BIT_LCD_ENABLE)) != 0;
       if (was_on && !now_on) ppu->window_line = 0;
       if (!was_on && now_on) {
         ppu->lcd_turning_on = true;
@@ -129,29 +129,16 @@ void ppu_write(struct Ppu* ppu, uint16_t addr, uint8_t val) {
   }
 }
 
-void ppu_post_boot(struct Ppu* ppu) {
-  ppu->lcdc = PPU_BOOT_LCDC;
-  ppu->stat = PPU_BOOT_STAT;
-  ppu->scy = 0x00;
-  ppu->scx = 0x00;
-  ppu->render_scx = 0x00;
-  ppu->ly = 0x00;
-  ppu->lyc = 0x00;
-  ppu->bgp = PPU_BOOT_BGP;
-  ppu->wy = 0x00;
-  ppu->wx = 0x00;
-}
+bool ppu_frame_ready(const struct Ppu* ppu) { return ppu->frame_ready; }
 
-uint8_t ppu_frame_ready(const struct Ppu* ppu) { return ppu->frame_ready; }
+void ppu_begin_frame(struct Ppu* ppu) { ppu->frame_ready = false; }
 
-void ppu_begin_frame(struct Ppu* ppu) { ppu->frame_ready = 0; }
-
-uint8_t ppu_blocks_vram(const struct Ppu* ppu) {
+bool ppu_blocks_vram(const struct Ppu* ppu) {
   return get_bit(ppu->lcdc, LCDC_BIT_LCD_ENABLE) &&
          (ppu->stat & PPU_MODE_MASK) == PPU_MODE_TRANSFER;
 }
 
-uint8_t ppu_blocks_oam(const struct Ppu* ppu) {
+bool ppu_blocks_oam(const struct Ppu* ppu) {
   uint8_t mode = ppu->stat & PPU_MODE_MASK;
   return get_bit(ppu->lcdc, LCDC_BIT_LCD_ENABLE) &&
          (mode == PPU_MODE_OAM || mode == PPU_MODE_TRANSFER);
@@ -173,8 +160,8 @@ void ppu_tick(struct Ppu* ppu, struct Bus* bus, uint8_t cycles) {
 
 static void ppu_check_stat_irq(struct Ppu* ppu, struct Bus* bus,
                                uint8_t curr_mode) {
-  uint8_t lyc_match = (ppu->ly == ppu->lyc);
-  uint8_t new_line =
+  bool lyc_match = (ppu->ly == ppu->lyc);
+  bool new_line =
       (curr_mode == PPU_MODE_HBLANK &&
        get_bit(ppu->stat, STAT_INT_HBLANK_BIT)) ||
       (curr_mode == PPU_MODE_VBLANK &&
@@ -214,7 +201,7 @@ void ppu_update_mode(struct Ppu* ppu, struct Bus* bus) {
     bus_req_intr(bus, INTR_VBLANK);
   if (prev_mode != PPU_MODE_OAM && curr_mode == PPU_MODE_OAM &&
       ppu->ly < PPU_VISIBLE_LINES && ppu->wy == ppu->ly)
-    ppu->wy_triggered = 1;
+    ppu->wy_triggered = true;
   if (prev_mode == PPU_MODE_OAM && curr_mode == PPU_MODE_TRANSFER)
     ppu->render_scx = ppu->scx;
   ppu_check_stat_irq(ppu, bus, curr_mode);

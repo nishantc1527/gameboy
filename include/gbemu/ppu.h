@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #define SCRN_WIDTH 160
@@ -19,15 +20,14 @@
 struct Bus;
 struct Ppu;
 
-struct Ppu* ppu_init(uint8_t cgb_mode, uint8_t cgb_compat);
+struct Ppu* ppu_init(bool cgb_mode, bool cgb_compat);
 uint8_t ppu_read(const struct Ppu* ppu, uint16_t addr);
 void ppu_write(struct Ppu* ppu, uint16_t addr, uint8_t val);
-void ppu_post_boot(struct Ppu* ppu);
 void ppu_tick(struct Ppu* ppu, struct Bus* bus, uint8_t cycles);
-uint8_t ppu_frame_ready(const struct Ppu* ppu);
+bool ppu_frame_ready(const struct Ppu* ppu);
 void ppu_begin_frame(struct Ppu* ppu);
-uint8_t ppu_blocks_vram(const struct Ppu* ppu);
-uint8_t ppu_blocks_oam(const struct Ppu* ppu);
-uint8_t ppu_get_cgb_mode(const struct Ppu* ppu);
+bool ppu_blocks_vram(const struct Ppu* ppu);
+bool ppu_blocks_oam(const struct Ppu* ppu);
+bool ppu_get_cgb_mode(const struct Ppu* ppu);
 const uint8_t* ppu_get_dmg_framebuffer(const struct Ppu* ppu);
 const uint16_t* ppu_get_cgb_framebuffer(const struct Ppu* ppu);

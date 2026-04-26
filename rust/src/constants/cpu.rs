@@ -1,19 +1,12 @@
-#[allow(dead_code)]
 pub const JOYP: u16 = 0xFF00;
-#[allow(dead_code)]
 pub const SB: u16 = 0xFF01;
-#[allow(dead_code)]
 pub const SC: u16 = 0xFF02;
-#[allow(dead_code)]
 pub const DIV: u16 = 0xFF04;
-#[allow(dead_code)]
 pub const TIMA: u16 = 0xFF05;
-#[allow(dead_code)]
 pub const TMA: u16 = 0xFF06;
 pub const TAC: u16 = 0xFF07;
 pub const IF: u16 = 0xFF0F;
 pub const IE: u16 = 0xFFFF;
-
 pub const CPU_FREQ: u64 = 4194304;
 pub const DIV_FREQ: u64 = 16384;
 pub const TIM_FREQ_1: u64 = 4096;

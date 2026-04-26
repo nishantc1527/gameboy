@@ -1,4 +1,5 @@
 #pragma once
+#include <stdbool.h>
 #include <stdint.h>
 
 #define BTN_A 0
@@ -17,6 +18,6 @@ struct Joypad* joypad_init(void);
 void joypad_free(struct Joypad* j);
 uint8_t joypad_read(const struct Joypad* j);
 void joypad_write(struct Joypad* j, uint8_t val);
-void joypad_set_button(struct Joypad* j, int btn, uint8_t pressed,
+void joypad_set_button(struct Joypad* j, int btn, bool pressed,
                        struct Bus* bus);
-void joypad_force_button(struct Joypad* j, int btn, uint8_t pressed);
+void joypad_force_button(struct Joypad* j, int btn, bool pressed);

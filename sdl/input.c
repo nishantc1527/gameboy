@@ -12,7 +12,7 @@ static void SDLCALL rom_dialog_callback(void* userdata,
                                         int filter) {
   (void)filter;
   struct AppState* state = (struct AppState*)userdata;
-  state->dialog_open = 0;
+  state->dialog_open = false;
   if (filelist && filelist[0])
     SDL_snprintf(state->pending_rom, sizeof(state->pending_rom), "%s",
                  filelist[0]);
@@ -20,7 +20,7 @@ static void SDLCALL rom_dialog_callback(void* userdata,
 
 void open_rom_dialog(struct AppState* state) {
   if (state->dialog_open) return;
-  state->dialog_open = 1;
+  state->dialog_open = true;
   static const SDL_DialogFileFilter filters[] = {
       {"Game Boy ROMs", "gb;gbc"},
       {"All files", "*"},
@@ -79,11 +79,11 @@ int handle_input(struct AppState* state, SDL_Event* event) {
       else if (k == g_controls[CTRL_RIGHT])
         joypad_set_button(joypad, BTN_RIGHT, true, state->gb->bus);
       else if (k == g_controls[CTRL_PAUSE])
-        state->gb->paused ^= 1;
+        state->gb->is_paused = !state->gb->is_paused;
       else if (k == g_controls[CTRL_SCREENSHOT])
         take_screenshot(state->gb->ppu);
       else if (k == SDLK_TAB)
-        state->gb->fast_forward = 1;
+        state->gb->fast_forward = true;
       else if (k == SDLK_R && (event->key.mod & SDL_KMOD_CTRL))
         gbemu_reset(state->gb);
       break;
@@ -109,7 +109,7 @@ int handle_input(struct AppState* state, SDL_Event* event) {
       else if (k == g_controls[CTRL_RIGHT])
         joypad_set_button(joypad, BTN_RIGHT, false, state->gb->bus);
       else if (k == SDLK_TAB)
-        state->gb->fast_forward = 0;
+        state->gb->fast_forward = false;
       break;
     }
 

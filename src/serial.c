@@ -2,8 +2,14 @@
 
 #include <stdlib.h>
 
-#include "bus_private.h"
 #include "gbemu/bus.h"
+
+#define REG_SB 0xFF01
+#define REG_SC 0xFF02
+#define SC_TRANSFER_TRIGGER 0x81
+#define SC_STORED_MASK 0x7F
+#define SC_UNUSED_BITS 0x7E
+#define SERIAL_BUF_SIZE 0xFF
 
 struct Serial {
   uint8_t sb;
@@ -13,13 +19,6 @@ struct Serial {
   uint8_t buf_head;
   uint8_t buf_tail;
 };
-
-#define REG_SB 0xFF01
-#define REG_SC 0xFF02
-#define SC_TRANSFER_TRIGGER 0x81
-#define SC_STORED_MASK 0x7F
-#define SC_UNUSED_BITS 0x7E
-#define SERIAL_BUF_SIZE 0xFF
 
 struct Serial* serial_init(void) { return calloc(1, sizeof(struct Serial)); }
 

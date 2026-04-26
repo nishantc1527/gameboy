@@ -3,7 +3,7 @@
 #include "gbemu/apu.h"
 #include "gbemu/settings.h"
 
-static SDL_AudioStream* audio_stream = NULL;
+static SDL_AudioStream* audio_stream = nullptr;
 
 int init_audio(void) {
   SDL_AudioSpec spec = {

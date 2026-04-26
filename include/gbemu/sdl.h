@@ -1,6 +1,7 @@
 #pragma once
 
 #include <SDL3/SDL.h>
+#include <stdbool.h>
 
 struct Apu;
 struct Ppu;
@@ -34,7 +35,7 @@ void imgui_process_event(SDL_Event* event);
 struct AppState {
   struct GBemu* gb;
   char pending_rom[512];
-  int dialog_open;
+  bool dialog_open;
   char rom_error[512];
 };
 

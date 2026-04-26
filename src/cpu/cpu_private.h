@@ -1,23 +1,22 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
-#include "../bus_private.h"
 #include "gbemu/bus.h"
-#include "gbemu/cpu.h"
 #include "gbemu/timer.h"
 #include "gbemu/util.h"
 
 struct Cpu {
   uint8_t A, B, C, D, E, F, H, L;
   uint16_t PC, SP;
-  uint8_t halted;
-  uint8_t ime;
-  uint8_t ime_pending;
+  bool halted;
+  bool ime;
+  bool ime_pending;
   uint8_t if_reg;
   uint8_t ie_reg;
-  uint8_t cgb_mode;
-  uint8_t ld_b_b_fired;  // Many tests exit by executing LD B, B
+  bool cgb_mode;
+  bool ld_b_b_fired;  // Many tests exit by executing LD B, B
 };
 
 #define FLG_Z 7
@@ -98,12 +97,6 @@ static inline uint16_t pop(struct Cpu* cpu, struct Bus* bus) {
   return val1 | (uint16_t)(val2 << 8);
 }
 
-static inline uint16_t peek_stack(struct Cpu* cpu, struct Bus* bus) {
-  uint16_t val = pop(cpu, bus);
-  push(cpu, bus, val);
-  return val;
-}
-
 static inline void set_zero_flag(struct Cpu* cpu, uint8_t var) {
   if (var == 0)
     set_flag(cpu, FLG_Z);
@@ -164,10 +157,6 @@ static inline void set_carry_sub(struct Cpu* cpu, uint8_t var1, uint8_t var2) {
   else
     clear_flag(cpu, FLG_C);
 }
-static inline void req_intr(struct Bus* bus, uint8_t intr) {
-  bus_req_intr(bus, intr);
-}
-
 static inline int c_add(struct Cpu* cpu, uint8_t reg) {
   set_half_carry_add(cpu, cpu->A, reg);
   set_carry_add(cpu, cpu->A, reg);

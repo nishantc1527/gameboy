@@ -1,5 +1,6 @@
 #include "gbemu/core.h"
 
+#include <stdbool.h>
 #include <stdlib.h>
 
 #include "gbemu/apu.h"
@@ -13,15 +14,12 @@
 #include "gbemu/serial.h"
 #include "gbemu/timer.h"
 
-#define ROM_HEADER_CHECKSUM 0x014D
-#define BOOT_ROM_DISABLE_REG 0xFF50
-
 void disassemble(struct Cpu* cpu, struct Bus* bus, const uint16_t* watch_addrs,
                  uint8_t watch_count, uint64_t total_cycles);
 
 static void init_components(struct GBemu* gb) {
-  uint8_t cgb_mode = mmu_is_cgb(gb->mmu) ? 1 : 0;
-  uint8_t cgb_compat = mmu_is_cgb_compat(gb->mmu) ? 1 : 0;
+  bool cgb_mode = mmu_is_cgb(gb->mmu);
+  bool cgb_compat = mmu_is_cgb_compat(gb->mmu);
   gb->cpu = cpu_init(cgb_mode);
   gb->apu = apu_init();
   gb->ppu = ppu_init(cgb_mode, cgb_compat);
@@ -33,14 +31,8 @@ static void init_components(struct GBemu* gb) {
                      gb->joypad, gb->serial);
   gb->total_cycles = 0;
   gb->total_frames = 0;
-  gb->paused = 0;
+  gb->is_paused = false;
   mmu_load(gb->mmu);
-  if (mmu_boot_skipped(gb->mmu)) {
-    uint8_t checksum = mmu_read_rom(gb->mmu, ROM_HEADER_CHECKSUM);
-    cpu_post_boot(gb->cpu, cpu_get_cgb_mode(gb->cpu), checksum);
-    timer_post_boot(gb->timer);
-    ppu_post_boot(gb->ppu);
-  }
 }
 
 static void system_tick(struct GBemu* gb, uint8_t cycles) {
@@ -58,14 +50,14 @@ static void system_tick(struct GBemu* gb, uint8_t cycles) {
   gb->total_cycles += (uint64_t)cycles;
 }
 
-struct GBemu* gbemu_init(char* rom_name, uint8_t disassemble_enable,
+struct GBemu* gbemu_init(char* rom_name, bool disassemble_enable,
                          const uint16_t* watch_addrs, uint8_t watch_count) {
   struct GBemu* gb = malloc(sizeof(struct GBemu));
   if (!gb) return NULL;
   gb->rom_name = rom_name;
   gb->disassemble_enable = disassemble_enable;
-  gb->paused = 0;
-  gb->fast_forward = 0;
+  gb->is_paused = false;
+  gb->fast_forward = false;
   gb->watch_count = watch_addrs ? (watch_count < 8 ? watch_count : 8) : 0;
   for (uint8_t i = 0; i < gb->watch_count; i++)
     gb->watch_addrs[i] = watch_addrs[i];

@@ -6,7 +6,6 @@ struct Timer;
 
 struct Timer* timer_init(void);
 void timer_free(struct Timer* t);
-void timer_post_boot(struct Timer* t);
 uint8_t timer_read(const struct Timer* t, uint16_t addr);
 void timer_write(struct Timer* t, uint16_t addr, uint8_t val, struct Bus* bus);
 void timer_tick(struct Timer* t, uint8_t cycles, struct Bus* bus);

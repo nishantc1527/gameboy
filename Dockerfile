@@ -5,8 +5,6 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 RUN cargo install cbindgen
 RUN curl -L https://github.com/gbdev/rgbds/releases/download/v1.0.1/rgbds-linux-x86_64.tar.xz | tar -xJ -C /usr/local/bin rgbasm rgbfix rgbgfx rgblink
-RUN git clone --depth=1 https://github.com/pret/pokered.git /pokered && make -C /pokered pokered.gbc
 WORKDIR /gbemu
 COPY . .
-RUN mkdir -p pokered && cp /pokered/pokered.gbc pokered/pokered.gbc
 CMD make verify

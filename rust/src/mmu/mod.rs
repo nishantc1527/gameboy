@@ -43,16 +43,11 @@ pub struct Mmu {
     rtc_carry: bool,
     cgb_mode: bool,
     cgb_compat: bool,
-    boot_skipped: bool,
 }
 
 #[allow(clippy::manual_range_patterns)]
 impl Mmu {
-    pub fn new(
-        rom_file_name: &str,
-        dmg_boot: Option<&[u8]>,
-        cgb_boot: Option<&[u8]>,
-    ) -> Option<Mmu> {
+    pub fn new(rom_file_name: &str, dmg_boot: &[u8], cgb_boot: &[u8]) -> Option<Mmu> {
         let mut rom_title = String::new();
         let vram = vec![0u8; 0x2000];
         let wram = vec![0u8; 0x1000];
@@ -84,22 +79,20 @@ impl Mmu {
         let new_licensee_nintendo =
             rom[0x014B] == 0x33 && rom[0x0144] == b'0' && rom[0x0145] == b'1';
         let cgb_mode = cgb_flag || old_licensee_nintendo || new_licensee_nintendo;
-        let boot_data = if cgb_mode { cgb_boot } else { dmg_boot };
-        let expected_size = if cgb_mode { 0x900usize } else { 0x100usize };
-        let boot_skipped = if let Some(data) = boot_data {
-            if data.len() != expected_size {
-                eprintln!(
-                    "Boot ROM has wrong size: expected {}, got {}",
-                    expected_size,
-                    data.len()
-                );
-                return None;
-            }
-            brom[..data.len()].copy_from_slice(data);
-            false
+        let (boot_data, expected_size) = if cgb_mode {
+            (cgb_boot, 0x900usize)
         } else {
-            true
+            (dmg_boot, 0x100usize)
         };
+        if boot_data.len() != expected_size {
+            eprintln!(
+                "Boot ROM has wrong size: expected {}, got {}",
+                expected_size,
+                boot_data.len()
+            );
+            return None;
+        }
+        brom[..boot_data.len()].copy_from_slice(boot_data);
         let mut checksum: u8 = 0u8;
         for byte in rom.iter().take(0x014C + 1).skip(0x0134usize) {
             checksum = checksum.wrapping_sub(*byte).wrapping_sub(1);
@@ -128,14 +121,14 @@ impl Mmu {
         match rom_size {
             0x00 | 0x01 | 0x02 | 0x03 | 0x04 | 0x05 | 0x06 | 0x07 | 0x08 => (),
             _ => {
-                eprintln!("UNIMPLEMENTED ROM SIZE: ${:02X}\n", rom_size);
+                eprintln!("Unimplemented ROM size: ${:02X}\n", rom_size);
                 return None;
             }
         }
         match ram_size {
             0x00 | 0x02 | 0x03 | 0x04 => (),
             _ => {
-                eprintln!("UNIMPLEMENTED RAM SIZE: ${:02X}\n", ram_size);
+                eprintln!("Unimplemented RAM size: ${:02X}\n", ram_size);
                 return None;
             }
         }
@@ -147,16 +140,16 @@ impl Mmu {
                 mbc1_1mb_mode = false;
                 mbc1_multicart = mbc1::check_multicart(&rom, rom_size);
                 if rom_size > 0x06 {
-                    eprintln!("ROM SIZE NOT AVAILABLE\n");
+                    eprintln!("ROM size not available\n");
                     return None;
                 }
                 if ram_size > 0x03 {
-                    eprintln!("RAM SIZE NOT AVAILABLE\n");
+                    eprintln!("RAM size not available\n");
                     return None;
                 }
             }
             0x05 | 0x06 if rom_size > 0x03 => {
-                eprintln!("ROM SIZE NOT AVAILABLE\n");
+                eprintln!("ROM size not available\n");
                 return None;
             }
             0x05 | 0x06 => {}
@@ -195,7 +188,7 @@ impl Mmu {
             wram_bank: 1,
             oam,
             hram,
-            boot_active: !boot_skipped,
+            boot_active: true,
             cgb_speed: 0,
             brom,
             rom,
@@ -218,7 +211,6 @@ impl Mmu {
             rtc_carry: false,
             cgb_mode,
             cgb_compat: cgb_mode && !cgb_flag,
-            boot_skipped,
         };
         Some(mmu)
     }
@@ -249,10 +241,6 @@ impl Mmu {
 
     pub fn read_vram_bank1(&self, addr: u16) -> u8 {
         self.vram_bank1[(addr - 0x8000) as usize]
-    }
-
-    pub fn boot_skipped(&self) -> bool {
-        self.boot_skipped
     }
 
     pub fn read_vram(&self, addr: u16) -> u8 {

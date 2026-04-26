@@ -17,16 +17,8 @@ extern "C" fn mmu_init(
             .to_str()
             .expect("Could not read rom file name")
     };
-    let dmg = if dmg_boot.is_null() || dmg_len == 0 {
-        None
-    } else {
-        Some(unsafe { std::slice::from_raw_parts(dmg_boot, dmg_len) })
-    };
-    let cgb = if cgb_boot.is_null() || cgb_len == 0 {
-        None
-    } else {
-        Some(unsafe { std::slice::from_raw_parts(cgb_boot, cgb_len) })
-    };
+    let dmg = unsafe { std::slice::from_raw_parts(dmg_boot, dmg_len) };
+    let cgb = unsafe { std::slice::from_raw_parts(cgb_boot, cgb_len) };
     match Mmu::new(rom_str, dmg, cgb) {
         Some(mmu) => Box::into_raw(Box::new(mmu)),
         None => std::ptr::null_mut(),
@@ -75,11 +67,6 @@ extern "C" fn mmu_is_cgb(mmu: *const Mmu) -> bool {
 #[unsafe(no_mangle)]
 extern "C" fn mmu_is_cgb_compat(mmu: *const Mmu) -> bool {
     unsafe { (*mmu).is_cgb_compat() }
-}
-
-#[unsafe(no_mangle)]
-extern "C" fn mmu_boot_skipped(mmu: *const Mmu) -> bool {
-    unsafe { (*mmu).boot_skipped() }
 }
 
 #[unsafe(no_mangle)]

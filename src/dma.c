@@ -1,22 +1,22 @@
 #include "gbemu/dma.h"
 
+#include <stdbool.h>
 #include <stdlib.h>
 
-#include "bus_private.h"
 #include "gbemu/bus.h"
 #include "gbemu/mmu.h"
 
 struct Dma {
-  uint8_t active;
+  bool active;
   uint16_t src;
   uint8_t pos;
-  uint8_t hdma_active;
+  bool hdma_active;
   uint16_t hdma_src;
   uint16_t hdma_dst;
   uint8_t hdma_remaining;
   uint8_t hdma1, hdma2, hdma3, hdma4;
   uint8_t hdma5;
-  uint8_t hdma_block_pending;
+  bool hdma_block_pending;
 };
 
 #define DMA_REG_ADDR 0xFF46
@@ -70,7 +70,7 @@ void dma_trigger(struct Dma* d, uint8_t val) {
   if (val <= DMA_MAX_SRC_PAGE) {
     d->src = (uint16_t)((uint16_t)val << DMA_SRC_ADDR_SHIFT);
     d->pos = 0;
-    d->active = 1;
+    d->active = true;
   }
 }
 
@@ -82,20 +82,22 @@ void dma_tick(struct Dma* d, struct Bus* bus, uint8_t cycles) {
     d->pos++;
   }
   if (d->pos >= DMA_BYTE_COUNT) {
-    d->active = 0;
+    d->active = false;
     d->pos = 0;
   }
 }
 
-uint8_t dma_blocks_cpu(const struct Dma* d) { return d->active; }
+bool dma_blocks_cpu(const struct Dma* d) { return d->active; }
 
-void dma_notify_hblank(struct Dma* d) { d->hdma_block_pending = 1; }
+void dma_notify_hblank(struct Dma* d) { d->hdma_block_pending = true; }
 
-uint8_t dma_hdma_block_pending(const struct Dma* d) {
+bool dma_hdma_block_pending(const struct Dma* d) {
   return d->hdma_block_pending;
 }
 
-void dma_clear_hdma_block_pending(struct Dma* d) { d->hdma_block_pending = 0; }
+void dma_clear_hdma_block_pending(struct Dma* d) {
+  d->hdma_block_pending = false;
+}
 
 void dma_hdma_write(struct Dma* d, struct Bus* bus, uint16_t addr,
                     uint8_t val) {

@@ -1,6 +1,5 @@
 #include <stdint.h>
 
-#include "../bus_private.h"
 #include "gbemu/bus.h"
 #include "gbemu/mmu.h"
 #include "gbemu/ppu.h"
@@ -170,14 +169,8 @@ static void render_sprites_cgb(struct Ppu* ppu, struct Bus* bus, uint8_t ly,
       if (!flipx) posx = TILE_WIDTH - 1 - posx;
       uint8_t clr = (uint8_t)((get_bit(ms, posx) << 1) | get_bit(ls, posx));
       if (clr == 0) continue;
-      int bg_wins = 0;
-      if (!get_bit(lcdc, LCDC_BIT_BG_ENABLE)) {
-        bg_wins = 0;
-      } else if (bg_prio_bit[x0] && bg_color_idx[x0] != 0) {
-        bg_wins = 1;
-      } else if (obj_prio && bg_color_idx[x0] != 0) {
-        bg_wins = 1;
-      }
+      int bg_wins = get_bit(lcdc, LCDC_BIT_BG_ENABLE) &&
+                    bg_color_idx[x0] != 0 && (bg_prio_bit[x0] || obj_prio);
       if (!bg_wins) {
         uint8_t lo = ppu->obj_pal_ram[pal_num * 8 + clr * 2];
         uint8_t hi = ppu->obj_pal_ram[pal_num * 8 + clr * 2 + 1];

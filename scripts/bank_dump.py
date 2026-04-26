@@ -4,7 +4,7 @@ import argparse
 BANK_SIZE = 0x4000
 
 
-def parse_hex(s):
+def to_hex(s):
     return int(s, 16)
 
 
@@ -21,14 +21,14 @@ def main():
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
         "--offset",
-        type=parse_hex,
+        type=to_hex,
         default=0,
         metavar="HEX",
         help="Offset within each bank to dump (hex, default: 0)",
     )
     group.add_argument(
         "--addr",
-        type=parse_hex,
+        type=to_hex,
         metavar="HEX",
         help="GB address to dump per bank (e.g. 4000 for the banked window start)",
     )
@@ -36,12 +36,12 @@ def main():
         "--raw",
         nargs=2,
         metavar=("START", "END"),
-        type=parse_hex,
+        type=to_hex,
         help="Dump raw ROM file bytes from START to END (hex addresses, inclusive)",
     )
     parser.add_argument(
         "--count",
-        type=parse_hex,
+        type=to_hex,
         default=1,
         metavar="HEX",
         help="Number of bytes to show per bank (hex, default: 1)",

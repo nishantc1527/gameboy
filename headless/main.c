@@ -13,39 +13,40 @@
 #include "rust.h"
 #include "stb_image_write.h"
 
-typedef struct TestState {
+struct TestState {
   int category;
   uint64_t frame_limit;
-  uint8_t done;
-} TestState;
+  bool done;
+};
 
 static const uint8_t ACID_COLORS[5] = {0xFF, 0xAA, 0x55, 0x00, 0x00};
 
 static int write_screenshot(struct Ppu* ppu, const char* path) {
   if (ppu_get_cgb_mode(ppu)) {
     const uint16_t* cgb_fb = ppu_get_cgb_framebuffer(ppu);
-    uint8_t buf[144][160][3];
-    for (int y = 0; y < 144; y++)
-      for (int x = 0; x < 160; x++) {
-        uint16_t rgb555 = cgb_fb[y * 160 + x];
-        uint8_t r5 = rgb555 & 0x1F;
+    uint8_t buf[SCRN_HEIGHT][SCRN_WIDTH][3];
+    for (int y = 0; y < SCRN_HEIGHT; y++)
+      for (int x = 0; x < SCRN_WIDTH; x++) {
+        uint16_t rgb555 = cgb_fb[y * SCRN_WIDTH + x];
+        uint8_t r5 = (rgb555 >> 0) & 0x1F;
         uint8_t g5 = (rgb555 >> 5) & 0x1F;
         uint8_t b5 = (rgb555 >> 10) & 0x1F;
         buf[y][x][0] = (r5 << 3) | (r5 >> 2);
         buf[y][x][1] = (g5 << 3) | (g5 >> 2);
         buf[y][x][2] = (b5 << 3) | (b5 >> 2);
       }
-    if (!stbi_write_png(path, 160, 144, 3, buf, 160 * 3)) {
+    if (!stbi_write_png(path, SCRN_WIDTH, SCRN_HEIGHT, 3, buf,
+                        SCRN_WIDTH * 3)) {
       fprintf(stderr, "Failed to write screenshot: %s\n", path);
       return -1;
     }
   } else {
     const uint8_t* dmg_fb = ppu_get_dmg_framebuffer(ppu);
-    uint8_t buf[144][160];
-    for (int y = 0; y < 144; y++)
-      for (int x = 0; x < 160; x++)
-        buf[y][x] = ACID_COLORS[dmg_fb[y * 160 + x]];
-    if (!stbi_write_png(path, 160, 144, 1, buf, 160)) {
+    uint8_t buf[SCRN_HEIGHT][SCRN_WIDTH];
+    for (int y = 0; y < SCRN_HEIGHT; y++)
+      for (int x = 0; x < SCRN_WIDTH; x++)
+        buf[y][x] = ACID_COLORS[dmg_fb[y * SCRN_WIDTH + x]];
+    if (!stbi_write_png(path, SCRN_WIDTH, SCRN_HEIGHT, 1, buf, SCRN_WIDTH)) {
       fprintf(stderr, "Failed to write screenshot: %s\n", path);
       return -1;
     }
@@ -53,13 +54,13 @@ static int write_screenshot(struct Ppu* ppu, const char* path) {
   return 0;
 }
 
-static TestState test_init(int category) {
-  TestState ts = {.category = category, .done = false};
+static struct TestState test_init(int category) {
+  struct TestState ts = {.category = category, .done = false};
   ts.frame_limit = (uint64_t)-1;
   return ts;
 }
 
-static void handle_test_frame(struct GBemu* gb, TestState* ts) {
+static void handle_test_frame(struct GBemu* gb, struct TestState* ts) {
   uint64_t f = gb->total_frames - BROM_FRAMES;
   int cat = ts->category;
   if (cat == TestBlarggCpu || cat == TestBlarggAudio ||
@@ -107,18 +108,18 @@ static void handle_test_frame(struct GBemu* gb, TestState* ts) {
     ts->done = true;
   }
   if (cat == TestRtc3Basic || cat == TestRtc3Range || cat == TestRtc3Sub) {
-    int btn_down = 0, btn_a = 0;
+    bool btn_down = false, btn_a = false;
     if (cat == TestRtc3Basic) {
-      btn_a = (f >= 12 && f < 22) ? 1 : 0;
+      btn_a = (f >= 12 && f < 22);
     } else if (cat == TestRtc3Range) {
-      btn_down = (f >= 12 && f < 22) ? 1 : 0;
-      btn_a = (f >= 32 && f < 42) ? 1 : 0;
+      btn_down = (f >= 12 && f < 22);
+      btn_a = (f >= 32 && f < 42);
     } else {
-      btn_down = ((f >= 12 && f < 22) || (f >= 32 && f < 42)) ? 1 : 0;
-      btn_a = (f >= 52 && f < 62) ? 1 : 0;
+      btn_down = ((f >= 12 && f < 22) || (f >= 32 && f < 42));
+      btn_a = (f >= 52 && f < 62);
     }
-    joypad_force_button(gb->joypad, BTN_DOWN, btn_down != 0);
-    joypad_force_button(gb->joypad, BTN_A, btn_a != 0);
+    joypad_force_button(gb->joypad, BTN_DOWN, btn_down);
+    joypad_force_button(gb->joypad, BTN_A, btn_a);
     if ((cat == TestRtc3Basic &&
          gb->total_frames >= BROM_FRAMES + 22 + 13 * 60) ||
         (cat == TestRtc3Range &&
@@ -158,7 +159,7 @@ int main(int argc, char* argv[]) {
   char* rom_name = NULL;
   char* screenshot_path = NULL;
   int test_category = -1;
-  int disassemble_enable = 0;
+  bool disassemble_enable = false;
   uint64_t stop_frame = (uint64_t)-1;
   uint16_t watch_addrs[8];
   uint8_t watch_count = 0;
@@ -246,7 +247,7 @@ int main(int argc, char* argv[]) {
         return 1;
       }
     } else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--disassembly"))
-      disassemble_enable = 1;
+      disassemble_enable = true;
     else if ((!strcmp(argv[i], "-s") || !strcmp(argv[i], "--screenshot")) &&
              i + 1 < argc)
       screenshot_path = argv[++i];
@@ -268,10 +269,10 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "MUST PROVIDE ROM FILE\n");
     return 1;
   }
-  struct GBemu* gb = gbemu_init(rom_name, (uint8_t)disassemble_enable,
-                                watch_addrs, watch_count);
+  struct GBemu* gb =
+      gbemu_init(rom_name, disassemble_enable, watch_addrs, watch_count);
   if (!gb) return 1;
-  TestState ts = test_init(test_category);
+  struct TestState ts = test_init(test_category);
   while (!ts.done) {
     if (gbemu_step_frame(gb) == -1) {
       gbemu_free(gb);

@@ -69,7 +69,7 @@ static void mkdir_config_dir(void) {
 #endif
 }
 
-static void load_key(toml_datum_t tbl, const char* name, char* dst,
+static void load_key(const toml_datum_t tbl, const char* name, char* dst,
                      size_t len) {
   toml_datum_t v = toml_get(tbl, name);
   if (v.type == TOML_STRING) snprintf(dst, len, "%s", v.u.s);

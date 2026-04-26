@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "gbemu/apu.h"
@@ -12,34 +13,34 @@ struct Apu {
   uint8_t nr41, nr42, nr43, nr44;
   uint8_t nr50, nr51;
   uint8_t wave_ram[16];
-  uint8_t powered;
+  bool powered;
   uint8_t seq_step;
-  uint8_t ch1_active;
+  bool ch1_active;
   uint8_t ch1_len;
-  uint8_t ch1_len_enable;
+  bool ch1_len_enable;
   uint16_t ch1_freq_timer;
   uint8_t ch1_duty_pos;
   uint16_t sweep_freq;
   uint8_t sweep_timer;
-  uint8_t sweep_enable;
-  uint8_t sweep_neg_used;
+  bool sweep_enable;
+  bool sweep_neg_used;
   uint8_t ch1_env_vol;
   uint8_t ch1_env_timer;
-  uint8_t ch2_active;
+  bool ch2_active;
   uint8_t ch2_len;
-  uint8_t ch2_len_enable;
+  bool ch2_len_enable;
   uint16_t ch2_freq_timer;
   uint8_t ch2_duty_pos;
   uint8_t ch2_env_vol;
   uint8_t ch2_env_timer;
-  uint8_t ch3_active;
+  bool ch3_active;
   uint16_t ch3_len;
-  uint8_t ch3_len_enable;
+  bool ch3_len_enable;
   uint16_t ch3_freq_timer;
   uint8_t ch3_pos;
-  uint8_t ch4_active;
+  bool ch4_active;
   uint8_t ch4_len;
-  uint8_t ch4_len_enable;
+  bool ch4_len_enable;
   uint32_t ch4_freq_timer;
   uint16_t ch4_lfsr;
   uint8_t ch4_env_vol;

@@ -1,9 +1,10 @@
+#pragma once
 #include <stdint.h>
 
 struct Settings {
   int scale;
   uint32_t dmg_palette[4];
-  uint8_t fullscreen;
+  bool fullscreen;
   float volume;
   char key_a[64];
   char key_b[64];

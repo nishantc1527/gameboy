@@ -16,8 +16,8 @@ void apu_write_ch4(struct Apu* apu, uint16_t addr, uint8_t val) {
       apu->nr43 = val;
       break;
     case 0xFF23: {
-      uint8_t old_len_enable = apu->ch4_len_enable;
-      apu->ch4_len_enable = (val >> 6) & 1;
+      bool old_len_enable = apu->ch4_len_enable;
+      apu->ch4_len_enable = ((val >> 6) & 1) != 0;
       if (!old_len_enable && apu->ch4_len_enable && (apu->seq_step & 1) == 0) {
         if (clock_length_u8(&apu->ch4_len, APU_CH4_LEN_MAX))
           apu->ch4_active = false;

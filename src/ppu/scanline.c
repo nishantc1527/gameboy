@@ -1,6 +1,5 @@
 #include <stdint.h>
 
-#include "../bus_private.h"
 #include "gbemu/bus.h"
 #include "gbemu/mmu.h"
 #include "gbemu/ppu.h"
@@ -8,7 +7,7 @@
 #include "ppu_private.h"
 
 uint8_t palette_color(uint8_t pal, int color_idx) {
-  return (pal >> (color_idx << 1)) & PPU_MODE_MASK;
+  return (pal >> (color_idx << 1)) & 0x03;
 }
 
 void write_pixel(struct Ppu* ppu, int y, int x, uint8_t clr) {
@@ -50,7 +49,7 @@ static void advance_line(struct Ppu* ppu) {
   if (ppu->ly >= PPU_TOTAL_LINES) {
     ppu->ly = 0;
     ppu->window_line = 0;
-    ppu->wy_triggered = 0;
+    ppu->wy_triggered = false;
     ppu->frame_ready = true;
   }
 }
@@ -69,7 +68,7 @@ void ppu_render_line(struct Ppu* ppu, struct Bus* bus) {
   } else {
     ppu->ly = 0;
     ppu->window_line = 0;
-    ppu->wy_triggered = 0;
+    ppu->wy_triggered = false;
     ppu->off_line_count++;
     if (ppu->off_line_count >= PPU_TOTAL_LINES) {
       ppu->off_line_count = 0;

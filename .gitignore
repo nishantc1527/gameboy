@@ -1,6 +1,5 @@
 build/
 roms/
-pokered/
 rust/target/
 .cache/
 *.gb
@@ -16,3 +15,4 @@ compile_commands.json
 include/rust.h
 src/boot_roms.c
 imgui.ini
+pandocs/

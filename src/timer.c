@@ -2,17 +2,7 @@
 
 #include <stdlib.h>
 
-#include "bus_private.h"
 #include "gbemu/bus.h"
-
-struct Timer {
-  uint16_t sys_ctr;
-  uint8_t tima;
-  uint8_t tma;
-  uint8_t tac;
-  uint8_t tima_overflow_pending;
-  uint8_t sub_instr_cycles;
-};
 
 #define REG_DIV 0xFF04
 #define REG_TIMA 0xFF05
@@ -29,6 +19,15 @@ struct Timer {
 #define TIMER_CLK2_BIT 5
 #define TIMER_CLK3_BIT 7
 #define TIMER_APU_BIT 12
+
+struct Timer {
+  uint16_t sys_ctr;
+  uint8_t tima;
+  uint8_t tma;
+  uint8_t tac;
+  uint8_t tima_overflow_pending;
+  uint8_t sub_instr_cycles;
+};
 
 static uint8_t timer_selected_bit(const struct Timer* t) {
   switch (t->tac & TAC_CLOCK_MASK) {
@@ -57,14 +56,6 @@ struct Timer* timer_init(void) { return calloc(1, sizeof(struct Timer)); }
 
 void timer_free(struct Timer* t) { free(t); }
 
-void timer_post_boot(struct Timer* t) {
-  t->sys_ctr = 0x0000;
-  t->tima = 0x00;
-  t->tma = 0x00;
-  t->tac = 0x00;
-  t->tima_overflow_pending = false;
-}
-
 uint8_t timer_read(const struct Timer* t, uint16_t addr) {
   if (addr == REG_DIV) return (uint8_t)(t->sys_ctr >> 8);
   if (addr == REG_TIMA) return t->tima;
@@ -75,7 +66,7 @@ uint8_t timer_read(const struct Timer* t, uint16_t addr) {
 
 void timer_write(struct Timer* t, uint16_t addr, uint8_t val, struct Bus* bus) {
   if (addr == REG_DIV) {
-    uint8_t sel_bit = timer_selected_bit(t);
+    const uint8_t sel_bit = timer_selected_bit(t);
     if ((t->tac & (1u << TAC_ENABLE_BIT)) && ((t->sys_ctr >> sel_bit) & 1)) {
       timer_increment_tima(t);
     }
@@ -95,23 +86,22 @@ void timer_write(struct Timer* t, uint16_t addr, uint8_t val, struct Bus* bus) {
     return;
   }
   if (addr == REG_TAC) {
-    uint8_t old_bit = timer_selected_bit(t);
-    uint8_t old_enabled = (t->tac & (1u << TAC_ENABLE_BIT)) != 0;
+    const uint8_t old_bit = timer_selected_bit(t);
+    const uint8_t old_enabled = (t->tac & (1u << TAC_ENABLE_BIT)) != 0;
     t->tac = val & TAC_VALID_MASK;
-    uint8_t new_enabled = (t->tac & (1u << TAC_ENABLE_BIT)) != 0;
+    const uint8_t new_enabled = (t->tac & (1u << TAC_ENABLE_BIT)) != 0;
     if (old_enabled && (t->sys_ctr >> old_bit) & 1) {
-      uint8_t new_bit = timer_selected_bit(t);
-      uint8_t new_bit_is_1 = (t->sys_ctr >> new_bit) & 1;
+      const uint8_t new_bit = timer_selected_bit(t);
+      const uint8_t new_bit_is_1 = (t->sys_ctr >> new_bit) & 1;
       if (!new_enabled || !new_bit_is_1) {
         timer_increment_tima(t);
       }
     }
-    return;
   }
 }
 
 uint8_t timer_consume_sub_cycles(struct Timer* t) {
-  uint8_t v = t->sub_instr_cycles;
+  const uint8_t v = t->sub_instr_cycles;
   t->sub_instr_cycles = 0;
   return v;
 }
@@ -126,15 +116,14 @@ void timer_tick(struct Timer* t, uint8_t cycles, struct Bus* bus) {
     t->tima = t->tma;
     bus_req_intr(bus, INTR_TIMER);
   }
-
   for (uint8_t i = 0; i < cycles; i++) {
-    uint16_t old = t->sys_ctr;
+    const uint16_t old = t->sys_ctr;
     t->sys_ctr = (uint16_t)(t->sys_ctr + 1);
     if ((old >> TIMER_APU_BIT) & 1 && !((t->sys_ctr >> TIMER_APU_BIT) & 1)) {
       bus_notify_div_pulse(bus);
     }
     if (t->tac & (1u << TAC_ENABLE_BIT)) {
-      uint8_t bit = timer_selected_bit(t);
+      const uint8_t bit = timer_selected_bit(t);
       if ((old >> bit) & 1 && !((t->sys_ctr >> bit) & 1)) {
         timer_increment_tima(t);
       }

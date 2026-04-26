@@ -1,5 +1,4 @@
 pub const NR10: u16 = 0xFF10;
-#[allow(dead_code)]
 pub const NR11: u16 = 0xFF11;
 pub const NR12: u16 = 0xFF12;
 pub const NR13: u16 = 0xFF13;

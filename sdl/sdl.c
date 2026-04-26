@@ -46,12 +46,12 @@ static int load_rom(struct AppState* state, const char* path, uint8_t dis) {
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
   if (argc < 1) return usage();
   char* rom_name = NULL;
-  uint8_t disassemble_enable = 0;
+  bool disassemble_enable = false;
   for (int i = 1; i < argc; i++) {
     if ((!strcmp(argv[i], "-r") || !strcmp(argv[i], "--rom")) && i + 1 < argc)
       rom_name = argv[++i];
     else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--disassembly"))
-      disassemble_enable = 1;
+      disassemble_enable = true;
     else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
       SDL_Log(
           "Usage: gbemu [-r <rom.gb>] [-d]\n\n"
@@ -105,7 +105,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
   const Uint64 frame_cyc =
       (Uint64)PPU_CYCLES_PER_LINE * (Uint64)PPU_TOTAL_LINES;
   const Uint64 frame_ticks = (frame_cyc * perf_freq) / CPU_FREQ;
-  if (state->gb && !state->gb->paused && state->gb->fast_forward) {
+  if (state->gb && !state->gb->is_paused && state->gb->fast_forward) {
     for (int i = 0; i < 4; i++) {
       if (gbemu_step_frame(state->gb) == -1) return SDL_APP_FAILURE;
     }
@@ -120,7 +120,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     next_frame_time += frame_ticks;
     if (next_frame_time < now) next_frame_time = now;
 
-    if (state->gb && !state->gb->paused) {
+    if (state->gb && !state->gb->is_paused) {
       if (gbemu_step_frame(state->gb) == -1) return SDL_APP_FAILURE;
       push_audio(state->gb->apu);
     }

@@ -2,13 +2,7 @@
 
 #include <stdlib.h>
 
-#include "bus_private.h"
 #include "gbemu/bus.h"
-
-struct Joypad {
-  uint8_t buttons[8];
-  uint8_t select;
-};
 
 #define REG_P1 0xFF00
 #define P1_DPAD_SELECT 4
@@ -18,6 +12,11 @@ struct Joypad {
 #define P1_UP_SELECT_BIT 2
 #define P1_DOWN_START_BIT 3
 #define P1_UNUSED_BITS 0xC0
+
+struct Joypad {
+  bool buttons[8];
+  uint8_t select;
+};
 
 struct Joypad* joypad_init(void) {
   struct Joypad* j = calloc(1, sizeof(struct Joypad));
@@ -46,16 +45,16 @@ uint8_t joypad_read(const struct Joypad* j) {
 
 void joypad_write(struct Joypad* j, uint8_t val) { j->select = val; }
 
-void joypad_force_button(struct Joypad* j, int btn, uint8_t pressed) {
+void joypad_force_button(struct Joypad* j, int btn, bool pressed) {
   j->buttons[btn] = pressed;
 }
 
-void joypad_set_button(struct Joypad* j, int btn, uint8_t pressed,
+void joypad_set_button(struct Joypad* j, int btn, bool pressed,
                        struct Bus* bus) {
-  uint8_t was_pressed = j->buttons[btn];
+  bool was_pressed = j->buttons[btn];
   j->buttons[btn] = pressed;
   if (pressed && !was_pressed) {
-    uint8_t relevant = false;
+    bool relevant = false;
     if ((j->select & (1u << P1_BTN_SELECT)) == 0 &&
         (btn == BTN_A || btn == BTN_B || btn == BTN_SELECT || btn == BTN_START))
       relevant = true;

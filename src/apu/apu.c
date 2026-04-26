@@ -71,13 +71,17 @@ uint8_t apu_read(const struct Apu* apu, uint16_t addr) {
 
 static void apu_clock_length(struct Apu* apu) {
   if (apu->ch1_len_enable)
-    if (clock_length_u8(&apu->ch1_len, APU_CH1_LEN_MAX)) apu->ch1_active = 0;
+    if (clock_length_u8(&apu->ch1_len, APU_CH1_LEN_MAX))
+      apu->ch1_active = false;
   if (apu->ch2_len_enable)
-    if (clock_length_u8(&apu->ch2_len, APU_CH2_LEN_MAX)) apu->ch2_active = 0;
+    if (clock_length_u8(&apu->ch2_len, APU_CH2_LEN_MAX))
+      apu->ch2_active = false;
   if (apu->ch3_len_enable)
-    if (clock_length_u16(&apu->ch3_len, APU_CH3_LEN_MAX)) apu->ch3_active = 0;
+    if (clock_length_u16(&apu->ch3_len, APU_CH3_LEN_MAX))
+      apu->ch3_active = false;
   if (apu->ch4_len_enable)
-    if (clock_length_u8(&apu->ch4_len, APU_CH4_LEN_MAX)) apu->ch4_active = 0;
+    if (clock_length_u8(&apu->ch4_len, APU_CH4_LEN_MAX))
+      apu->ch4_active = false;
 }
 
 static void clock_envelope(uint8_t env_period, uint8_t* timer, uint8_t* vol,
@@ -164,7 +168,7 @@ static void apu_write_control(struct Apu* apu, uint16_t addr, uint8_t val) {
     case 0xFF26:
       if (!(val & (1u << NR52_POWER_BIT)) && apu->powered) {
         apu_power_off(apu);
-        apu->powered = 0;
+        apu->powered = false;
       }
       break;
   }
@@ -191,7 +195,7 @@ void apu_write(struct Apu* apu, uint16_t addr, uint8_t val) {
         return;
       case 0xFF26:
         if (val & (1u << NR52_POWER_BIT)) {
-          apu->powered = 1;
+          apu->powered = true;
           apu->seq_step = 0;
         }
         return;
