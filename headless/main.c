@@ -167,7 +167,8 @@ int main(int argc, char* argv[]) {
     if (!strcmp(argv[i], "--version")) {
       printf("gbemu " GBEMU_VERSION "\n");
       return 0;
-    } else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
+    }
+    if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
       printf("Usage: gbemu_headless -r <rom.gb> [options]\n\n");
       printf("Options:\n");
       printf("  -r, --rom <file>        ROM file to run\n");
@@ -186,8 +187,8 @@ int main(int argc, char* argv[]) {
       printf("  micro, little, mealybug, mooneye, same, age, bully,\n");
       printf("  scribble, strike, turtle\n");
       return 0;
-    } else if ((!strcmp(argv[i], "-r") || !strcmp(argv[i], "--rom")) &&
-               i + 1 < argc)
+    }
+    if ((!strcmp(argv[i], "-r") || !strcmp(argv[i], "--rom")) && i + 1 < argc)
       rom_name = argv[++i];
     else if ((!strcmp(argv[i], "-t") || !strcmp(argv[i], "--test")) &&
              i + 1 < argc) {

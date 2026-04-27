@@ -9,7 +9,7 @@
 
 // TODO sdl state
 int win_width, win_height;
-int menu_bar_height = 19;
+int menu_bar_height = 23;
 SDL_Texture* txt = NULL;
 
 SDL_Window* win;

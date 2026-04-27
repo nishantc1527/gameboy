@@ -27,7 +27,7 @@ int init_audio(void) {
 
 int audio_queued_bytes(void) {
   if (!audio_stream) return 0;
-  return (int)SDL_GetAudioStreamQueued(audio_stream);
+  return SDL_GetAudioStreamQueued(audio_stream);
 }
 
 void push_audio(struct Apu* apu) {

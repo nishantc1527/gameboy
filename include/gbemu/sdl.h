@@ -31,7 +31,7 @@ extern SDL_Renderer* rnd;
 
 void imgui_init(SDL_Window* window, SDL_Renderer* renderer);
 void imgui_shutdown(void);
-void imgui_process_event(SDL_Event* event);
+void imgui_process_event(const SDL_Event* event);
 
 struct AppState {
   struct GBemu* gb;
