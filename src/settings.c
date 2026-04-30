@@ -25,6 +25,7 @@ void settings_defaults(struct Settings* s) {
   s->dmg_palette[2] = 0x0e450b;
   s->dmg_palette[3] = 0x1b2a09;
   s->volume = 1.0F;
+  s->mute   = false;
   (void)snprintf(s->key_a, sizeof(s->key_a), "S");
   (void)snprintf(s->key_b, sizeof(s->key_b), "A");
   (void)snprintf(s->key_start, sizeof(s->key_start), "Return");
@@ -109,6 +110,7 @@ void settings_save(const struct Settings* s) {
                 s->dmg_palette[3]);
   (void)fprintf(fp, "\n[audio]\n");
   (void)fprintf(fp, "volume = %.2f\n", (double)s->volume);
+  (void)fprintf(fp, "mute = %s\n", (int)s->mute ? "true" : "false");
   (void)fprintf(fp, "\n[controls]\n");
   (void)fprintf(fp, "a = ");
   write_str(fp, s->key_a);
@@ -190,6 +192,10 @@ void settings_load(struct Settings* s) {
     v = toml_get(tbl, "volume");
     if (v.type == TOML_FP64) {
       s->volume = (float)v.u.fp64;
+    }
+    v = toml_get(tbl, "mute");
+    if (v.type == TOML_BOOLEAN) {
+      s->mute = v.u.boolean;
     }
   }
   tbl = toml_get(root, "controls");

@@ -6,6 +6,7 @@ struct Settings {
   uint32_t dmg_palette[4];
   bool fullscreen;
   float volume;
+  bool mute;
   char key_a[64];
   char key_b[64];
   char key_start[64];

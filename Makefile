@@ -134,7 +134,7 @@ verify: gbemu_headless
 	$(FORMAT) --dry-run -Werror $(CORE_SRCS) $(SDL_SRCS) $(HEADLESS_SRCS) $(CORE_HDRS)
 	$(CARGO) fmt --check --manifest-path $(RUST_MANIFEST)
 	$(CARGO) clippy --manifest-path $(RUST_MANIFEST) -- -D warnings
-	# $(TIDY) -p . $(CORE_SRCS) $(SDL_SRCS) $(HEADLESS_SRCS)
+# $(TIDY) -p . $(CORE_SRCS) $(SDL_SRCS) $(HEADLESS_SRCS)
 # $(CPPCHECK)
 	$(MAKE) test
 

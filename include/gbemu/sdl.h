@@ -3,6 +3,8 @@
 #include <SDL3/SDL.h>
 #include <stdbool.h>
 
+#include "gbemu/settings.h"
+
 struct Apu;
 struct Ppu;
 struct GBemu;
@@ -39,6 +41,10 @@ struct AppState {
   bool dialog_open;
   bool close_requested;
   char rom_error[512];
+  bool settings_open;
+  int rebinding_control;
+  bool settings_has_draft;
+  struct Settings settings_draft;
 };
 
 int init_window(const char* title);
@@ -52,5 +58,6 @@ void draw_ui(struct AppState* state);
 int init_audio(void);
 int audio_queued_bytes(void);
 void push_audio(struct Apu* apu);
+void set_audio_volume(float volume, bool mute);
 
 void take_screenshot(struct Ppu* ppu);

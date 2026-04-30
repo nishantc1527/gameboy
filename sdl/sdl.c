@@ -88,6 +88,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
   if (!state) {
     return SDL_APP_FAILURE;
   }
+  state->rebinding_control = -1;
   *appstate = state;
 
   if (init_window("gbemu")) {
