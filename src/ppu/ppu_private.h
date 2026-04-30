@@ -101,15 +101,14 @@ struct Ppu {
 
 struct Bus;
 
-// Writes to pixel buffer
-void write_pixel(struct Ppu* ppu, int y, int x, uint8_t clr);
+void write_pixel(struct Ppu* ppu, int row, int col, uint8_t clr);
 uint8_t palette_color(uint8_t pal, int color_idx);
 
 uint16_t tile_map_base(uint8_t lcdc, int use_window_map);
 uint16_t tile_data_addr(uint8_t tile_idx, int dat_area);
-int collect_sprites(struct Bus* bus, uint8_t ly, uint8_t sz, uint16_t* obj);
+int collect_sprites(struct Bus* bus, uint8_t line_y, uint8_t obj_size, uint16_t* obj);
 
-void render_line_dmg(struct Ppu* ppu, struct Bus* bus, uint8_t ly);
+void render_line_dmg(struct Ppu* ppu, struct Bus* bus, uint8_t line_y);
 void render_line_cgb(struct Ppu* ppu, struct Bus* bus);
 
 void ppu_update_mode(struct Ppu* ppu, struct Bus* bus);

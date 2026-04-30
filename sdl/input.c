@@ -1,5 +1,9 @@
-#include <SDL3/SDL.h>
 #include <SDL3/SDL_dialog.h>
+#include <SDL3/SDL_events.h>
+#include <SDL3/SDL_gamepad.h>
+#include <SDL3/SDL_keycode.h>
+#include <SDL3/SDL_stdinc.h>
+#include <SDL3/SDL_video.h>
 
 #include "gbemu/core.h"
 #include "gbemu/joypad.h"
@@ -13,13 +17,16 @@ static void SDLCALL rom_dialog_callback(void* userdata,
   (void)filter;
   struct AppState* state = (struct AppState*)userdata;
   state->dialog_open = false;
-  if (filelist && filelist[0])
+  if (filelist && filelist[0]) {
     SDL_snprintf(state->pending_rom, sizeof(state->pending_rom), "%s",
                  filelist[0]);
+  }
 }
 
 void open_rom_dialog(struct AppState* state) {
-  if (state->dialog_open) return;
+  if (state->dialog_open) {
+    return;
+  }
   state->dialog_open = true;
   static const SDL_DialogFileFilter filters[] = {
       {"Game Boy ROMs", "gb;gbc"},
@@ -43,7 +50,9 @@ int handle_input(struct AppState* state, SDL_Event* event) {
       break;
 
     case SDL_EVENT_GAMEPAD_ADDED:
-      if (!g_gamepad) g_gamepad = SDL_OpenGamepad(event->gdevice.which);
+      if (!g_gamepad) {
+        g_gamepad = SDL_OpenGamepad(event->gdevice.which);
+      }
       break;
 
     case SDL_EVENT_GAMEPAD_REMOVED:
@@ -57,105 +66,119 @@ int handle_input(struct AppState* state, SDL_Event* event) {
       SDL_Keycode k = event->key.key;
       if (k == SDLK_F11) {
         SDL_WindowFlags flags = SDL_GetWindowFlags(win);
-        SDL_SetWindowFullscreen(win, !(flags & SDL_WINDOW_FULLSCREEN));
+        SDL_SetWindowFullscreen(win, (!(flags & SDL_WINDOW_FULLSCREEN)) != 0);
       } else if (k == SDLK_O && (event->key.mod & SDL_KMOD_CTRL)) {
         open_rom_dialog(state);
       }
-      if (!joypad) break;
-      if (k == g_controls[CTRL_A])
+      if (!joypad) {
+        break;
+      }
+      if (k == g_controls[CTRL_A]) {
         joypad_set_button(joypad, BTN_A, true, state->gb->bus);
-      else if (k == g_controls[CTRL_B])
+      } else if (k == g_controls[CTRL_B]) {
         joypad_set_button(joypad, BTN_B, true, state->gb->bus);
-      else if (k == g_controls[CTRL_START])
+      } else if (k == g_controls[CTRL_START]) {
         joypad_set_button(joypad, BTN_START, true, state->gb->bus);
-      else if (k == g_controls[CTRL_SELECT])
+      } else if (k == g_controls[CTRL_SELECT]) {
         joypad_set_button(joypad, BTN_SELECT, true, state->gb->bus);
-      else if (k == g_controls[CTRL_UP])
+      } else if (k == g_controls[CTRL_UP]) {
         joypad_set_button(joypad, BTN_UP, true, state->gb->bus);
-      else if (k == g_controls[CTRL_DOWN])
+      } else if (k == g_controls[CTRL_DOWN]) {
         joypad_set_button(joypad, BTN_DOWN, true, state->gb->bus);
-      else if (k == g_controls[CTRL_LEFT])
+      } else if (k == g_controls[CTRL_LEFT]) {
         joypad_set_button(joypad, BTN_LEFT, true, state->gb->bus);
-      else if (k == g_controls[CTRL_RIGHT])
+      } else if (k == g_controls[CTRL_RIGHT]) {
         joypad_set_button(joypad, BTN_RIGHT, true, state->gb->bus);
-      else if (k == g_controls[CTRL_PAUSE])
-        state->gb->is_paused = !state->gb->is_paused;
-      else if (k == g_controls[CTRL_SCREENSHOT])
+      } else if (k == g_controls[CTRL_PAUSE]) {
+        state->gb->is_paused = ((!state->gb->is_paused) != 0);
+      } else if (k == g_controls[CTRL_SCREENSHOT]) {
         take_screenshot(state->gb->ppu);
-      else if (k == SDLK_TAB)
+      } else if (k == SDLK_TAB) {
         state->gb->fast_forward = true;
-      else if (k == SDLK_R && (event->key.mod & SDL_KMOD_CTRL))
+      } else if (k == SDLK_R && (event->key.mod & SDL_KMOD_CTRL)) {
         gbemu_reset(state->gb);
+      }
       break;
     }
 
     case SDL_EVENT_KEY_UP: {
-      if (!joypad) break;
+      if (!joypad) {
+        break;
+      }
       SDL_Keycode k = event->key.key;
-      if (k == g_controls[CTRL_A])
+      if (k == g_controls[CTRL_A]) {
         joypad_set_button(joypad, BTN_A, false, state->gb->bus);
-      else if (k == g_controls[CTRL_B])
+      } else if (k == g_controls[CTRL_B]) {
         joypad_set_button(joypad, BTN_B, false, state->gb->bus);
-      else if (k == g_controls[CTRL_START])
+      } else if (k == g_controls[CTRL_START]) {
         joypad_set_button(joypad, BTN_START, false, state->gb->bus);
-      else if (k == g_controls[CTRL_SELECT])
+      } else if (k == g_controls[CTRL_SELECT]) {
         joypad_set_button(joypad, BTN_SELECT, false, state->gb->bus);
-      else if (k == g_controls[CTRL_UP])
+      } else if (k == g_controls[CTRL_UP]) {
         joypad_set_button(joypad, BTN_UP, false, state->gb->bus);
-      else if (k == g_controls[CTRL_DOWN])
+      } else if (k == g_controls[CTRL_DOWN]) {
         joypad_set_button(joypad, BTN_DOWN, false, state->gb->bus);
-      else if (k == g_controls[CTRL_LEFT])
+      } else if (k == g_controls[CTRL_LEFT]) {
         joypad_set_button(joypad, BTN_LEFT, false, state->gb->bus);
-      else if (k == g_controls[CTRL_RIGHT])
+      } else if (k == g_controls[CTRL_RIGHT]) {
         joypad_set_button(joypad, BTN_RIGHT, false, state->gb->bus);
-      else if (k == SDLK_TAB)
+      } else if (k == SDLK_TAB) {
         state->gb->fast_forward = false;
+      }
       break;
     }
 
     case SDL_EVENT_GAMEPAD_BUTTON_DOWN: {
-      if (!joypad) break;
+      if (!joypad) {
+        break;
+      }
       SDL_GamepadButton btn = (SDL_GamepadButton)event->gbutton.button;
-      if (btn == SDL_GAMEPAD_BUTTON_SOUTH)
+      if (btn == SDL_GAMEPAD_BUTTON_SOUTH) {
         joypad_set_button(joypad, BTN_A, true, state->gb->bus);
-      else if (btn == SDL_GAMEPAD_BUTTON_EAST)
+      } else if (btn == SDL_GAMEPAD_BUTTON_EAST) {
         joypad_set_button(joypad, BTN_B, true, state->gb->bus);
-      else if (btn == SDL_GAMEPAD_BUTTON_START)
+      } else if (btn == SDL_GAMEPAD_BUTTON_START) {
         joypad_set_button(joypad, BTN_START, true, state->gb->bus);
-      else if (btn == SDL_GAMEPAD_BUTTON_BACK)
+      } else if (btn == SDL_GAMEPAD_BUTTON_BACK) {
         joypad_set_button(joypad, BTN_SELECT, true, state->gb->bus);
-      else if (btn == SDL_GAMEPAD_BUTTON_DPAD_UP)
+      } else if (btn == SDL_GAMEPAD_BUTTON_DPAD_UP) {
         joypad_set_button(joypad, BTN_UP, true, state->gb->bus);
-      else if (btn == SDL_GAMEPAD_BUTTON_DPAD_DOWN)
+      } else if (btn == SDL_GAMEPAD_BUTTON_DPAD_DOWN) {
         joypad_set_button(joypad, BTN_DOWN, true, state->gb->bus);
-      else if (btn == SDL_GAMEPAD_BUTTON_DPAD_LEFT)
+      } else if (btn == SDL_GAMEPAD_BUTTON_DPAD_LEFT) {
         joypad_set_button(joypad, BTN_LEFT, true, state->gb->bus);
-      else if (btn == SDL_GAMEPAD_BUTTON_DPAD_RIGHT)
+      } else if (btn == SDL_GAMEPAD_BUTTON_DPAD_RIGHT) {
         joypad_set_button(joypad, BTN_RIGHT, true, state->gb->bus);
+      }
       break;
     }
 
     case SDL_EVENT_GAMEPAD_BUTTON_UP: {
-      if (!joypad) break;
+      if (!joypad) {
+        break;
+      }
       SDL_GamepadButton btn = (SDL_GamepadButton)event->gbutton.button;
-      if (btn == SDL_GAMEPAD_BUTTON_SOUTH)
+      if (btn == SDL_GAMEPAD_BUTTON_SOUTH) {
         joypad_set_button(joypad, BTN_A, false, state->gb->bus);
-      else if (btn == SDL_GAMEPAD_BUTTON_EAST)
+      } else if (btn == SDL_GAMEPAD_BUTTON_EAST) {
         joypad_set_button(joypad, BTN_B, false, state->gb->bus);
-      else if (btn == SDL_GAMEPAD_BUTTON_START)
+      } else if (btn == SDL_GAMEPAD_BUTTON_START) {
         joypad_set_button(joypad, BTN_START, false, state->gb->bus);
-      else if (btn == SDL_GAMEPAD_BUTTON_BACK)
+      } else if (btn == SDL_GAMEPAD_BUTTON_BACK) {
         joypad_set_button(joypad, BTN_SELECT, false, state->gb->bus);
-      else if (btn == SDL_GAMEPAD_BUTTON_DPAD_UP)
+      } else if (btn == SDL_GAMEPAD_BUTTON_DPAD_UP) {
         joypad_set_button(joypad, BTN_UP, false, state->gb->bus);
-      else if (btn == SDL_GAMEPAD_BUTTON_DPAD_DOWN)
+      } else if (btn == SDL_GAMEPAD_BUTTON_DPAD_DOWN) {
         joypad_set_button(joypad, BTN_DOWN, false, state->gb->bus);
-      else if (btn == SDL_GAMEPAD_BUTTON_DPAD_LEFT)
+      } else if (btn == SDL_GAMEPAD_BUTTON_DPAD_LEFT) {
         joypad_set_button(joypad, BTN_LEFT, false, state->gb->bus);
-      else if (btn == SDL_GAMEPAD_BUTTON_DPAD_RIGHT)
+      } else if (btn == SDL_GAMEPAD_BUTTON_DPAD_RIGHT) {
         joypad_set_button(joypad, BTN_RIGHT, false, state->gb->bus);
+      }
       break;
     }
+    default:
+      break;
   }
   return 0;
 }

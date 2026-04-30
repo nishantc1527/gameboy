@@ -1,5 +1,6 @@
 #include "gbemu/pokemon.h"
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include "gbemu/mmu.h"
@@ -13,13 +14,14 @@ void p_init_data(struct Mmu* mmu) {
   p_init_table();
 }
 
-void p_get_name(struct Mmu* mmu, char name[]) {
+void p_get_name(struct Mmu* mmu, char name[], size_t name_size) {
   const uint16_t n = 0xB;
   const uint16_t src = 0x2598;
   uint8_t enc[n];
-  for (uint16_t i = src; i < src + n; i++)
+  for (uint16_t i = src; i < src + n; i++) {
     enc[i - src] = mmu_read_extern_ram(mmu, i);
-  p_string_convert(name, n, enc);
+  }
+  p_string_convert(name, name_size, n, enc);
 }
 
 void p_init_table() {

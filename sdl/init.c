@@ -1,5 +1,13 @@
-#include <SDL3/SDL.h>
-#include <SDL3/SDL_timer.h>
+#include <SDL3/SDL_error.h>
+#include <SDL3/SDL_init.h>
+#include <SDL3/SDL_keyboard.h>
+#include <SDL3/SDL_keycode.h>
+#include <SDL3/SDL_log.h>
+#include <SDL3/SDL_pixels.h>
+#include <SDL3/SDL_render.h>
+#include <SDL3/SDL_stdinc.h>
+#include <SDL3/SDL_surface.h>
+#include <SDL3/SDL_video.h>
 
 #include "gbemu/core.h"
 #include "gbemu/ppu.h"
@@ -40,12 +48,14 @@ int init_window(const char* rom_title) {
   }
   if (!SDL_CreateWindowAndRenderer(
           rom_title, SCRN_WIDTH * g_settings.scale,
-          SCRN_HEIGHT * g_settings.scale + menu_bar_height, 0, &win, &rnd)) {
+          (SCRN_HEIGHT * g_settings.scale) + menu_bar_height, 0, &win, &rnd)) {
     SDL_LogError(SDL_LOG_CATEGORY_VIDEO,
                  "ERROR CREATING WINDOW & RENDERER: %s\n", SDL_GetError());
     return 1;
   }
-  if (g_settings.fullscreen) SDL_SetWindowFullscreen(win, true);
+  if (g_settings.fullscreen) {
+    SDL_SetWindowFullscreen(win, true);
+  }
   SDL_SetRenderVSync(rnd, 0);
   SDL_GetWindowSize(win, &win_width, &win_height);
   txt = SDL_CreateTexture(rnd, SDL_PIXELFORMAT_RGBA8888,

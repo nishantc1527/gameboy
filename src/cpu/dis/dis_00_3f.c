@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include "../cpu_private.h"
+#include "dis_private.h"
 #include "gbemu/bus.h"
 #include "gbemu/cpu.h"
 

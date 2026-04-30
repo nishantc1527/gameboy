@@ -1,29 +1,35 @@
+#include <stddef.h>
+#include <stdint.h>
+
 #include "cpu_private.h"
 #include "gbemu/bus.h"
 #include "gbemu/cpu.h"
 #include "gbemu/cpu_ops.h"
+#include "gbemu/util.h"
 
-static uint8_t cb_bit_res_set(struct Cpu* cpu, struct Bus* bus, uint8_t op) {
-  uint8_t group = op >> 6;
-  uint8_t bit = (op >> 3) & 7;
-  uint8_t r = op & 7;
-  if (r == 6) {
+static uint8_t cb_bit_res_set(struct Cpu* cpu, struct Bus* bus,
+                              uint8_t opcode) {
+  uint8_t group = (uint8_t)((unsigned)opcode >> 6U);
+  uint8_t bit = (uint8_t)(((unsigned)opcode >> 3U) & 7U);
+  uint8_t reg_idx = (uint8_t)((unsigned)opcode & 7U);
+  if (reg_idx == 6) {
     cpu_mem_tick(cpu, bus, 8);
     uint8_t val = bus_read(bus, gt_HL(cpu));
     if (group == 1) {
       c_bit(cpu, val, bit);
       return 12;
     }
-    if (group == 2)
-      val = (uint8_t)(val & ~(1u << bit));
-    else
+    if (group == 2) {
+      val = (uint8_t)(val & ~(1U << bit));
+    } else {
       set_bit(&val, bit);
+    }
     cpu_mem_tick(cpu, bus, 4);
     bus_write(bus, gt_HL(cpu), val);
     return 16;
   }
-  uint8_t* reg;
-  switch (r) {
+  uint8_t* reg = NULL;
+  switch (reg_idx) {
     case 0:
       reg = &cpu->B;
       break;
@@ -46,22 +52,30 @@ static uint8_t cb_bit_res_set(struct Cpu* cpu, struct Bus* bus, uint8_t op) {
       reg = &cpu->A;
       break;
   }
-  if (group == 1) return (uint8_t)c_bit(cpu, *reg, bit);
-  if (group == 2) return (uint8_t)c_res(reg, bit);
+  if (group == 1) {
+    return (uint8_t)c_bit(cpu, *reg, bit);
+  }
+  if (group == 2) {
+    return (uint8_t)c_res(reg, bit);
+  }
   return (uint8_t)c_set(reg, bit);
 }
 
 uint8_t cpu_step(struct Cpu* cpu, struct Bus* bus) {
-  if (cpu->halted) return 4;
+  if (cpu->halted) {
+    return 4;
+  }
   if (cpu->ime_pending) {
     cpu->ime = true;
     cpu->ime_pending = false;
   }
-  uint8_t op = bus_read(bus, cpu->PC++);
-  if (op == 0xCB) {
+  uint8_t opcode = bus_read(bus, cpu->PC++);
+  if (opcode == 0xCB) {
     uint8_t prefix = bus_read(bus, cpu->PC++);
-    if (prefix >= 0x40) return cb_bit_res_set(cpu, bus, prefix);
+    if (prefix >= 0x40) {
+      return cb_bit_res_set(cpu, bus, prefix);
+    }
     return cpu_cb_ops[prefix](cpu, bus);
   }
-  return cpu_ops[op](cpu, bus);
+  return cpu_ops[opcode](cpu, bus);
 }

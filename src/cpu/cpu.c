@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "cpu_private.h"
+#include "gbemu/bus.h"
 
 struct Cpu* cpu_init(bool cgb_mode) {
   struct Cpu* cpu = calloc(1, sizeof(struct Cpu));
@@ -14,15 +15,15 @@ struct Cpu* cpu_init(bool cgb_mode) {
 }
 
 uint8_t cpu_read_if(const struct Cpu* cpu) {
-  return cpu->if_reg | IF_UNUSED_BITS;
+  return (uint8_t)((unsigned)cpu->if_reg | IF_UNUSED_BITS);
 }
 
 void cpu_write_if(struct Cpu* cpu, uint8_t val) {
-  cpu->if_reg = val & IF_VALID_MASK;
+  cpu->if_reg = (uint8_t)((unsigned)val & IF_VALID_MASK);
 }
 
 void cpu_req_intr(struct Cpu* cpu, uint8_t intr) {
-  cpu->if_reg |= (uint8_t)(1u << intr);
+  cpu->if_reg |= (uint8_t)(1U << intr);
 }
 
 uint8_t cpu_read_ie(const struct Cpu* cpu) { return cpu->ie_reg; }

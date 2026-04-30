@@ -1,6 +1,11 @@
+#include <SDL3/SDL_events.h>
+#include <SDL3/SDL_init.h>
+#include <SDL3/SDL_log.h>
+#include <SDL3/SDL_render.h>
+#include <SDL3/SDL_stdinc.h>
+#include <SDL3/SDL_video.h>
+#include <stdint.h>
 #define SDL_MAIN_USE_CALLBACKS
-#include "gbemu/sdl.h"
-
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL_timer.h>
 #include <stdio.h>
@@ -11,6 +16,7 @@
 #include "gbemu/core.h"
 #include "gbemu/pokemon.h"
 #include "gbemu/ppu.h"
+#include "gbemu/sdl.h"
 #include "gbemu/settings.h"
 #include "rust.h"
 
@@ -29,10 +35,10 @@ static int load_rom(struct AppState* state, const char* path, uint8_t dis) {
     settings_save(&g_settings);
     return 1;
   }
-  fclose(f);
+  (void)fclose(f);
   state->rom_error[0] = '\0';
   gbemu_free(state->gb);
-  state->gb = gbemu_init((char*)path, dis, NULL, 0);
+  state->gb = gbemu_init((char*)path, dis != 0U, NULL, 0);
   if (!state->gb) {
     SDL_snprintf(state->rom_error, sizeof(state->rom_error),
                  "Failed to load ROM: %s", path);
@@ -41,20 +47,28 @@ static int load_rom(struct AppState* state, const char* path, uint8_t dis) {
   set_window_title_rom(mmu_get_rom_title(state->gb->mmu));
   settings_add_recent_rom(&g_settings, path);
   settings_save(&g_settings);
-  if (pokemon_enabled) p_init_data(state->gb->mmu);
+  if (pokemon_enabled) {
+    p_init_data(state->gb->mmu);
+  }
   return 0;
 }
 
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
-  if (argc < 1) return usage();
+  if (argc < 1) {
+    return usage();
+  }
   char* rom_name = NULL;
   bool disassemble_enable = false;
   for (int i = 1; i < argc; i++) {
-    if ((!strcmp(argv[i], "-r") || !strcmp(argv[i], "--rom")) && i + 1 < argc)
-      rom_name = argv[++i];
-    else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--disassembly"))
-      disassemble_enable = true;
-    else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
+    if ((!strcmp(argv[i], "-r") || !strcmp(argv[i], "--rom")) && i + 1 < argc) {
+      {
+        rom_name = argv[++i];
+      }
+    } else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--disassembly")) {
+      {
+        disassemble_enable = true;
+      }
+    } else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
       SDL_Log(
           "Usage: gbemu [-r <rom.gb>] [-d]\n\n"
           "Options:\n"
@@ -71,7 +85,9 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
   settings_load(&g_settings);
 
   struct AppState* state = calloc(1, sizeof(struct AppState));
-  if (!state) return SDL_APP_FAILURE;
+  if (!state) {
+    return SDL_APP_FAILURE;
+  }
   *appstate = state;
 
   if (init_window("gbemu")) {
@@ -80,8 +96,11 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
   }
 
   if (rom_name) {
-    if (load_rom(state, rom_name, disassemble_enable)) return SDL_APP_FAILURE;
-    snprintf(g_settings.last_rom, sizeof(g_settings.last_rom), "%s", rom_name);
+    if (load_rom(state, rom_name, (uint8_t)disassemble_enable)) {
+      return SDL_APP_FAILURE;
+    }
+    (void)snprintf(g_settings.last_rom, sizeof(g_settings.last_rom), "%s",
+                   rom_name);
     settings_save(&g_settings);
   }
 
@@ -116,7 +135,9 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
   const Uint64 frame_ticks = (frame_cyc * perf_freq) / CPU_FREQ;
   if (state->gb && !state->gb->is_paused && state->gb->fast_forward) {
     for (int i = 0; i < 4; i++) {
-      if (gbemu_step_frame(state->gb) == -1) return SDL_APP_FAILURE;
+      if (gbemu_step_frame(state->gb) == -1) {
+        return SDL_APP_FAILURE;
+      }
     }
     apu_discard_samples(state->gb->apu);
     next_frame_time = SDL_GetPerformanceCounter();
@@ -127,10 +148,14 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
       return SDL_APP_CONTINUE;
     }
     next_frame_time += frame_ticks;
-    if (next_frame_time < now) next_frame_time = now;
+    if (next_frame_time < now) {
+      next_frame_time = now;
+    }
 
     if (state->gb && !state->gb->is_paused) {
-      if (gbemu_step_frame(state->gb) == -1) return SDL_APP_FAILURE;
+      if (gbemu_step_frame(state->gb) == -1) {
+        return SDL_APP_FAILURE;
+      }
       push_audio(state->gb->apu);
     }
   }
@@ -148,14 +173,18 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
 SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event) {
   struct AppState* state = appstate;
-  if (handle_input(state, event)) return SDL_APP_SUCCESS;
+  if (handle_input(state, event)) {
+    return SDL_APP_SUCCESS;
+  }
   return SDL_APP_CONTINUE;
 }
 
 void SDL_AppQuit(void* appstate, SDL_AppResult result) {
   (void)result;
   struct AppState* state = appstate;
-  if (!state) return;
+  if (!state) {
+    return;
+  }
   settings_save(&g_settings);
   gbemu_free(state->gb);
   imgui_shutdown();

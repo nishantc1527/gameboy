@@ -4,6 +4,7 @@
 #include "gbemu/bus.h"
 #include "gbemu/cpu.h"
 #include "gbemu/cpu_ops.h"
+#include "ops_private.h"
 
 /* 0x80 ADD A,B */
 uint8_t op_80(struct Cpu* cpu, struct Bus* bus) {

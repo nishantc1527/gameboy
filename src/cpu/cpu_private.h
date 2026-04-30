@@ -603,4 +603,3 @@ void disassemble(struct Cpu* cpu, struct Bus* bus, const uint16_t* watch_addrs,
                  uint8_t watch_count, uint64_t total_cycles);
 
 int do_intr(struct Cpu* cpu, struct Bus* bus, uint8_t intr);
-uint8_t cpu_check_interrupts(struct Cpu* cpu, struct Bus* bus);

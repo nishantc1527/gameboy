@@ -1,8 +1,7 @@
 #pragma once
 #include <stdint.h>
 
-#define APU_SAMPLE_RATE 48000
-#define APU_BUF_SIZE 1024
+enum { APU_SAMPLE_RATE = 48000, APU_BUF_SIZE = 1024 };
 
 struct Apu;
 

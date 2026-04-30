@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include "../cpu_private.h"
+#include "dis_private.h"
 #include "gbemu/bus.h"
 #include "gbemu/cpu.h"
 
@@ -207,10 +208,11 @@ void dis_c0_ff(struct Cpu* cpu, struct Bus* bus, uint8_t instr) {
     case 0xE0: {
       uint8_t n = bus_read(bus, (uint16_t)(cpu->PC + 1));
       const char* name = io_reg_name(n);
-      if (name)
+      if (name) {
         printf("LDH (%s), A\n", name);
-      else
+      } else {
         printf("LDH ($FF%02X), A\n", n);
+      }
       break;
     }
     case 0xE1:
@@ -249,10 +251,11 @@ void dis_c0_ff(struct Cpu* cpu, struct Bus* bus, uint8_t instr) {
     case 0xF0: {
       uint8_t n = bus_read(bus, (uint16_t)(cpu->PC + 1));
       const char* name = io_reg_name(n);
-      if (name)
+      if (name) {
         printf("LDH A, (%s)\n", name);
-      else
+      } else {
         printf("LDH A, ($FF%02X)\n", n);
+      }
       break;
     }
     case 0xF1:

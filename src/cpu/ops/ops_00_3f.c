@@ -5,11 +5,12 @@
 #include "gbemu/bus.h"
 #include "gbemu/cpu.h"
 #include "gbemu/cpu_ops.h"
+#include "ops_private.h"
 
 uint8_t op_xx(struct Cpu* cpu, struct Bus* bus) {
   (void)cpu;
   (void)bus;
-  fprintf(stderr, "UNIMPLEMENTED INSTRUCTION\n");
+  (void)fprintf(stderr, "UNIMPLEMENTED INSTRUCTION\n");
   return 0;
 }
 /* 0x00 NOP */
@@ -60,8 +61,9 @@ uint8_t op_07(struct Cpu* cpu, struct Bus* bus) {
 /* 0x08 LD (a16),SP */
 uint8_t op_08(struct Cpu* cpu, struct Bus* bus) {
   uint16_t addr = fetch_word(cpu, bus);
-  bus_write(bus, addr, (uint8_t)(cpu->SP & 0xFF));
-  bus_write(bus, (uint16_t)(addr + 1), (uint8_t)((cpu->SP >> 8) & 0xFF));
+  bus_write(bus, addr, (uint8_t)((unsigned)cpu->SP & 0xFFU));
+  bus_write(bus, (uint16_t)(addr + 1),
+            (uint8_t)(((unsigned)cpu->SP >> 8U) & 0xFFU));
   return 20;
 }
 /* 0x09 ADD HL,BC */
@@ -246,12 +248,16 @@ uint8_t op_27(struct Cpu* cpu, struct Bus* bus) {
       cpu->A += 0x60;
       set_flag(cpu, FLG_C);
     }
-    if (get_flag(cpu, FLG_H) || (cpu->A & 0x0f) > 0x09) {
+    if (get_flag(cpu, FLG_H) || ((unsigned)cpu->A & 0x0fU) > 0x09U) {
       cpu->A += 0x06;
     }
   } else {
-    if (get_flag(cpu, FLG_C)) cpu->A -= 0x60;
-    if (get_flag(cpu, FLG_H)) cpu->A -= 0x06;
+    if (get_flag(cpu, FLG_C)) {
+      cpu->A -= 0x60;
+    }
+    if (get_flag(cpu, FLG_H)) {
+      cpu->A -= 0x06;
+    }
   }
   set_zero_flag(cpu, cpu->A);
   clear_flag(cpu, FLG_H);
@@ -394,9 +400,10 @@ uint8_t op_3F(struct Cpu* cpu, struct Bus* bus) {
   (void)bus;
   clear_flag(cpu, FLG_N);
   clear_flag(cpu, FLG_H);
-  if (get_flag(cpu, FLG_C))
+  if (get_flag(cpu, FLG_C)) {
     clear_flag(cpu, FLG_C);
-  else
+  } else {
     set_flag(cpu, FLG_C);
+  }
   return 4;
 }

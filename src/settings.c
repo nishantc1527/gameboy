@@ -24,17 +24,17 @@ void settings_defaults(struct Settings* s) {
   s->dmg_palette[1] = 0x496b22;
   s->dmg_palette[2] = 0x0e450b;
   s->dmg_palette[3] = 0x1b2a09;
-  s->volume = 1.0f;
-  snprintf(s->key_a, sizeof(s->key_a), "S");
-  snprintf(s->key_b, sizeof(s->key_b), "A");
-  snprintf(s->key_start, sizeof(s->key_start), "Return");
-  snprintf(s->key_select, sizeof(s->key_select), "Left Shift");
-  snprintf(s->key_up, sizeof(s->key_up), "Up");
-  snprintf(s->key_down, sizeof(s->key_down), "Down");
-  snprintf(s->key_left, sizeof(s->key_left), "Left");
-  snprintf(s->key_right, sizeof(s->key_right), "Right");
-  snprintf(s->key_pause, sizeof(s->key_pause), "P");
-  snprintf(s->key_screenshot, sizeof(s->key_screenshot), "F2");
+  s->volume = 1.0F;
+  (void)snprintf(s->key_a, sizeof(s->key_a), "S");
+  (void)snprintf(s->key_b, sizeof(s->key_b), "A");
+  (void)snprintf(s->key_start, sizeof(s->key_start), "Return");
+  (void)snprintf(s->key_select, sizeof(s->key_select), "Left Shift");
+  (void)snprintf(s->key_up, sizeof(s->key_up), "Up");
+  (void)snprintf(s->key_down, sizeof(s->key_down), "Down");
+  (void)snprintf(s->key_left, sizeof(s->key_left), "Left");
+  (void)snprintf(s->key_right, sizeof(s->key_right), "Right");
+  (void)snprintf(s->key_pause, sizeof(s->key_pause), "P");
+  (void)snprintf(s->key_screenshot, sizeof(s->key_screenshot), "F2");
   s->last_rom[0] = '\0';
   s->recent_rom_count = 0;
 }
@@ -43,11 +43,13 @@ static void config_path(char* buf, size_t len) {
 #ifdef _WIN32
   const char* appdata = getenv("APPDATA");
   if (!appdata) appdata = ".";
-  snprintf(buf, len, "%s\\gbemu\\settings.toml", appdata);
+  (void)snprintf(buf, len, "%s\\gbemu\\settings.toml", appdata);
 #else
   const char* home = getenv("HOME");
-  if (!home) home = ".";
-  snprintf(buf, len, "%s/.config/gbemu/settings.toml", home);
+  if (!home) {
+    home = ".";
+  }
+  (void)snprintf(buf, len, "%s/.config/gbemu/settings.toml", home);
 #endif
 }
 
@@ -56,15 +58,17 @@ static void mkdir_config_dir(void) {
   const char* appdata = getenv("APPDATA");
   if (!appdata) return;
   char dir[512];
-  snprintf(dir, sizeof(dir), "%s\\gbemu", appdata);
+  (void)snprintf(dir, sizeof(dir), "%s\\gbemu", appdata);
   MKDIR(dir);
 #else
   const char* home = getenv("HOME");
-  if (!home) return;
+  if (!home) {
+    return;
+  }
   char dir[512];
-  snprintf(dir, sizeof(dir), "%s/.config", home);
+  (void)snprintf(dir, sizeof(dir), "%s/.config", home);
   MKDIR(dir);
-  snprintf(dir, sizeof(dir), "%s/.config/gbemu", home);
+  (void)snprintf(dir, sizeof(dir), "%s/.config/gbemu", home);
   MKDIR(dir);
 #endif
 }
@@ -72,16 +76,20 @@ static void mkdir_config_dir(void) {
 static void load_key(const toml_datum_t tbl, const char* name, char* dst,
                      size_t len) {
   toml_datum_t v = toml_get(tbl, name);
-  if (v.type == TOML_STRING) snprintf(dst, len, "%s", v.u.s);
+  if (v.type == TOML_STRING) {
+    (void)snprintf(dst, len, "%s", v.u.s);
+  }
 }
 
 static void write_str(FILE* fp, const char* s) {
-  fputc('"', fp);
+  (void)fputc('"', fp);
   for (; *s; s++) {
-    if (*s == '"' || *s == '\\') fputc('\\', fp);
-    fputc(*s, fp);
+    if (*s == '"' || *s == '\\') {
+      (void)fputc('\\', fp);
+    }
+    (void)fputc(*s, fp);
   }
-  fputc('"', fp);
+  (void)fputc('"', fp);
 }
 
 void settings_save(const struct Settings* s) {
@@ -89,50 +97,54 @@ void settings_save(const struct Settings* s) {
   char path[1024];
   config_path(path, sizeof(path));
   FILE* fp = fopen(path, "w");
-  if (!fp) return;
+  if (!fp) {
+    return;
+  }
 
-  fprintf(fp, "[display]\n");
-  fprintf(fp, "scale = %d\n", s->scale);
-  fprintf(fp, "fullscreen = %s\n", s->fullscreen ? "true" : "false");
-  fprintf(fp, "dmg_palette = [\"%06x\", \"%06x\", \"%06x\", \"%06x\"]\n",
-          s->dmg_palette[0], s->dmg_palette[1], s->dmg_palette[2],
-          s->dmg_palette[3]);
-  fprintf(fp, "\n[audio]\n");
-  fprintf(fp, "volume = %.2f\n", (double)s->volume);
-  fprintf(fp, "\n[controls]\n");
-  fprintf(fp, "a = ");
+  (void)fprintf(fp, "[display]\n");
+  (void)fprintf(fp, "scale = %d\n", s->scale);
+  (void)fprintf(fp, "fullscreen = %s\n", (int)s->fullscreen ? "true" : "false");
+  (void)fprintf(fp, "dmg_palette = [\"%06x\", \"%06x\", \"%06x\", \"%06x\"]\n",
+                s->dmg_palette[0], s->dmg_palette[1], s->dmg_palette[2],
+                s->dmg_palette[3]);
+  (void)fprintf(fp, "\n[audio]\n");
+  (void)fprintf(fp, "volume = %.2f\n", (double)s->volume);
+  (void)fprintf(fp, "\n[controls]\n");
+  (void)fprintf(fp, "a = ");
   write_str(fp, s->key_a);
-  fprintf(fp, "\nb = ");
+  (void)fprintf(fp, "\nb = ");
   write_str(fp, s->key_b);
-  fprintf(fp, "\nstart = ");
+  (void)fprintf(fp, "\nstart = ");
   write_str(fp, s->key_start);
-  fprintf(fp, "\nselect = ");
+  (void)fprintf(fp, "\nselect = ");
   write_str(fp, s->key_select);
-  fprintf(fp, "\nup = ");
+  (void)fprintf(fp, "\nup = ");
   write_str(fp, s->key_up);
-  fprintf(fp, "\ndown = ");
+  (void)fprintf(fp, "\ndown = ");
   write_str(fp, s->key_down);
-  fprintf(fp, "\nleft = ");
+  (void)fprintf(fp, "\nleft = ");
   write_str(fp, s->key_left);
-  fprintf(fp, "\nright = ");
+  (void)fprintf(fp, "\nright = ");
   write_str(fp, s->key_right);
-  fprintf(fp, "\npause = ");
+  (void)fprintf(fp, "\npause = ");
   write_str(fp, s->key_pause);
-  fprintf(fp, "\nscreenshot = ");
+  (void)fprintf(fp, "\nscreenshot = ");
   write_str(fp, s->key_screenshot);
-  fputc('\n', fp);
-  fprintf(fp, "\n[paths]\n");
-  fprintf(fp, "last_rom = ");
+  (void)fputc('\n', fp);
+  (void)fprintf(fp, "\n[paths]\n");
+  (void)fprintf(fp, "last_rom = ");
   write_str(fp, s->last_rom);
-  fputc('\n', fp);
-  fprintf(fp, "\n[ui]\n");
-  fprintf(fp, "recent_roms = [");
+  (void)fputc('\n', fp);
+  (void)fprintf(fp, "\n[ui]\n");
+  (void)fprintf(fp, "recent_roms = [");
   for (int i = 0; i < s->recent_rom_count; i++) {
-    if (i > 0) fprintf(fp, ", ");
+    if (i > 0) {
+      (void)fprintf(fp, ", ");
+    }
     write_str(fp, s->recent_roms[i]);
   }
-  fprintf(fp, "]\n");
-  fclose(fp);
+  (void)fprintf(fp, "]\n");
+  (void)fclose(fp);
 }
 
 void settings_load(struct Settings* s) {
@@ -146,31 +158,39 @@ void settings_load(struct Settings* s) {
     return;
   }
   toml_result_t res = toml_parse_file(fp);
-  fclose(fp);
+  (void)fclose(fp);
   if (!res.ok) {
     toml_free(res);
     return;
   }
   toml_datum_t root = res.toptab;
-  toml_datum_t tbl, v;
+  toml_datum_t tbl;
+  toml_datum_t v;
   tbl = toml_get(root, "display");
   if (tbl.type == TOML_TABLE) {
     v = toml_get(tbl, "scale");
-    if (v.type == TOML_INT64) s->scale = (int)v.u.int64;
+    if (v.type == TOML_INT64) {
+      s->scale = (int)v.u.int64;
+    }
     v = toml_get(tbl, "fullscreen");
-    if (v.type == TOML_BOOLEAN) s->fullscreen = v.u.boolean;
+    if (v.type == TOML_BOOLEAN) {
+      s->fullscreen = v.u.boolean;
+    }
     v = toml_get(tbl, "dmg_palette");
     if (v.type == TOML_ARRAY && v.u.arr.size == 4) {
       for (int i = 0; i < 4; i++) {
-        if (v.u.arr.elem[i].type == TOML_STRING)
+        if (v.u.arr.elem[i].type == TOML_STRING) {
           s->dmg_palette[i] = (uint32_t)strtoul(v.u.arr.elem[i].u.s, NULL, 16);
+        }
       }
     }
   }
   tbl = toml_get(root, "audio");
   if (tbl.type == TOML_TABLE) {
     v = toml_get(tbl, "volume");
-    if (v.type == TOML_FP64) s->volume = (float)v.u.fp64;
+    if (v.type == TOML_FP64) {
+      s->volume = (float)v.u.fp64;
+    }
   }
   tbl = toml_get(root, "controls");
   if (tbl.type == TOML_TABLE) {
@@ -188,8 +208,9 @@ void settings_load(struct Settings* s) {
   tbl = toml_get(root, "paths");
   if (tbl.type == TOML_TABLE) {
     v = toml_get(tbl, "last_rom");
-    if (v.type == TOML_STRING)
-      snprintf(s->last_rom, sizeof(s->last_rom), "%s", v.u.s);
+    if (v.type == TOML_STRING) {
+      (void)snprintf(s->last_rom, sizeof(s->last_rom), "%s", v.u.s);
+    }
   }
   tbl = toml_get(root, "ui");
   if (tbl.type == TOML_TABLE) {
@@ -198,9 +219,10 @@ void settings_load(struct Settings* s) {
       int n = v.u.arr.size < 10 ? v.u.arr.size : 10;
       s->recent_rom_count = n;
       for (int i = 0; i < n; i++) {
-        if (v.u.arr.elem[i].type == TOML_STRING)
-          snprintf(s->recent_roms[i], sizeof(s->recent_roms[i]), "%s",
-                   v.u.arr.elem[i].u.s);
+        if (v.u.arr.elem[i].type == TOML_STRING) {
+          (void)snprintf(s->recent_roms[i], sizeof(s->recent_roms[i]), "%s",
+                         v.u.arr.elem[i].u.s);
+        }
       }
     }
   }
@@ -210,8 +232,9 @@ void settings_load(struct Settings* s) {
 void settings_remove_recent_rom(struct Settings* s, const char* path) {
   for (int i = 0; i < s->recent_rom_count; i++) {
     if (strcmp(s->recent_roms[i], path) == 0) {
-      for (int j = i; j < s->recent_rom_count - 1; j++)
+      for (int j = i; j < s->recent_rom_count - 1; j++) {
         memcpy(s->recent_roms[j], s->recent_roms[j + 1], 512);
+      }
       s->recent_rom_count--;
       return;
     }
@@ -221,14 +244,18 @@ void settings_remove_recent_rom(struct Settings* s, const char* path) {
 void settings_add_recent_rom(struct Settings* s, const char* path) {
   for (int i = 0; i < s->recent_rom_count; i++) {
     if (strcmp(s->recent_roms[i], path) == 0) {
-      for (int j = i; j < s->recent_rom_count - 1; j++)
+      for (int j = i; j < s->recent_rom_count - 1; j++) {
         memcpy(s->recent_roms[j], s->recent_roms[j + 1], 512);
+      }
       s->recent_rom_count--;
       break;
     }
   }
-  if (s->recent_rom_count < 10) s->recent_rom_count++;
-  for (int i = s->recent_rom_count - 1; i > 0; i--)
+  if (s->recent_rom_count < 10) {
+    s->recent_rom_count++;
+  }
+  for (int i = s->recent_rom_count - 1; i > 0; i--) {
     memcpy(s->recent_roms[i], s->recent_roms[i - 1], 512);
-  snprintf(s->recent_roms[0], 512, "%s", path);
+  }
+  (void)snprintf(s->recent_roms[0], 512, "%s", path);
 }

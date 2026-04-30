@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stddef.h>
 #include <stdint.h>
 
 struct Mmu;
@@ -13,4 +14,4 @@ void p_init_data(struct Mmu* mmu);
          hacking the save file                              */
 void p_set_checksum(struct Mmu* mmu);
 
-void p_get_name(struct Mmu* mmu, char name[]);
+void p_get_name(struct Mmu* mmu, char name[], size_t name_size);

@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "dis_private.h"
 #include "gbemu/bus.h"
 #include "gbemu/cpu.h"
 

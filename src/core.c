@@ -1,6 +1,7 @@
 #include "gbemu/core.h"
 
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 #include "gbemu/apu.h"
@@ -44,8 +45,10 @@ static void system_tick(struct GBemu* gb, uint8_t cycles) {
   dma_tick(gb->dma, gb->bus, cycles);
   uint8_t timer_remaining =
       (uint8_t)(cycles - timer_consume_sub_cycles(gb->timer));
-  if (timer_remaining) timer_tick(gb->timer, timer_remaining, gb->bus);
-  apu_tick(gb->apu, (uint8_t)cycles);
+  if (timer_remaining) {
+    timer_tick(gb->timer, timer_remaining, gb->bus);
+  }
+  apu_tick(gb->apu, cycles);
   mmu_advance_rtc(gb->mmu, (uint64_t)cycles);
   gb->total_cycles += (uint64_t)cycles;
 }
@@ -53,14 +56,21 @@ static void system_tick(struct GBemu* gb, uint8_t cycles) {
 struct GBemu* gbemu_init(char* rom_name, bool disassemble_enable,
                          const uint16_t* watch_addrs, uint8_t watch_count) {
   struct GBemu* gb = malloc(sizeof(struct GBemu));
-  if (!gb) return NULL;
+  if (!gb) {
+    return NULL;
+  }
   gb->rom_name = rom_name;
   gb->disassemble_enable = disassemble_enable;
   gb->is_paused = false;
   gb->fast_forward = false;
-  gb->watch_count = watch_addrs ? (watch_count < 8 ? watch_count : 8) : 0;
-  for (uint8_t i = 0; i < gb->watch_count; i++)
+  if (watch_addrs) {
+    gb->watch_count = watch_count < 8 ? watch_count : 8;
+  } else {
+    gb->watch_count = 0;
+  }
+  for (uint8_t i = 0; i < gb->watch_count; i++) {
     gb->watch_addrs[i] = watch_addrs[i];
+  }
   gb->mmu = mmu_init(rom_name, dmg_boot_rom, sizeof(dmg_boot_rom), cgb_boot_rom,
                      sizeof(cgb_boot_rom));
   if (!gb->mmu) {
@@ -95,21 +105,28 @@ void gbemu_reset(struct GBemu* gb) {
 int gbemu_step_frame(struct GBemu* gb) {
   ppu_begin_frame(gb->ppu);
   while (!ppu_frame_ready(gb->ppu)) {
-    if (gb->disassemble_enable)
+    if (gb->disassemble_enable) {
       disassemble(gb->cpu, gb->bus, gb->watch_addrs, gb->watch_count,
                   gb->total_cycles);
+    }
     uint8_t cyc = cpu_step(gb->cpu, gb->bus);
-    if (cyc == 0) return -1;
+    if (cyc == 0) {
+      return -1;
+    }
     system_tick(gb, cyc);
     uint8_t dispatch_cyc = cpu_check_interrupts(gb->cpu, gb->bus);
-    if (dispatch_cyc) system_tick(gb, dispatch_cyc);
+    if (dispatch_cyc) {
+      system_tick(gb, dispatch_cyc);
+    }
   }
   gb->total_frames++;
   return 0;
 }
 
 void gbemu_free(struct GBemu* gb) {
-  if (!gb) return;
+  if (!gb) {
+    return;
+  }
   gbemu_free_components(gb);
   mmu_save(gb->mmu);
   mmu_free(gb->mmu);

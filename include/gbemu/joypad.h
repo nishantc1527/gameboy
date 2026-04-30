@@ -2,14 +2,16 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define BTN_A 0
-#define BTN_B 1
-#define BTN_START 2
-#define BTN_SELECT 3
-#define BTN_UP 4
-#define BTN_DOWN 5
-#define BTN_LEFT 6
-#define BTN_RIGHT 7
+enum {
+  BTN_A = 0,
+  BTN_B = 1,
+  BTN_START = 2,
+  BTN_SELECT = 3,
+  BTN_UP = 4,
+  BTN_DOWN = 5,
+  BTN_LEFT = 6,
+  BTN_RIGHT = 7
+};
 
 struct Bus;
 struct Joypad;

@@ -4,6 +4,7 @@
 #include "gbemu/bus.h"
 #include "gbemu/cpu.h"
 #include "gbemu/cpu_ops.h"
+#include "ops_private.h"
 
 /* 0x40 LD B,B (+ ld_b_b_fired) */
 uint8_t op_40(struct Cpu* cpu, struct Bus* bus) {
@@ -332,9 +333,10 @@ uint8_t op_75(struct Cpu* cpu, struct Bus* bus) {
 }
 /* 0x76 HALT */
 uint8_t op_76(struct Cpu* cpu, struct Bus* bus) {
-  if (!cpu->ime && (cpu->ie_reg & cpu->if_reg & IF_VALID_MASK)) {
-    uint8_t op = bus_read(bus, cpu->PC);
-    cpu_ops[op](cpu, bus);
+  if (!cpu->ime &&
+      ((unsigned)cpu->ie_reg & (unsigned)cpu->if_reg & IF_VALID_MASK)) {
+    uint8_t opcode = bus_read(bus, cpu->PC);
+    cpu_ops[opcode](cpu, bus);
   } else {
     cpu->halted = true;
   }

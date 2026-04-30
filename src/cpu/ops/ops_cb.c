@@ -4,6 +4,7 @@
 #include "gbemu/bus.h"
 #include "gbemu/cpu.h"
 #include "gbemu/cpu_ops.h"
+#include "ops_private.h"
 
 /* CB 0x00-0x07: RLC r */
 uint8_t cb_00(struct Cpu* cpu, struct Bus* bus) {

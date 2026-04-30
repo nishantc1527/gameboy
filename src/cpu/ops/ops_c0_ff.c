@@ -4,6 +4,7 @@
 #include "gbemu/bus.h"
 #include "gbemu/cpu.h"
 #include "gbemu/cpu_ops.h"
+#include "ops_private.h"
 
 /* 0xC0 RET NZ */
 uint8_t op_C0(struct Cpu* cpu, struct Bus* bus) {

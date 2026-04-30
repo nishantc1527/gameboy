@@ -1,6 +1,9 @@
-#include <SDL3/SDL.h>
+#include <SDL3/SDL_audio.h>
+#include <SDL3/SDL_error.h>
+#include <SDL3/SDL_log.h>
 
 #include "gbemu/apu.h"
+#include "gbemu/sdl.h"
 #include "gbemu/settings.h"
 
 static SDL_AudioStream* audio_stream = nullptr;
@@ -26,13 +29,18 @@ int init_audio(void) {
 }
 
 int audio_queued_bytes(void) {
-  if (!audio_stream) return 0;
+  if (!audio_stream) {
+    return 0;
+  }
   return SDL_GetAudioStreamQueued(audio_stream);
 }
 
 void push_audio(struct Apu* apu) {
-  if (!audio_stream || apu_get_sample_count(apu) == 0) return;
-  SDL_PutAudioStreamData(audio_stream, apu_get_sample_buf(apu),
-                         (int)(apu_get_sample_count(apu) * 2u * sizeof(float)));
+  if (!audio_stream || apu_get_sample_count(apu) == 0) {
+    return;
+  }
+  SDL_PutAudioStreamData(
+      audio_stream, apu_get_sample_buf(apu),
+      (int)((size_t)apu_get_sample_count(apu) * 2U * sizeof(float)));
   apu_discard_samples(apu);
 }
