@@ -25,7 +25,7 @@ void settings_defaults(struct Settings* s) {
   s->dmg_palette[2] = 0x0e450b;
   s->dmg_palette[3] = 0x1b2a09;
   s->volume = 1.0F;
-  s->mute   = false;
+  s->mute = false;
   (void)snprintf(s->key_a, sizeof(s->key_a), "S");
   (void)snprintf(s->key_b, sizeof(s->key_b), "A");
   (void)snprintf(s->key_start, sizeof(s->key_start), "Return");

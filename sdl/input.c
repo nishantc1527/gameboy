@@ -15,17 +15,38 @@ static SDL_Gamepad* g_gamepad = NULL;
 
 static void set_key_binding(struct Settings* s, int ctrl, const char* name) {
   switch (ctrl) {
-    case CTRL_A:          SDL_snprintf(s->key_a,          64, "%s", name); break;
-    case CTRL_B:          SDL_snprintf(s->key_b,          64, "%s", name); break;
-    case CTRL_START:      SDL_snprintf(s->key_start,      64, "%s", name); break;
-    case CTRL_SELECT:     SDL_snprintf(s->key_select,     64, "%s", name); break;
-    case CTRL_UP:         SDL_snprintf(s->key_up,         64, "%s", name); break;
-    case CTRL_DOWN:       SDL_snprintf(s->key_down,       64, "%s", name); break;
-    case CTRL_LEFT:       SDL_snprintf(s->key_left,       64, "%s", name); break;
-    case CTRL_RIGHT:      SDL_snprintf(s->key_right,      64, "%s", name); break;
-    case CTRL_PAUSE:      SDL_snprintf(s->key_pause,      64, "%s", name); break;
-    case CTRL_SCREENSHOT: SDL_snprintf(s->key_screenshot, 64, "%s", name); break;
-    default: break;
+    case CTRL_A:
+      SDL_snprintf(s->key_a, 64, "%s", name);
+      break;
+    case CTRL_B:
+      SDL_snprintf(s->key_b, 64, "%s", name);
+      break;
+    case CTRL_START:
+      SDL_snprintf(s->key_start, 64, "%s", name);
+      break;
+    case CTRL_SELECT:
+      SDL_snprintf(s->key_select, 64, "%s", name);
+      break;
+    case CTRL_UP:
+      SDL_snprintf(s->key_up, 64, "%s", name);
+      break;
+    case CTRL_DOWN:
+      SDL_snprintf(s->key_down, 64, "%s", name);
+      break;
+    case CTRL_LEFT:
+      SDL_snprintf(s->key_left, 64, "%s", name);
+      break;
+    case CTRL_RIGHT:
+      SDL_snprintf(s->key_right, 64, "%s", name);
+      break;
+    case CTRL_PAUSE:
+      SDL_snprintf(s->key_pause, 64, "%s", name);
+      break;
+    case CTRL_SCREENSHOT:
+      SDL_snprintf(s->key_screenshot, 64, "%s", name);
+      break;
+    default:
+      break;
   }
 }
 
@@ -59,9 +80,11 @@ int handle_input(struct AppState* state, SDL_Event* event) {
     SDL_Keycode k = event->key.key;
     if (k != SDLK_ESCAPE) {
       if (state->settings_has_draft) {
-        set_key_binding(&state->settings_draft, state->rebinding_control, SDL_GetKeyName(k));
+        set_key_binding(&state->settings_draft, state->rebinding_control,
+                        SDL_GetKeyName(k));
       } else {
-        set_key_binding(&g_settings, state->rebinding_control, SDL_GetKeyName(k));
+        set_key_binding(&g_settings, state->rebinding_control,
+                        SDL_GetKeyName(k));
         populate_controls();
         settings_save(&g_settings);
       }
