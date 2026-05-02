@@ -147,7 +147,7 @@ int handle_input(struct AppState* state, SDL_Event* event) {
       } else if (k == g_controls[CTRL_PAUSE]) {
         state->gb->is_paused = ((!state->gb->is_paused) != 0);
       } else if (k == g_controls[CTRL_SCREENSHOT]) {
-        take_screenshot(state->gb->ppu);
+        take_screenshot(state->gb->ppu, state);
       } else if (k == SDLK_TAB) {
         state->gb->fast_forward = true;
       } else if (k == SDLK_R && (event->key.mod & SDL_KMOD_CTRL)) {

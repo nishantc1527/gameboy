@@ -45,6 +45,8 @@ struct AppState {
   int rebinding_control;
   bool settings_has_draft;
   struct Settings settings_draft;
+  char screenshot_toast[64];
+  Uint64 screenshot_toast_until;
 };
 
 int init_window(const char* title);
@@ -60,4 +62,4 @@ int audio_queued_bytes(void);
 void push_audio(struct Apu* apu);
 void set_audio_volume(float volume, bool mute);
 
-void take_screenshot(struct Ppu* ppu);
+void take_screenshot(struct Ppu* ppu, struct AppState* state);

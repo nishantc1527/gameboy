@@ -1,6 +1,8 @@
 #include <SDL3/SDL_log.h>
 #include <SDL3/SDL_stdinc.h>
+#include <SDL3/SDL_timer.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "gbemu/core.h"
@@ -9,10 +11,21 @@
 #include "gbemu/settings.h"
 #include "stb_image_write.h"
 
-void take_screenshot(struct Ppu* ppu) {
+static bool file_exists(const char* path) {
+  FILE* f = fopen(path, "r");
+  if (f) {
+    fclose(f);
+    return true;
+  }
+  return false;
+}
+
+void take_screenshot(struct Ppu* ppu, struct AppState* state) {
   static int counter = 0;
   char path[64];
-  SDL_snprintf(path, sizeof(path), "screenshot_%04d.png", ++counter);
+  do {
+    SDL_snprintf(path, sizeof(path), "screenshot_%04d.png", ++counter);
+  } while (file_exists(path));
 
   uint8_t buf[SCRN_HEIGHT][SCRN_WIDTH][3];
   if (ppu_get_cgb_mode(ppu)) {
@@ -45,5 +58,8 @@ void take_screenshot(struct Ppu* ppu) {
                  path);
   } else {
     SDL_Log("Screenshot saved: %s\n", path);
+    SDL_snprintf(state->screenshot_toast, sizeof(state->screenshot_toast), "%s",
+                 path);
+    state->screenshot_toast_until = SDL_GetTicks() + 2000;
   }
 }

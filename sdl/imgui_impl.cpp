@@ -96,7 +96,7 @@ static void apply_settings(AppState* state) {
   memcpy(next.recent_roms, g_settings.recent_roms, sizeof(next.recent_roms));
   next.recent_rom_count = g_settings.recent_rom_count;
   g_settings = next;
-  set_audio_volume(g_settings.volume);
+  set_audio_volume(g_settings.volume, g_settings.mute);
   populate_controls();
   settings_save(&g_settings);
 }
@@ -341,6 +341,30 @@ static void draw_ui_idle(AppState* state) {
   ImGui::End();
 }
 
+static void draw_screenshot_toast(AppState* state) {
+  Uint64 now = SDL_GetTicks();
+  if (!state->screenshot_toast_until || now >= state->screenshot_toast_until)
+    return;
+  Uint64 remaining = state->screenshot_toast_until - now;
+  float alpha = remaining < 500 ? (float)remaining / 500.0f : 1.0f;
+  ImVec2 vp = ImGui::GetMainViewport()->Size;
+  ImGui::SetNextWindowPos(ImVec2(vp.x / 2.0f, vp.y - 16.0f),
+                          ImGuiCond_Always, ImVec2(0.5f, 1.0f));
+  ImGui::SetNextWindowBgAlpha(0.75f * alpha);
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f, 6.0f));
+  ImGui::Begin("##toast", nullptr,
+               ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoInputs |
+               ImGuiWindowFlags_NoNav | ImGuiWindowFlags_AlwaysAutoResize |
+               ImGuiWindowFlags_NoSavedSettings |
+               ImGuiWindowFlags_NoBringToFrontOnFocus |
+               ImGuiWindowFlags_NoFocusOnAppearing);
+  ImGui::PushStyleVar(ImGuiStyleVar_Alpha, alpha);
+  ImGui::Text("Screenshot saved: %s", state->screenshot_toast);
+  ImGui::PopStyleVar();
+  ImGui::End();
+  ImGui::PopStyleVar();
+}
+
 extern "C" void draw_ui(AppState* state) {
   ImGui_ImplSDLRenderer3_NewFrame();
   ImGui_ImplSDL3_NewFrame();
@@ -348,6 +372,7 @@ extern "C" void draw_ui(AppState* state) {
   draw_menu_bar(state);
   if (!state->gb) draw_ui_idle(state);
   if (state->settings_open) draw_settings_window(state);
+  draw_screenshot_toast(state);
   ImGui::Render();
   ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), rnd);
 }
