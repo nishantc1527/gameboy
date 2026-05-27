@@ -96,7 +96,7 @@ static void apply_settings(AppState* state) {
   memcpy(next.recent_roms, g_settings.recent_roms, sizeof(next.recent_roms));
   next.recent_rom_count = g_settings.recent_rom_count;
   g_settings = next;
-  set_audio_volume(g_settings.volume);
+  set_audio_volume(g_settings.volume, g_settings.mute);
   populate_controls();
   settings_save(&g_settings);
 }
