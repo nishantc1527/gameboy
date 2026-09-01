@@ -30,6 +30,7 @@ extern int menu_bar_height;
 
 extern SDL_Window* win;
 extern SDL_Renderer* rnd;
+extern int pokemon_enabled;
 
 void imgui_init(SDL_Window* window, SDL_Renderer* renderer);
 void imgui_shutdown(void);
@@ -47,6 +48,8 @@ struct AppState {
   struct Settings settings_draft;
   char screenshot_toast[64];
   Uint64 screenshot_toast_until;
+  int    pokemon_focused_slot;
+  Uint64 pokemon_session_start;
 };
 
 int init_window(const char* title);

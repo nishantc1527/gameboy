@@ -8,9 +8,8 @@
 void p_string_convert(char dst[], size_t dst_size, uint16_t n,
                       const uint8_t encoded[]) {
   for (int i = 0; i < n; i++) {
-    if (encoded[i] == 0x50) {
-      break;
-    }
+    if (encoded[i] == 0x50) break;
+    if (!p_table[encoded[i]]) continue;
     strncat(dst, p_table[encoded[i]], dst_size - strlen(dst) - 1);
   }
 }
@@ -23,9 +22,11 @@ void p_set_checksum(struct Mmu* mmu) {
   mmu_write_extern_ram(mmu, 0x3523, sum);
 }
 
-int p_check_pokemon(const char* rom_title) {
-  if (!strcmp(rom_title, "POKEMON RED") || !strcmp(rom_title, "POKEMON BLUE")) {
-    return 1;
-  }
-  return 0;
+int pokemon_check(const char* rom_title) {
+  return !strcmp(rom_title, "POKEMON RED") || !strcmp(rom_title, "POKEMON BLUE");
+}
+
+void pokemon_init(struct Mmu* mmu) {
+  p_set_checksum(mmu);
+  p_init_table();
 }

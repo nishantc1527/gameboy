@@ -19,11 +19,28 @@
 #include "gbemu/sdl.h"
 #include "gbemu/settings.h"
 #include "rust.h"
+#include "sdl_private.h"
+
+int pokemon_enabled;
 
 static SDL_AppResult usage() {
   SDL_LogError(SDL_LOG_CATEGORY_ERROR,
                "Usage: gbemu [-r/--rom <rom file>] [-d/--disassembly]\n");
   return SDL_APP_FAILURE;
+}
+
+void pokemon_resize_window(void) {
+  int w = POKEMON_LEFT_W + SCRN_WIDTH * g_settings.scale + POKEMON_RIGHT_W;
+  int h = menu_bar_height + POKEMON_HEADER_H + SCRN_HEIGHT * g_settings.scale +
+          POKEMON_BOTTOM_H;
+  SDL_SetWindowSize(win, w, h);
+  SDL_GetWindowSize(win, &win_width, &win_height);
+}
+
+void pokemon_restore_window(void) {
+  SDL_SetWindowSize(win, SCRN_WIDTH * g_settings.scale,
+                    SCRN_HEIGHT * g_settings.scale + menu_bar_height);
+  SDL_GetWindowSize(win, &win_width, &win_height);
 }
 
 static int load_rom(struct AppState* state, const char* path, uint8_t dis) {
@@ -37,18 +54,28 @@ static int load_rom(struct AppState* state, const char* path, uint8_t dis) {
   }
   (void)fclose(f);
   state->rom_error[0] = '\0';
+  bool was_pokemon = pokemon_enabled != 0;
   gbemu_free(state->gb);
+  pokemon_enabled = 0;
   state->gb = gbemu_init((char*)path, dis != 0U, NULL, 0);
   if (!state->gb) {
     SDL_snprintf(state->rom_error, sizeof(state->rom_error),
                  "Failed to load ROM: %s", path);
+    if (was_pokemon) pokemon_restore_window();
     return 1;
   }
-  set_window_title_rom(mmu_get_rom_title(state->gb->mmu));
+  const char* title = mmu_get_rom_title(state->gb->mmu);
+  set_window_title_rom(title);
   settings_add_recent_rom(&g_settings, path);
   settings_save(&g_settings);
-  if (pokemon_enabled) {
-    p_init_data(state->gb->mmu);
+  if (pokemon_check(title)) {
+    pokemon_enabled = 1;
+    pokemon_init(state->gb->mmu);
+    state->pokemon_focused_slot = 0;
+    state->pokemon_session_start = SDL_GetTicks();
+    if (!was_pokemon) pokemon_resize_window();
+  } else {
+    if (was_pokemon) pokemon_restore_window();
   }
   return 0;
 }
@@ -115,6 +142,10 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     state->close_requested = false;
     gbemu_free(state->gb);
     state->gb = NULL;
+    if (pokemon_enabled) {
+      pokemon_enabled = 0;
+      pokemon_restore_window();
+    }
     SDL_SetWindowTitle(win, "gbemu");
   }
 

@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "gbemu/core.h"
+#include "gbemu/pokemon.h"
 #include "gbemu/ppu.h"
 #include "gbemu/sdl.h"
 #include "gbemu/settings.h"
@@ -58,20 +59,33 @@ void render(struct Ppu* ppu) {
     }
   }
   SDL_UpdateTexture(txt, NULL, buf, SCRN_WIDTH * sizeof(uint32_t));
-  int avail_h = win_height - menu_bar_height;
-  int scale = win_width / SCRN_WIDTH;
-  if (avail_h / SCRN_HEIGHT < scale) {
-    scale = avail_h / SCRN_HEIGHT;
+
+  SDL_FRect dest;
+  if (pokemon_enabled) {
+    int game_w = win_width - POKEMON_LEFT_W - POKEMON_RIGHT_W;
+    int game_h = win_height - menu_bar_height - POKEMON_HEADER_H - POKEMON_BOTTOM_H;
+    int scale  = game_w / SCRN_WIDTH;
+    if (game_h / SCRN_HEIGHT < scale) scale = game_h / SCRN_HEIGHT;
+    if (scale < 1) scale = 1;
+    dest = (SDL_FRect){
+        (float)POKEMON_LEFT_W + (float)(game_w - SCRN_WIDTH * scale) / 2.0F,
+        (float)(menu_bar_height + POKEMON_HEADER_H) +
+            (float)(game_h - SCRN_HEIGHT * scale) / 2.0F,
+        (float)(SCRN_WIDTH * scale),
+        (float)(SCRN_HEIGHT * scale),
+    };
+  } else {
+    int avail_h = win_height - menu_bar_height;
+    int scale   = win_width / SCRN_WIDTH;
+    if (avail_h / SCRN_HEIGHT < scale) scale = avail_h / SCRN_HEIGHT;
+    if (scale < 1) scale = 1;
+    dest = (SDL_FRect){
+        (float)(win_width - SCRN_WIDTH * scale) / 2.0F,
+        (float)menu_bar_height +
+            (float)(avail_h - SCRN_HEIGHT * scale) / 2.0F,
+        (float)(SCRN_WIDTH * scale),
+        (float)(SCRN_HEIGHT * scale),
+    };
   }
-  if (scale < 1) {
-    scale = 1;
-  }
-  SDL_FRect dest = {
-      (float)(win_width - (SCRN_WIDTH * scale)) / 2.0F,
-      (float)menu_bar_height +
-          ((float)(avail_h - (SCRN_HEIGHT * scale)) / 2.0F),
-      (float)(SCRN_WIDTH * scale),
-      (float)(SCRN_HEIGHT * scale),
-  };
   SDL_RenderTexture(rnd, txt, NULL, &dest);
 }
